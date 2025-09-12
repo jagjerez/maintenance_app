@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
-import WorkOrder from '@/models/WorkOrder';
+import { WorkOrder } from '@/models';
 import { workOrderUpdateSchema } from '@/lib/validations';
 
 export async function GET(

@@ -14,6 +14,7 @@ export interface IWorkOrder {
   completedDate?: Date;
   assignedTo?: string;
   notes?: string;
+  companyId: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -58,6 +59,11 @@ const WorkOrderSchema = new Schema({
     type: String,
     trim: true,
   },
+  companyId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Company',
+    required: [true, 'Company is required'],
+  },
 }, {
   timestamps: true,
 });
@@ -67,5 +73,6 @@ WorkOrderSchema.index({ machine: 1 });
 WorkOrderSchema.index({ status: 1 });
 WorkOrderSchema.index({ scheduledDate: 1 });
 WorkOrderSchema.index({ maintenanceRange: 1 });
+WorkOrderSchema.index({ companyId: 1 });
 
 export default mongoose.models.WorkOrder || mongoose.model<IWorkOrder>('WorkOrder', WorkOrderSchema);

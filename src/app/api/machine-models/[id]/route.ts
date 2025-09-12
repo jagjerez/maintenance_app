@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '@/lib/db';
-import MachineModel from '@/models/MachineModel';
+import { MachineModel } from '@/models';
 import { machineModelUpdateSchema } from '@/lib/validations';
 
 export async function GET(

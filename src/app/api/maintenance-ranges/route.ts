@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/db';
-import MaintenanceRange from '@/models/MaintenanceRange';
+import { MaintenanceRange } from '@/models';
 import { maintenanceRangeSchema } from '@/lib/validations';
+import { authOptions } from '@/lib/auth';
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
-    const maintenanceRanges = await MaintenanceRange.find()
+    const maintenanceRanges = await MaintenanceRange.find({ 
+      companyId: session.user.companyId 
+    })
       .populate('operations')
       .sort({ createdAt: -1 });
     return NextResponse.json(maintenanceRanges);
@@ -21,9 +33,20 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const body = await request.json();
-    const validatedData = maintenanceRangeSchema.parse(body);
+    const validatedData = maintenanceRangeSchema.parse({
+      ...body,
+      companyId: session.user.companyId,
+    });
     
     const maintenanceRange = new MaintenanceRange(validatedData);
     await maintenanceRange.save();

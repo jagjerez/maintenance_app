@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/db';
-import Operation from '@/models/Operation';
+import { Operation } from '@/models';
 import { operationSchema } from '@/lib/validations';
+import { authOptions } from '@/lib/auth';
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
-    const operations = await Operation.find().sort({ createdAt: -1 });
+    const operations = await Operation.find({ 
+      companyId: session.user.companyId 
+    }).sort({ createdAt: -1 });
     return NextResponse.json(operations);
   } catch (error) {
     console.error('Error fetching operations:', error);
@@ -19,9 +31,20 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const body = await request.json();
-    const validatedData = operationSchema.parse(body);
+    const validatedData = operationSchema.parse({
+      ...body,
+      companyId: session.user.companyId,
+    });
     
     const operation = new Operation(validatedData);
     await operation.save();

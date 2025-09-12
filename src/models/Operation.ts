@@ -6,6 +6,7 @@ export interface IOperation {
   description: string;
   estimatedTime: number; // in minutes
   requiredResources: string[];
+  companyId: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -30,11 +31,17 @@ const OperationSchema = new Schema({
     type: String,
     trim: true,
   }],
+  companyId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Company',
+    required: [true, 'Company is required'],
+  },
 }, {
   timestamps: true,
 });
 
 // Index for better query performance
 OperationSchema.index({ name: 1 });
+OperationSchema.index({ companyId: 1 });
 
 export default mongoose.models.Operation || mongoose.model<IOperation>('Operation', OperationSchema);

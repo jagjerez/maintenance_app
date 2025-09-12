@@ -6,6 +6,7 @@ export interface IMachineModel {
   manufacturer: string;
   year: number;
   properties: Map<string, unknown>;
+  companyId: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +33,11 @@ const MachineModelSchema = new Schema({
     of: Schema.Types.Mixed,
     default: new Map(),
   },
+  companyId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Company',
+    required: [true, 'Company is required'],
+  },
 }, {
   timestamps: true,
 });
@@ -39,5 +45,6 @@ const MachineModelSchema = new Schema({
 // Index for better query performance
 MachineModelSchema.index({ name: 1, manufacturer: 1 });
 MachineModelSchema.index({ year: 1 });
+MachineModelSchema.index({ companyId: 1 });
 
 export default mongoose.models.MachineModel || mongoose.model<IMachineModel>('MachineModel', MachineModelSchema);

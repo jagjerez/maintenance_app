@@ -28,21 +28,21 @@ export default function DataTable<T extends { _id: string }>({
   if (data.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">No hay datos disponibles</p>
+        <p className="text-gray-500 dark:text-gray-400">No hay datos disponibles</p>
       </div>
     );
   }
 
   return (
     <div className={cn('overflow-x-auto', className)}>
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead className="bg-gray-50 dark:bg-gray-700">
           <tr>
             {columns.map((column, index) => (
               <th
                 key={index}
                 className={cn(
-                  'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider',
+                  'px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider',
                   column.className
                 )}
               >
@@ -50,20 +50,20 @@ export default function DataTable<T extends { _id: string }>({
               </th>
             ))}
             {(onEdit || onDelete) && (
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 Acciones
               </th>
             )}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
           {data.map((item) => (
-            <tr key={item._id} className="hover:bg-gray-50">
+            <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
               {columns.map((column, colIndex) => (
                 <td
                   key={colIndex}
                   className={cn(
-                    'px-6 py-4 whitespace-nowrap text-sm text-gray-900',
+                    'px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100',
                     column.className
                   )}
                 >
@@ -78,7 +78,7 @@ export default function DataTable<T extends { _id: string }>({
                     {onEdit && (
                       <button
                         onClick={() => onEdit(item)}
-                        className="text-blue-600 hover:text-blue-900"
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                       >
                         Editar
                       </button>
@@ -86,7 +86,7 @@ export default function DataTable<T extends { _id: string }>({
                     {onDelete && (
                       <button
                         onClick={() => onDelete(item)}
-                        className="text-red-600 hover:text-red-900"
+                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                       >
                         Eliminar
                       </button>

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   FileText, 
@@ -43,6 +45,8 @@ interface Stats {
 }
 
 export default function Dashboard() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [stats, setStats] = useState<Stats>({
     totalWorkOrders: 0,
@@ -57,8 +61,14 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+      return;
+    }
+    if (status === 'authenticated') {
+      fetchDashboardData();
+    }
+  }, [status, router]);
 
   const fetchDashboardData = async () => {
     try {
@@ -66,6 +76,9 @@ export default function Dashboard() {
       
       // Fetch work orders
       const workOrdersResponse = await fetch('/api/work-orders');
+      if (!workOrdersResponse.ok) {
+        throw new Error('Failed to fetch work orders');
+      }
       const workOrdersData = await workOrdersResponse.json();
       setWorkOrders(workOrdersData.slice(0, 5)); // Show only latest 5
 
@@ -120,16 +133,16 @@ export default function Dashboard() {
     }
   };
 
-  if (loading) {
+  if (status === 'loading' || loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white p-6 rounded-lg shadow">
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
-                <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+              <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
+                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
               </div>
             ))}
           </div>
@@ -138,29 +151,33 @@ export default function Dashboard() {
     );
   }
 
+  if (status === 'unauthenticated') {
+    return null;
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="mt-2 text-gray-600">
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+        <p className="mt-2 text-gray-600 dark:text-gray-400">
           Resumen del sistema de mantenimiento
         </p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <FileText className="h-6 w-6 text-blue-600" />
+                <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     Total Órdenes
                   </dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
                     {stats.totalWorkOrders}
                   </dd>
                 </dl>
@@ -169,18 +186,18 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <Clock className="h-6 w-6 text-yellow-600" />
+                <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     Pendientes
                   </dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
                     {stats.pendingWorkOrders}
                   </dd>
                 </dl>
@@ -189,18 +206,18 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <AlertCircle className="h-6 w-6 text-blue-600" />
+                <AlertCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     En Progreso
                   </dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
                     {stats.inProgressWorkOrders}
                   </dd>
                 </dl>
@@ -209,18 +226,18 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <CheckCircle className="h-6 w-6 text-green-600" />
+                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
+                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     Completadas
                   </dt>
-                  <dd className="text-lg font-medium text-gray-900">
+                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
                     {stats.completedWorkOrders}
                   </dd>
                 </dl>
@@ -232,9 +249,9 @@ export default function Dashboard() {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div className="bg-white shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+            <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
               Acciones Rápidas
             </h3>
             <div className="grid grid-cols-2 gap-4">
@@ -247,7 +264,7 @@ export default function Dashboard() {
               </Link>
               <Link
                 href="/machines/new"
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Nueva Máquina
@@ -256,27 +273,27 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white shadow rounded-lg">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
+            <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
               Resumen del Sistema
             </h3>
             <dl className="grid grid-cols-2 gap-4">
               <div>
-                <dt className="text-sm font-medium text-gray-500">Máquinas</dt>
-                <dd className="text-lg font-semibold text-gray-900">{stats.totalMachines}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Máquinas</dt>
+                <dd className="text-lg font-semibold text-gray-900 dark:text-white">{stats.totalMachines}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Modelos</dt>
-                <dd className="text-lg font-semibold text-gray-900">{stats.totalModels}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Modelos</dt>
+                <dd className="text-lg font-semibold text-gray-900 dark:text-white">{stats.totalModels}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Gamas</dt>
-                <dd className="text-lg font-semibold text-gray-900">{stats.totalMaintenanceRanges}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Gamas</dt>
+                <dd className="text-lg font-semibold text-gray-900 dark:text-white">{stats.totalMaintenanceRanges}</dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500">Operaciones</dt>
-                <dd className="text-lg font-semibold text-gray-900">{stats.totalOperations}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">Operaciones</dt>
+                <dd className="text-lg font-semibold text-gray-900 dark:text-white">{stats.totalOperations}</dd>
               </div>
             </dl>
           </div>
@@ -284,15 +301,15 @@ export default function Dashboard() {
       </div>
 
       {/* Recent Work Orders */}
-      <div className="bg-white shadow rounded-lg">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">
+            <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
               Órdenes de Trabajo Recientes
             </h3>
             <Link
               href="/work-orders"
-              className="text-sm font-medium text-blue-600 hover:text-blue-500"
+              className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
             >
               Ver todas
             </Link>
@@ -300,9 +317,9 @@ export default function Dashboard() {
           
           {workOrders.length === 0 ? (
             <div className="text-center py-8">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No hay órdenes de trabajo</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <FileText className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No hay órdenes de trabajo</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Comienza creando una nueva orden de trabajo.
               </p>
               <div className="mt-6">
@@ -317,36 +334,36 @@ export default function Dashboard() {
             </div>
           ) : (
             <div className="overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Descripción
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Máquina
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Tipo
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Estado
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Fecha Programada
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {workOrders.map((workOrder) => (
-                    <tr key={workOrder._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <tr key={workOrder._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {workOrder.description}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         <div>
                           <div className="font-medium">{workOrder.machine.model.name}</div>
-                          <div className="text-gray-500">{workOrder.machine.location}</div>
+                          <div className="text-gray-500 dark:text-gray-400">{workOrder.machine.location}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -363,7 +380,7 @@ export default function Dashboard() {
                           </span>
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {formatDate(workOrder.scheduledDate)}
                       </td>
                     </tr>

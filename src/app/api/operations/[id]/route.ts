@@ -1,16 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/db';
-import Operation from '@/models/Operation';
+import { Operation } from '@/models';
 import { operationUpdateSchema } from '@/lib/validations';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const { id } = await params;
-    const operation = await Operation.findById(id);
+    const operation = await Operation.findOne({ 
+      _id: id, 
+      companyId: session.user.companyId 
+    });
     
     if (!operation) {
       return NextResponse.json(
@@ -34,13 +47,21 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const body = await request.json();
     const validatedData = operationUpdateSchema.parse(body);
     
     const { id } = await params;
-    const operation = await Operation.findByIdAndUpdate(
-      id,
+    const operation = await Operation.findOneAndUpdate(
+      { _id: id, companyId: session.user.companyId },
       validatedData,
       { new: true, runValidators: true }
     );
@@ -73,9 +94,20 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const { id } = await params;
-    const operation = await Operation.findByIdAndDelete(id);
+    const operation = await Operation.findOneAndDelete({ 
+      _id: id, 
+      companyId: session.user.companyId 
+    });
     
     if (!operation) {
       return NextResponse.json(
