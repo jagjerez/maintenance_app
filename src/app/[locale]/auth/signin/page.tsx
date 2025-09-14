@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { signIn, getSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +11,7 @@ import { toast } from 'react-hot-toast';
 import { Wrench, Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from '@/hooks/useTranslations';
 
-const getSignInSchema = (t: any) => z.object({
+const getSignInSchema = (t: (key: string, params?: Record<string, string | number | Date>) => string) => z.object({
   email: z.string().email(t('errors.email')),
   password: z.string().min(6, t('errors.minLength', { min: 6 })),
 });
@@ -21,6 +22,7 @@ export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslations();
 
   const signInSchema = getSignInSchema(t);
@@ -45,13 +47,14 @@ export default function SignInPage() {
       if (result?.error) {
         toast.error(t('errors.invalidCredentials'));
       } else {
-        toast.success(t('success.saved'));
+        toast.success(t('auth.loginSuccess'));
         const session = await getSession();
         if (session) {
-          router.push('/');
+          const callbackUrl = searchParams.get('callbackUrl') || '/';
+          router.push(callbackUrl);
         }
       }
-    } catch (error) {
+    } catch {
       toast.error(t('errors.serverError'));
     } finally {
       setIsLoading(false);
@@ -69,7 +72,7 @@ export default function SignInPage() {
             {t('auth.signIn')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            Accede a tu cuenta de mantenimiento
+            {t('auth.signInSubtitle')}
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
@@ -136,12 +139,12 @@ export default function SignInPage() {
           <div className="text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {t('auth.dontHaveAccount')}{' '}
-              <a
+              <Link
                 href="/auth/signup"
                 className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
               >
                 {t('auth.signUp')}
-              </a>
+              </Link>
             </p>
           </div>
         </form>

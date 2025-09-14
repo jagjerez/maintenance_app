@@ -58,7 +58,12 @@
     "alreadyHaveAccount": "Already have an account?",
     "dontHaveAccount": "Don't have an account?",
     "signInWith": "Sign in with",
-    "signUpWith": "Sign up with"
+    "signUpWith": "Sign up with",
+    "signInSubtitle": "Access your maintenance account",
+    "signUpSubtitle": "Register to access the maintenance system",
+    "accountCreated": "Account created successfully",
+    "loginSuccess": "Login successful",
+    "companiesLoadError": "Error loading companies"
   },
   "machines": {
     "title": "Machines",

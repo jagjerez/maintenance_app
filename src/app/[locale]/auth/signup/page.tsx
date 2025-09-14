@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,11 +10,11 @@ import { toast } from 'react-hot-toast';
 import { Wrench, Eye, EyeOff, Building2 } from 'lucide-react';
 import { useTranslations } from '@/hooks/useTranslations';
 
-const getSignUpSchema = (t: any) => z.object({
+const getSignUpSchema = (t: (key: string, params?: Record<string, string | number | Date>) => string) => z.object({
   name: z.string().min(1, t('errors.required')),
   email: z.string().email(t('errors.email')),
   password: z.string().min(6, t('errors.minLength', { min: 6 })),
-  confirmPassword: z.string().min(6, t('auth.confirmPassword')),
+  confirmPassword: z.string().min(6, t('errors.minLength', { min: 6 })),
   companyId: z.string().min(1, t('errors.required')),
 }).refine((data) => data.password === data.confirmPassword, {
   message: t('errors.passwordMismatch'),
@@ -55,9 +56,12 @@ export default function SignUpPage() {
       if (response.ok) {
         const data = await response.json();
         setCompanies(data);
+      } else {
+        toast.error(t('auth.companiesLoadError'));
       }
     } catch (error) {
       console.error('Error fetching companies:', error);
+      toast.error(t('auth.companiesLoadError'));
     }
   };
 
@@ -78,7 +82,7 @@ export default function SignUpPage() {
       });
 
       if (response.ok) {
-        toast.success(t('success.created'));
+        toast.success(t('auth.accountCreated'));
         router.push('/auth/signin');
       } else {
         const error = await response.json();
@@ -102,7 +106,7 @@ export default function SignUpPage() {
             {t('auth.signUp')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            Regístrate para acceder al sistema de mantenimiento
+            {t('auth.signUpSubtitle')}
           </p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
@@ -231,7 +235,7 @@ export default function SignUpPage() {
           <div>
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={true}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? t('common.loading') : t('auth.signUp')}
@@ -241,12 +245,12 @@ export default function SignUpPage() {
           <div className="text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {t('auth.alreadyHaveAccount')}{' '}
-              <a
+              <Link
                 href="/auth/signin"
                 className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
               >
                 {t('auth.signIn')}
-              </a>
+              </Link>
             </p>
           </div>
         </form>
