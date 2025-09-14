@@ -139,7 +139,8 @@
     "preventive": "Preventive",
     "corrective": "Corrective",
     "operationsCount": "operations",
-    "range": "range"
+    "range": "range",
+    "type": "Type"
   },
   "operations": {
     "title": "Operations",
@@ -198,7 +199,8 @@
     "workOrderUpdated": "Work order updated successfully",
     "workOrderDeleted": "Work order deleted successfully",
     "workOrderError": "Error saving work order",
-    "workOrderLoadError": "Error loading work orders"
+    "workOrderLoadError": "Error loading work orders",
+    "createWorkOrder": "Create Work Order"
   },
   "settings": {
     "title": "Settings",

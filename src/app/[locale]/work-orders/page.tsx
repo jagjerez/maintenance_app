@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useSearchParams } from 'next/navigation';
 import { useTranslations } from '@/hooks/useTranslations';
 import { Plus, Edit, Trash2, FileText, Calendar, User, AlertCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -47,6 +48,7 @@ const ITEMS_PER_PAGE = 10;
 export default function WorkOrdersPage() {
   const { t } = useTranslations();
   const { data: session } = useSession();
+  const searchParams = useSearchParams();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [maintenanceRanges, setMaintenanceRanges] = useState<MaintenanceRange[]>([]);
@@ -127,6 +129,17 @@ export default function WorkOrdersPage() {
     };
     loadData();
   }, [currentPage]);
+
+  // Check if we should open the modal automatically (from dashboard)
+  useEffect(() => {
+    if (searchParams.get('new') === 'true') {
+      setShowModal(true);
+      // Clean up the URL parameter
+      const url = new URL(window.location.href);
+      url.searchParams.delete('new');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams, loading, machines.length, maintenanceRanges.length]);
 
   const onSubmit = async (data: WorkOrderInput) => {
     try {
@@ -424,7 +437,7 @@ export default function WorkOrdersPage() {
           </div>
 
           <FormGroup>
-            <FormLabel required>{t("common.description")}</FormLabel>
+            <FormLabel required>{t("workOrders.description")}</FormLabel>
             <FormTextarea
               {...register('description')}
               error={errors.description?.message}

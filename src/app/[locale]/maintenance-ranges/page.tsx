@@ -341,7 +341,7 @@ export default function MaintenanceRangesPage() {
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>{t("common.type")}</FormLabel>
+            <FormLabel required>{t("maintenanceRanges.type")}</FormLabel>
             <FormSelect
               {...register('type')}
               error={errors.type?.message}
@@ -353,7 +353,7 @@ export default function MaintenanceRangesPage() {
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>{t("common.description")}</FormLabel>
+            <FormLabel required>{t("maintenanceRanges.description")}</FormLabel>
             <FormTextarea
               {...register('description')}
               error={errors.description?.message}

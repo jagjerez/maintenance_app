@@ -113,7 +113,11 @@ export default function MachinesPage() {
 
   // Check if we should open the modal automatically (from dashboard)
   useEffect(() => {
-    if (searchParams.get('new') === 'true' && !loading && machineModels.length > 0) {
+    console.log('searchParams', searchParams);
+    console.log('loading', loading);
+    console.log('machineModels.length', machineModels.length);
+    if (searchParams.get('new') === 'true') {
+      
       setShowModal(true);
       // Clean up the URL parameter
       const url = new URL(window.location.href);

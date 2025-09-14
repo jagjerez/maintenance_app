@@ -18,7 +18,6 @@ const validRoutes = [
   '/maintenance-ranges',
   '/operations',
   '/work-orders',
-  '/work-orders/new',
   '/settings',
   '/auth/signin',
   '/auth/signup',

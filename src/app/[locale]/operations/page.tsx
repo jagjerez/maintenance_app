@@ -305,7 +305,7 @@ export default function OperationsPage() {
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>{t("common.description")}</FormLabel>
+            <FormLabel required>{t("operations.description")}</FormLabel>
             <FormTextarea
               {...register('description')}
               error={errors.description?.message}

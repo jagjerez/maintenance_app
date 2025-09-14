@@ -139,7 +139,8 @@
     "preventive": "Preventivo",
     "corrective": "Correctivo",
     "operationsCount": "operaciones",
-    "range": "rango"
+    "range": "rango",
+    "type": "Tipo"
   },
   "operations": {
     "title": "Operaciones",
@@ -198,7 +199,8 @@
     "workOrderUpdated": "Orden de trabajo actualizada correctamente",
     "workOrderDeleted": "Orden de trabajo eliminada correctamente",
     "workOrderError": "Error al guardar la orden de trabajo",
-    "workOrderLoadError": "Error al cargar las órdenes de trabajo"
+    "workOrderLoadError": "Error al cargar las órdenes de trabajo",
+    "createWorkOrder": "Crear Orden de Trabajo"
   },
   "settings": {
     "title": "Configuración",

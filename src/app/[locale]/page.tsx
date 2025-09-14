@@ -56,6 +56,7 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
 
+
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
@@ -264,7 +265,7 @@ export default function Dashboard() {
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <Link
-                href="/work-orders/new"
+                href="/work-orders?new=true"
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -350,7 +351,7 @@ export default function Dashboard() {
               </p>
               <div className="mt-6">
                 <Link
-                  href="/work-orders/new"
+                  href="/work-orders?new=true"
                   className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   <Plus className="h-4 w-4 mr-2" />
@@ -437,6 +438,7 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
     </div>
   );
 }
