@@ -10,6 +10,7 @@ import { Plus, Edit, Trash2, MapPin, Wrench } from 'lucide-react';
 import Modal from '@/components/Modal';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { Form, FormGroup, FormLabel, FormInput, FormSelect, FormButton } from '@/components/Form';
+import { Pagination } from '@/components/Pagination';
 import { machineSchema } from '@/lib/validations';
 
 interface MachineModel {
@@ -48,6 +49,11 @@ export default function MachinesPage() {
     isOpen: false,
     machine: null,
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+
+  const ITEMS_PER_PAGE = 10;
 
   const {
     register,
@@ -61,13 +67,15 @@ export default function MachinesPage() {
     },
   });
 
-  // Fetch machines
-  const fetchMachines = async () => {
+  // Fetch machines with pagination
+  const fetchMachines = async (page = 1) => {
     try {
-      const response = await fetch('/api/machines');
+      const response = await fetch(`/api/machines?page=${page}&limit=${ITEMS_PER_PAGE}`);
       if (response.ok) {
         const data = await response.json();
-        setMachines(data);
+        setMachines(data.machines || data);
+        setTotalPages(data.totalPages || Math.ceil((data.machines || data).length / ITEMS_PER_PAGE));
+        setTotalItems(data.totalItems || (data.machines || data).length);
       }
     } catch (error) {
       console.error('Error fetching machines:', error);
@@ -90,11 +98,11 @@ export default function MachinesPage() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchMachines(), fetchMachineModels()]);
+      await Promise.all([fetchMachines(currentPage), fetchMachineModels()]);
       setLoading(false);
     };
     loadData();
-  }, []);
+  }, [currentPage]);
 
   // Check if we should open the modal automatically (from dashboard)
   useEffect(() => {
@@ -124,7 +132,7 @@ export default function MachinesPage() {
       });
 
       if (response.ok) {
-        await fetchMachines();
+        await fetchMachines(currentPage);
         setShowModal(false);
         setEditingMachine(null);
         reset();
@@ -153,12 +161,16 @@ export default function MachinesPage() {
       });
 
       if (response.ok) {
-        await fetchMachines();
+        await fetchMachines(currentPage);
         setDeleteModal({ isOpen: false, machine: null });
       }
     } catch (error) {
       console.error('Error deleting machine:', error);
     }
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   if (loading) {
@@ -196,7 +208,7 @@ export default function MachinesPage() {
         <div className="flex items-center space-x-2">
           <Wrench className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {machines.length} máquina{machines.length !== 1 ? 's' : ''}
+            {totalItems} máquina{totalItems !== 1 ? 's' : ''}
           </span>
         </div>
         <FormButton
@@ -278,6 +290,16 @@ export default function MachinesPage() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        totalItems={totalItems}
+        itemsPerPage={ITEMS_PER_PAGE}
+        className="mt-6"
+      />
 
       {/* Add/Edit Machine Modal */}
       <Modal

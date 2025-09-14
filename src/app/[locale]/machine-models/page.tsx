@@ -7,6 +7,7 @@ import DataTable from '@/components/DataTable';
 import Modal from '@/components/Modal';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { Form, FormGroup, FormLabel, FormInput, FormButton } from '@/components/Form';
+import { Pagination } from '@/components/Pagination';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { machineModelSchema } from '@/lib/validations';
@@ -25,6 +26,8 @@ interface MachineModel {
   updatedAt: string;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export default function MachineModelsPage() {
   const { data: session } = useSession();
   const { t } = useTranslations();
@@ -34,6 +37,9 @@ export default function MachineModelsPage() {
   const [editingModel, setEditingModel] = useState<MachineModel | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [modelToDelete, setModelToDelete] = useState<MachineModel | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
   const {
     register,
@@ -46,18 +52,24 @@ export default function MachineModelsPage() {
   });
 
   useEffect(() => {
-    fetchMachineModels();
-  }, []);
+    fetchMachineModels(currentPage);
+  }, [currentPage]);
 
-  const fetchMachineModels = async () => {
+  const fetchMachineModels = async (page = 1) => {
     try {
       setLoading(true);
-      const response = await fetch('/api/machine-models');
-      const data = await response.json();
-      setMachineModels(data);
+      const response = await fetch(`/api/machine-models?page=${page}&limit=${ITEMS_PER_PAGE}`);
+      if (response.ok) {
+        const data = await response.json();
+        setMachineModels(data.machineModels || data);
+        setTotalPages(data.totalPages || Math.ceil((data.machineModels || data).length / ITEMS_PER_PAGE));
+        setTotalItems(data.totalItems || (data.machineModels || data).length);
+      } else {
+        toast.error('Error al cargar los modelos de máquinas');
+      }
     } catch (error) {
       console.error('Error fetching machine models:', error);
-      toast.error('Error al cargar los modelos de máquina');
+      toast.error('Error al cargar los modelos de máquinas');
     } finally {
       setLoading(false);
     }
@@ -83,7 +95,7 @@ export default function MachineModelsPage() {
 
       if (response.ok) {
         toast.success(editingModel ? 'Modelo actualizado correctamente' : 'Modelo creado correctamente');
-        fetchMachineModels();
+        fetchMachineModels(currentPage);
         setShowModal(false);
         setEditingModel(null);
         reset();
@@ -121,7 +133,7 @@ export default function MachineModelsPage() {
 
       if (response.ok) {
         toast.success('Modelo eliminado correctamente');
-        fetchMachineModels();
+        fetchMachineModels(currentPage);
       } else {
         toast.error('Error al eliminar el modelo');
       }
@@ -138,6 +150,10 @@ export default function MachineModelsPage() {
     setEditingModel(null);
     reset();
     setShowModal(true);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
   };
 
   const columns = [
@@ -211,6 +227,16 @@ export default function MachineModelsPage() {
           />
         </div>
       </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        totalItems={totalItems}
+        itemsPerPage={ITEMS_PER_PAGE}
+        className="mt-6"
+      />
 
       {/* Create/Edit Modal */}
       <Modal
