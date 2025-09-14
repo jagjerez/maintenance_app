@@ -32,11 +32,8 @@ export function useCompanyTheme() {
         );
       }
 
-      // Apply company theme preference
-      if (company.theme && company.theme !== 'system') {
-        document.documentElement.classList.remove('light', 'dark');
-        document.documentElement.classList.add(company.theme);
-      }
+      // Note: Company theme preference is now handled by the ThemeProvider
+      // This hook only handles company branding colors
     }
   }, [session?.user?.company]);
 

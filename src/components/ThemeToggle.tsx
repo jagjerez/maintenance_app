@@ -3,10 +3,11 @@
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { Sun, Moon, Monitor } from 'lucide-react';
+import { useThemeSync } from '@/hooks/useThemeSync';
 
-export function ThemeToggle() {
+export function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const [mounted, setMounted] = useState(false);
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme } = useThemeSync();
 
   useEffect(() => {
     setMounted(true);
@@ -21,6 +22,30 @@ export function ThemeToggle() {
     { value: 'dark', label: 'Dark', icon: Moon },
     { value: 'system', label: 'System', icon: Monitor },
   ];
+
+  const getCurrentIcon = () => {
+    const currentTheme = themes.find(t => t.value === theme);
+    return currentTheme?.icon || Sun;
+  };
+
+  const cycleTheme = () => {
+    const currentIndex = themes.findIndex(t => t.value === theme);
+    const nextIndex = (currentIndex + 1) % themes.length;
+    setTheme(themes[nextIndex].value);
+  };
+
+  if (compact) {
+    const CurrentIcon = getCurrentIcon();
+    return (
+      <button
+        onClick={cycleTheme}
+        className="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        title={`Tema actual: ${themes.find(t => t.value === theme)?.label}`}
+      >
+        <CurrentIcon className="h-5 w-5" />
+      </button>
+    );
+  }
 
   return (
     <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">

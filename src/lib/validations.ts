@@ -18,7 +18,11 @@ export const companySchema = z.object({
     allowUserRegistration: z.boolean().default(true),
     requireEmailVerification: z.boolean().default(false),
     defaultUserRole: z.enum(['admin', 'user']).default('user'),
-  }).default({}),
+  }).default(() => ({
+    allowUserRegistration: true,
+    requireEmailVerification: false,
+    defaultUserRole: 'user' as const,
+  })),
 });
 
 // User validations
@@ -35,16 +39,26 @@ export const userSchema = z.object({
     notifications: z.object({
       email: z.boolean().default(true),
       push: z.boolean().default(true),
-    }).default({}),
-  }).default({}),
+    }).default(() => ({
+      email: true,
+      push: true,
+    })),
+  }).default(() => ({
+    theme: 'system' as const,
+    language: 'en',
+    notifications: {
+      email: true,
+      push: true,
+    },
+  })),
 });
 
 // Machine Model validations
 export const machineModelSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
   manufacturer: z.string().min(1, 'Manufacturer is required').max(100, 'Manufacturer name too long'),
+  brand: z.string().min(1, 'Brand is required').max(100, 'Brand name too long'),
   year: z.number().min(1900, 'Year must be after 1900').max(new Date().getFullYear() + 1, 'Year cannot be in the future'),
-  properties: z.record(z.string(), z.unknown()).default({}),
   companyId: z.string().min(1, 'Company is required'),
 });
 

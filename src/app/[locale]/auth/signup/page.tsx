@@ -7,19 +7,20 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'react-hot-toast';
 import { Wrench, Eye, EyeOff, Building2 } from 'lucide-react';
+import { useTranslations } from '@/hooks/useTranslations';
 
-const signUpSchema = z.object({
-  name: z.string().min(1, 'El nombre es requerido'),
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-  confirmPassword: z.string().min(6, 'Confirma tu contraseña'),
-  companyId: z.string().min(1, 'Debes seleccionar una empresa'),
+const getSignUpSchema = (t: any) => z.object({
+  name: z.string().min(1, t('errors.required')),
+  email: z.string().email(t('errors.email')),
+  password: z.string().min(6, t('errors.minLength', { min: 6 })),
+  confirmPassword: z.string().min(6, t('auth.confirmPassword')),
+  companyId: z.string().min(1, t('errors.required')),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Las contraseñas no coinciden",
+  message: t('errors.passwordMismatch'),
   path: ["confirmPassword"],
 });
 
-type SignUpForm = z.infer<typeof signUpSchema>;
+type SignUpForm = z.infer<ReturnType<typeof getSignUpSchema>>;
 
 interface Company {
   _id: string;
@@ -32,6 +33,9 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const router = useRouter();
+  const { t } = useTranslations();
+
+  const signUpSchema = getSignUpSchema(t);
 
   const {
     register,
@@ -74,14 +78,14 @@ export default function SignUpPage() {
       });
 
       if (response.ok) {
-        toast.success('Cuenta creada exitosamente');
+        toast.success(t('success.created'));
         router.push('/auth/signin');
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Error al crear la cuenta');
+        toast.error(error.error || t('errors.serverError'));
       }
     } catch (error) {
-      toast.error('Error al crear la cuenta');
+      toast.error(t('errors.serverError'));
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +99,7 @@ export default function SignUpPage() {
             <Wrench className="h-12 w-12 text-blue-600 dark:text-blue-400" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-            Crear Cuenta
+            {t('auth.signUp')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Regístrate para acceder al sistema de mantenimiento
@@ -105,7 +109,7 @@ export default function SignUpPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Nombre Completo
+                {t('auth.firstName')}
               </label>
               <input
                 {...register('name')}
@@ -123,7 +127,7 @@ export default function SignUpPage() {
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Email
+                {t('auth.email')}
               </label>
               <input
                 {...register('email')}
@@ -141,13 +145,13 @@ export default function SignUpPage() {
 
             <div>
               <label htmlFor="companyId" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Empresa
+                {t('auth.company')}
               </label>
               <select
                 {...register('companyId')}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               >
-                <option value="">Selecciona una empresa</option>
+                <option value="">{t('common.select')} {t('auth.company')}</option>
                 {companies.map((company) => (
                   <option key={company._id} value={company._id}>
                     {company.name}
@@ -163,7 +167,7 @@ export default function SignUpPage() {
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Contraseña
+                {t('auth.password')}
               </label>
               <div className="mt-1 relative">
                 <input
@@ -194,7 +198,7 @@ export default function SignUpPage() {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Confirmar Contraseña
+                {t('auth.confirmPassword')}
               </label>
               <div className="mt-1 relative">
                 <input
@@ -230,18 +234,18 @@ export default function SignUpPage() {
               disabled={isLoading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Creando cuenta...' : 'Crear Cuenta'}
+              {isLoading ? t('common.loading') : t('auth.signUp')}
             </button>
           </div>
 
           <div className="text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              ¿Ya tienes cuenta?{' '}
+              {t('auth.alreadyHaveAccount')}{' '}
               <a
                 href="/auth/signin"
                 className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                Inicia sesión aquí
+                {t('auth.signIn')}
               </a>
             </p>
           </div>

@@ -8,18 +8,22 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'react-hot-toast';
 import { Wrench, Eye, EyeOff } from 'lucide-react';
+import { useTranslations } from '@/hooks/useTranslations';
 
-const signInSchema = z.object({
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+const getSignInSchema = (t: any) => z.object({
+  email: z.string().email(t('errors.email')),
+  password: z.string().min(6, t('errors.minLength', { min: 6 })),
 });
 
-type SignInForm = z.infer<typeof signInSchema>;
+type SignInForm = z.infer<ReturnType<typeof getSignInSchema>>;
 
 export default function SignInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { t } = useTranslations();
+
+  const signInSchema = getSignInSchema(t);
 
   const {
     register,
@@ -39,16 +43,16 @@ export default function SignInPage() {
       });
 
       if (result?.error) {
-        toast.error('Credenciales inválidas');
+        toast.error(t('errors.invalidCredentials'));
       } else {
-        toast.success('Inicio de sesión exitoso');
+        toast.success(t('success.saved'));
         const session = await getSession();
         if (session) {
           router.push('/');
         }
       }
     } catch (error) {
-      toast.error('Error al iniciar sesión');
+      toast.error(t('errors.serverError'));
     } finally {
       setIsLoading(false);
     }
@@ -62,7 +66,7 @@ export default function SignInPage() {
             <Wrench className="h-12 w-12 text-blue-600 dark:text-blue-400" />
           </div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
-            Iniciar Sesión
+            {t('auth.signIn')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
             Accede a tu cuenta de mantenimiento
@@ -72,7 +76,7 @@ export default function SignInPage() {
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Email
+                {t('auth.email')}
               </label>
               <input
                 {...register('email')}
@@ -89,7 +93,7 @@ export default function SignInPage() {
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Contraseña
+                {t('auth.password')}
               </label>
               <div className="mt-1 relative">
                 <input
@@ -125,18 +129,18 @@ export default function SignInPage() {
               disabled={isLoading}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+              {isLoading ? t('common.loading') : t('auth.signIn')}
             </button>
           </div>
 
           <div className="text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              ¿No tienes cuenta?{' '}
+              {t('auth.dontHaveAccount')}{' '}
               <a
                 href="/auth/signup"
                 className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300"
               >
-                Regístrate aquí
+                {t('auth.signUp')}
               </a>
             </p>
           </div>

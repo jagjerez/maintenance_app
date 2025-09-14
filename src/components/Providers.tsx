@@ -16,6 +16,12 @@ export function Providers({ children }: ProvidersProps) {
         defaultTheme="system"
         enableSystem
         disableTransitionOnChange
+        storageKey="theme"
+        value={{
+          light: 'light',
+          dark: 'dark',
+          system: 'system'
+        }}
       >
         <CompanyThemeProvider>
           {children}

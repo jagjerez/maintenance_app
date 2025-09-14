@@ -4,6 +4,7 @@ export interface IMachineModel {
   _id: string;
   name: string;
   manufacturer: string;
+  brand: string;
   year: number;
   properties: Map<string, unknown>;
   companyId: string;
@@ -20,6 +21,11 @@ const MachineModelSchema = new Schema({
   manufacturer: {
     type: String,
     required: [true, 'Manufacturer is required'],
+    trim: true,
+  },
+  brand: {
+    type: String,
+    required: [true, 'Brand is required'],
     trim: true,
   },
   year: {
@@ -43,7 +49,7 @@ const MachineModelSchema = new Schema({
 });
 
 // Index for better query performance
-MachineModelSchema.index({ name: 1, manufacturer: 1 });
+MachineModelSchema.index({ name: 1, manufacturer: 1, brand: 1 });
 MachineModelSchema.index({ year: 1 });
 MachineModelSchema.index({ companyId: 1 });
 

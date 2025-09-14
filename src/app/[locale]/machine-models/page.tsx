@@ -2,25 +2,32 @@
 
 import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import DataTable from '@/components/DataTable';
 import Modal from '@/components/Modal';
+import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { Form, FormGroup, FormLabel, FormInput, FormButton } from '@/components/Form';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { machineModelSchema, MachineModelInput } from '@/lib/validations';
+import { machineModelSchema } from '@/lib/validations';
+import { formatDateSafe } from '@/lib/utils';
 import toast from 'react-hot-toast';
+import { useTranslations } from '@/hooks/useTranslations';
 
 interface MachineModel {
   _id: string;
   name: string;
   manufacturer: string;
+  brand: string;
   year: number;
-  properties: Record<string, unknown>;
+  companyId: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export default function MachineModelsPage() {
+  const { data: session } = useSession();
+  const { t } = useTranslations();
   const [machineModels, setMachineModels] = useState<MachineModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -56,8 +63,13 @@ export default function MachineModelsPage() {
     }
   };
 
-  const onSubmit = async (data: MachineModelInput) => {
+  const onSubmit = async (data: { name: string; manufacturer: string; brand: string; year: number; companyId: string; }) => {
     try {
+      if (!session?.user?.companyId) {
+        toast.error('No se pudo obtener la información de la empresa');
+        return;
+      }
+
       const url = editingModel ? `/api/machine-models/${editingModel._id}` : '/api/machine-models';
       const method = editingModel ? 'PUT' : 'POST';
 
@@ -89,8 +101,8 @@ export default function MachineModelsPage() {
     setEditingModel(model);
     setValue('name', model.name);
     setValue('manufacturer', model.manufacturer);
+    setValue('brand', model.brand);
     setValue('year', model.year);
-    setValue('properties', model.properties);
     setShowModal(true);
   };
 
@@ -138,22 +150,17 @@ export default function MachineModelsPage() {
       label: 'Fabricante',
     },
     {
+      key: 'brand' as keyof MachineModel,
+      label: 'Marca',
+    },
+    {
       key: 'year' as keyof MachineModel,
       label: 'Año',
     },
     {
-      key: 'properties' as keyof MachineModel,
-      label: 'Propiedades',
-      render: (value: unknown) => {
-        const properties = value as Record<string, unknown>;
-        const count = Object.keys(properties).length;
-        return count > 0 ? `${count} propiedades` : 'Sin propiedades';
-      },
-    },
-    {
       key: 'createdAt' as keyof MachineModel,
       label: 'Creado',
-      render: (value: unknown) => new Date(value as string).toLocaleDateString('es-ES'),
+      render: (value: unknown) => formatDateSafe(value as string),
     },
   ];
 
@@ -179,8 +186,8 @@ export default function MachineModelsPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Modelos de Máquina</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('machineModels.title')}</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
               Gestiona los modelos de máquinas del sistema
             </p>
           </div>
@@ -194,7 +201,7 @@ export default function MachineModelsPage() {
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           <DataTable
             data={machineModels}
@@ -217,6 +224,13 @@ export default function MachineModelsPage() {
         size="md"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
+          {/* Campo oculto para companyId */}
+          <input
+            type="hidden"
+            {...register('companyId')}
+            value={session?.user?.companyId || ''}
+          />
+          
           <FormGroup>
             <FormLabel required>Nombre</FormLabel>
             <FormInput
@@ -236,6 +250,15 @@ export default function MachineModelsPage() {
           </FormGroup>
 
           <FormGroup>
+            <FormLabel required>Marca</FormLabel>
+            <FormInput
+              {...register('brand')}
+              error={errors.brand?.message}
+              placeholder="Marca del fabricante"
+            />
+          </FormGroup>
+
+          <FormGroup>
             <FormLabel required>Año</FormLabel>
             <FormInput
               type="number"
@@ -244,6 +267,7 @@ export default function MachineModelsPage() {
               placeholder="Año de fabricación"
             />
           </FormGroup>
+
 
           <div className="flex justify-end space-x-3 mt-6">
             <FormButton
@@ -265,40 +289,19 @@ export default function MachineModelsPage() {
       </Modal>
 
       {/* Delete Confirmation Modal */}
-      <Modal
+      <ConfirmationModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
         title="Confirmar Eliminación"
-        size="sm"
-      >
-        <div className="space-y-4">
-          <p className="text-gray-600">
-            ¿Estás seguro de que quieres eliminar este modelo de máquina?
-          </p>
-          {modelToDelete && (
-            <div className="bg-gray-50 p-4 rounded-md">
-              <p className="font-medium">{modelToDelete.name}</p>
-              <p className="text-sm text-gray-500">{modelToDelete.manufacturer} - {modelToDelete.year}</p>
-            </div>
-          )}
-          <div className="flex justify-end space-x-3">
-            <FormButton
-              type="button"
-              variant="secondary"
-              onClick={() => setShowDeleteModal(false)}
-            >
-              Cancelar
-            </FormButton>
-            <FormButton
-              type="button"
-              variant="danger"
-              onClick={confirmDelete}
-            >
-              Eliminar
-            </FormButton>
-          </div>
-        </div>
-      </Modal>
+        message="¿Estás seguro de que quieres eliminar este modelo de máquina?"
+        confirmText="Eliminar"
+        variant="danger"
+        itemDetails={modelToDelete ? {
+          name: modelToDelete.name,
+          description: `${modelToDelete.manufacturer} - ${modelToDelete.year}`
+        } : undefined}
+      />
     </div>
   );
 }
