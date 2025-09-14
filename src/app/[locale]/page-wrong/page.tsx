@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useTranslations } from 'next-intl';
-import Link from 'next/link';
+import { useTranslations } from "@/hooks/useTranslations";
+import Link from "next/link";
 
 export default function PageWrong() {
-  const t = useTranslations('errors');
+  const { t } = useTranslations();
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+    <div className="flex items-center justify-center min-h-[60vh]">
       <div className="max-w-md w-full space-y-8 text-center">
         <div>
           <div className="mx-auto h-24 w-24 text-gray-400 dark:text-gray-600">
@@ -27,13 +27,13 @@ export default function PageWrong() {
             </svg>
           </div>
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900 dark:text-white">
-            {t('title')}
+            {t("common.title")}
           </h2>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-            {t('description')}
+            {t("common.description")}
           </p>
         </div>
-        
+
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -41,22 +41,22 @@ export default function PageWrong() {
               className="group relative w-full sm:w-auto flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
             >
               <span className="mr-2">🏠</span>
-              {t('goHome')}
+              {t("common.goHome")}
             </Link>
-            
+
             <button
               onClick={() => window.history.back()}
               className="group relative w-full sm:w-auto flex justify-center py-2 px-4 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
             >
               <span className="mr-2">←</span>
-              {t('goBack')}
+              {t("common.goBack")}
             </button>
           </div>
         </div>
-        
+
         <div className="mt-8">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {t('errorCode')}: 404
+            {t("errors.errorCode")}: 404
           </p>
         </div>
       </div>

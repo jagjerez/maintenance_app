@@ -13,7 +13,6 @@ const intlMiddleware = createIntlMiddleware({
 
 // Define all valid routes in the application
 const validRoutes = [
-  '/',
   '/machines',
   '/machine-models', 
   '/maintenance-ranges',
@@ -28,18 +27,27 @@ const validRoutes = [
 
 // Check if a path is a valid route
 function isValidRoute(pathname: string): boolean {
-  // Remove locale prefix for checking
-  const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}/, '') || '/';
+  // Check if pathname starts with a valid locale prefix (with or without trailing slash)
+  const hasValidLocale = locales.some((locale: string) => 
+    pathname.startsWith(`/${locale}/`) || pathname === `/${locale}`
+  );
+  
+  // Remove locale prefix only if it exists, otherwise use the full pathname
+  const pathWithoutLocale = hasValidLocale 
+    ? pathname.replace(/^\/[a-z]{2,3}/, '') || '/'
+    : pathname;
 
   // Check if this is a not-found route - always consider it valid
   if (pathWithoutLocale === '/page-wrong') {
     return true;
   }
   
+  // Check if this is the root route with locale prefix (e.g., /es/ -> /)
+  if (pathWithoutLocale === '/' && hasValidLocale) {
+    return true;
+  }
+  
   return validRoutes.some(route => {
-    if (route === '/') {
-      return pathWithoutLocale === '/';
-    }
     return pathWithoutLocale.startsWith(route);
   });
 }
@@ -57,6 +65,11 @@ export default async function middleware(request: NextRequest) {
 
   // Handle internationalization first
   const intlResponse = intlMiddleware(request);
+  
+  // If intlMiddleware returned a redirect, use it
+  if (intlResponse.status === 307 || intlResponse.status === 308) {
+    return intlResponse;
+  }
   
   // Check if this is a valid route
   if (!isValidRoute(pathname)) {
