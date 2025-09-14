@@ -36,7 +36,9 @@
     "noDataAvailable": "No hay datos disponibles",
     "saving": "Guardando...",
     "update": "Actualizar",
-    "machine": "Máquina"
+    "machine": "Máquina",
+    "workOrder": "orden de trabajo",
+    "workOrders": "órdenes de trabajo"
   },
   "navigation": {
     "dashboard": "Panel de Control",
@@ -129,6 +131,7 @@
     "rangeUpdated": "Rango actualizado correctamente",
     "rangeDeleted": "Rango eliminado correctamente",
     "rangeError": "Error al guardar el rango",
+    "rangeInUse": "No se puede eliminar el rango de mantenimiento. Está siendo usado en {count} {workOrders}.",
     "rangeLoadError": "Error al cargar los rangos",
     "noRanges": "No hay rangos de mantenimiento",
     "startAddingRange": "Comienza agregando un nuevo rango de mantenimiento al sistema.",
@@ -149,23 +152,25 @@
     "deleteOperation": "Eliminar Operación",
     "operationName": "Nombre de la Operación",
     "description": "Descripción",
-    "estimatedDuration": "Duración Estimada",
-    "requiredSkills": "Habilidades Requeridas",
-    "tools": "Herramientas",
-    "materials": "Materiales",
-    "estimatedTime": "Tiempo Estimado (minutos)",
-    "requiredResources": "Recursos Requeridos",
+    "type": "Tipo de Operación",
     "operationCreated": "Operación creada correctamente",
     "operationUpdated": "Operación actualizada correctamente",
     "operationDeleted": "Operación eliminada correctamente",
     "operationError": "Error al guardar la operación",
     "operationLoadError": "Error al cargar las operaciones",
+    "operationInUse": "No se puede eliminar la operación porque está siendo usada en rangos de mantenimiento",
     "noOperations": "No hay operaciones",
     "startAddingOperation": "Comienza agregando una nueva operación al sistema.",
     "newOperation": "Nueva Operación",
     "subtitle": "Gestión de operaciones",
     "operation": "operación",
-    "resources": "Recursos"
+    "types": {
+      "text": "Texto",
+      "date": "Fecha",
+      "time": "Hora",
+      "datetime": "Fecha y Hora",
+      "boolean": "Booleano"
+    }
   },
   "workOrders": {
     "title": "Órdenes de Trabajo",
@@ -241,8 +246,7 @@
   "placeholders": {
     "operationName": "Nombre de la operación",
     "operationDescription": "Descripción de la operación",
-    "estimatedTimeMinutes": "Tiempo estimado en minutos",
-    "requiredResources": "Separados por comas (ej: herramienta1, herramienta2)",
+    "operationType": "Selecciona el tipo de operación",
     "modelName": "Nombre del modelo",
     "manufacturerName": "Nombre del fabricante",
     "manufacturerBrand": "Marca del fabricante",
@@ -260,6 +264,8 @@
     "maintenanceRangeName": "Nombre del rango de mantenimiento",
     "maintenanceRangeDescription": "Descripción del rango de mantenimiento",
     "operationNames": "Nombres de operaciones separados por comas",
+    "selectOperations": "Seleccionar operaciones...",
+    "operationsHelp": "Selecciona una o más operaciones para asociar con este rango de mantenimiento",
     "operationNamesHelp": "Escribe los nombres de las operaciones separados por comas",
     "key": "Clave",
     "value": "Valor"

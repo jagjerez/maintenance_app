@@ -36,7 +36,9 @@
     "noDataAvailable": "No data available",
     "saving": "Saving...",
     "update": "Update",
-    "machine": "Machine"
+    "machine": "Machine",
+    "workOrder": "work order",
+    "workOrders": "work orders"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -131,6 +133,7 @@
     "rangeUpdated": "Range updated successfully",
     "rangeDeleted": "Range deleted successfully",
     "rangeError": "Error saving range",
+    "rangeInUse": "Cannot delete maintenance range. It is being used in {count} {workOrders}.",
     "rangeLoadError": "Error loading ranges",
     "noRanges": "No maintenance ranges",
     "startAddingRange": "Start adding a new maintenance range to the system.",
@@ -149,23 +152,25 @@
     "deleteOperation": "Delete Operation",
     "operationName": "Operation Name",
     "description": "Description",
-    "estimatedDuration": "Estimated Duration",
-    "requiredSkills": "Required Skills",
-    "tools": "Tools",
-    "materials": "Materials",
-    "estimatedTime": "Estimated Time (minutes)",
-    "requiredResources": "Required Resources",
+    "type": "Operation Type",
     "operationCreated": "Operation created successfully",
     "operationUpdated": "Operation updated successfully",
     "operationDeleted": "Operation deleted successfully",
     "operationError": "Error saving operation",
     "operationLoadError": "Error loading operations",
+    "operationInUse": "Cannot delete operation because it is being used in maintenance ranges",
     "noOperations": "No operations",
     "startAddingOperation": "Start adding a new operation to the system.",
     "newOperation": "New Operation",
     "subtitle": "Operations management",
     "operation": "operation",
-    "resources": "Resources"
+    "types": {
+      "text": "Text",
+      "date": "Date",
+      "time": "Time",
+      "datetime": "Date and Time",
+      "boolean": "Boolean"
+    }
   },
   "workOrders": {
     "title": "Work Orders",
@@ -241,8 +246,7 @@
   "placeholders": {
     "operationName": "Operation name",
     "operationDescription": "Operation description",
-    "estimatedTimeMinutes": "Estimated time in minutes",
-    "requiredResources": "Separated by commas (e.g: tool1, tool2)",
+    "operationType": "Select operation type",
     "modelName": "Model name",
     "manufacturerName": "Manufacturer name",
     "manufacturerBrand": "Manufacturer brand",
@@ -260,6 +264,8 @@
     "maintenanceRangeName": "Maintenance range name",
     "maintenanceRangeDescription": "Maintenance range description",
     "operationNames": "Operation names separated by commas",
+    "selectOperations": "Select operations...",
+    "operationsHelp": "Select one or more operations to associate with this maintenance range",
     "operationNamesHelp": "Write the operation names separated by commas",
     "key": "Key",
     "value": "Value"

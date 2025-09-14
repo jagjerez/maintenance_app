@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from '@/hooks/useTranslations';
-import { Plus, Edit, Trash2, Clock, Wrench } from 'lucide-react';
+import { Plus, Edit, Trash2, Wrench } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Modal from '@/components/Modal';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
@@ -17,8 +17,7 @@ interface Operation {
   _id: string;
   name: string;
   description: string;
-  estimatedTime: number;
-  requiredResources: string[];
+  type: 'text' | 'date' | 'time' | 'datetime' | 'boolean';
   createdAt: string;
   updatedAt: string;
 }
@@ -48,12 +47,14 @@ export default function OperationsPage() {
   } = useForm({
     resolver: zodResolver(operationSchema),
     defaultValues: {
-      requiredResources: [],
+      name: '',
+      description: '',
+      type: undefined as 'text' | 'date' | 'time' | 'datetime' | 'boolean' | undefined,
     },
   });
 
   // Fetch operations with pagination
-  const fetchOperations = async (page = 1) => {
+  const fetchOperations = useCallback(async (page = 1) => {
     try {
       const response = await fetch(`/api/operations?page=${page}&limit=${ITEMS_PER_PAGE}`);
       if (response.ok) {
@@ -68,7 +69,7 @@ export default function OperationsPage() {
       console.error('Error fetching operations:', error);
       toast.error(t("operations.operationLoadError"));
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -77,9 +78,14 @@ export default function OperationsPage() {
       setLoading(false);
     };
     loadData();
-  }, [currentPage]);
+  }, [currentPage, fetchOperations]);
 
-  const onSubmit = async (data: { name: string; description: string; estimatedTime: number; requiredResources: string[]; companyId: string }) => {
+  const onSubmit = async (data: { 
+    name: string; 
+    description: string; 
+    type: 'text' | 'date' | 'time' | 'datetime' | 'boolean';
+    companyId: string 
+  }) => {
     try {
       const url = editingOperation ? `/api/operations/${editingOperation._id}` : '/api/operations';
       const method = editingOperation ? 'PUT' : 'POST';
@@ -91,7 +97,6 @@ export default function OperationsPage() {
         },
         body: JSON.stringify({
           ...data,
-          requiredResources: data.requiredResources,
           companyId: session?.user?.companyId,
         }),
       });
@@ -116,8 +121,7 @@ export default function OperationsPage() {
     reset({
       name: operation.name,
       description: operation.description,
-      estimatedTime: operation.estimatedTime,
-      requiredResources: operation.requiredResources,
+      type: operation.type,
     });
     setShowModal(true);
   };
@@ -135,7 +139,18 @@ export default function OperationsPage() {
         setDeleteModal({ isOpen: false, operation: null });
         toast.success(t("operations.operationDeleted"));
       } else {
-        toast.error(t("operations.operationError"));
+        const errorData = await response.json();
+        
+        if (response.status === 400 && errorData.message?.includes('maintenance ranges')) {
+          // Mostrar error específico cuando la operación está siendo usada
+          const maintenanceRanges = errorData.details?.maintenanceRanges || [];
+          const rangeNames = maintenanceRanges.map((range: { name: string }) => range.name).join(', ');
+          toast.error(
+            `${t("operations.operationInUse")} ${rangeNames ? `(${rangeNames})` : ''}`
+          );
+        } else {
+          toast.error(t("operations.operationError"));
+        }
       }
     } catch (error) {
       console.error('Error deleting operation:', error);
@@ -229,14 +244,11 @@ export default function OperationsPage() {
                         </p>
                         <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                           <div className="flex items-center space-x-1">
-                            <Clock className="h-4 w-4" />
-                            <span>{operation.estimatedTime} min</span>
+                            <span className="font-medium">{t("operations.type")}:</span>
+                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+                              {t(`operations.types.${operation.type}`)}
+                            </span>
                           </div>
-                          {operation.requiredResources.length > 0 && (
-                            <div className="flex items-center space-x-1">
-                              <span>{t("operations.resources")}: {operation.requiredResources.join(', ')}</span>
-                            </div>
-                          )}
                         </div>
                       </div>
                     </div>
@@ -315,22 +327,23 @@ export default function OperationsPage() {
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>{t("operations.estimatedTime")}</FormLabel>
-            <FormInput
-              type="number"
-              {...register('estimatedTime', { valueAsNumber: true })}
-              error={errors.estimatedTime?.message}
-              placeholder={t("placeholders.estimatedTimeMinutes")}
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <FormLabel>{t("operations.requiredResources")}</FormLabel>
-            <FormInput
-              {...register('requiredResources')}
-              error={errors.requiredResources?.message}
-              placeholder={t("placeholders.requiredResources")}
-            />
+            <FormLabel required>{t("operations.type")}</FormLabel>
+            <select
+              {...register('type')}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+            >
+              <option value="">{t("placeholders.operationType")}</option>
+              <option value="text">{t("operations.types.text")}</option>
+              <option value="date">{t("operations.types.date")}</option>
+              <option value="time">{t("operations.types.time")}</option>
+              <option value="datetime">{t("operations.types.datetime")}</option>
+              <option value="boolean">{t("operations.types.boolean")}</option>
+            </select>
+            {errors.type && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                {errors.type.message}
+              </p>
+            )}
           </FormGroup>
 
           <div className="flex justify-end space-x-3 mt-6">

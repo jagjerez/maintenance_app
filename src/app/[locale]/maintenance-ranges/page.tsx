@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -11,6 +11,7 @@ import Modal from '@/components/Modal';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { Form, FormGroup, FormLabel, FormInput, FormTextarea, FormSelect, FormButton } from '@/components/Form';
 import { Pagination } from '@/components/Pagination';
+import MultiSelect from '@/components/MultiSelect';
 import { maintenanceRangeSchema } from '@/lib/validations';
 
 interface Operation {
@@ -46,6 +47,7 @@ export default function MaintenanceRangesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
 
   const {
     register,
@@ -60,7 +62,7 @@ export default function MaintenanceRangesPage() {
   });
 
   // Fetch maintenance ranges with pagination
-  const fetchMaintenanceRanges = async (page = 1) => {
+  const fetchMaintenanceRanges = useCallback(async (page = 1) => {
     try {
       const response = await fetch(`/api/maintenance-ranges?page=${page}&limit=${ITEMS_PER_PAGE}`);
       if (response.ok) {
@@ -75,15 +77,15 @@ export default function MaintenanceRangesPage() {
       console.error('Error fetching maintenance ranges:', error);
       toast.error(t("maintenanceRanges.rangeLoadError"));
     }
-  };
+  }, [t]);
 
   // Fetch operations for dropdown
-  const fetchOperations = async () => {
+  const fetchOperations = useCallback(async () => {
     try {
-      const response = await fetch('/api/operations');
+      const response = await fetch('/api/operations?limit=1000'); // Get all operations for dropdown
       if (response.ok) {
         const data = await response.json();
-        setOperations(data);
+        setOperations(data.operations || data); // Handle both paginated and non-paginated responses
       } else {
         toast.error(t("operations.operationError"));
       }
@@ -91,7 +93,7 @@ export default function MaintenanceRangesPage() {
       console.error('Error fetching operations:', error);
       toast.error(t("operations.operationError"));
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -100,15 +102,12 @@ export default function MaintenanceRangesPage() {
       setLoading(false);
     };
     loadData();
-  }, [currentPage]);
+  }, [currentPage, fetchMaintenanceRanges, fetchOperations]);
 
-  const onSubmit = async (data: { name: string; type: string; description: string; operations: string[]; companyId: string }) => {
+  const onSubmit = async (data: { name: string; type: string; description: string; companyId: string }) => {
     try {
       const url = editingRange ? `/api/maintenance-ranges/${editingRange._id}` : '/api/maintenance-ranges';
       const method = editingRange ? 'PUT' : 'POST';
-
-      // Operations is already an array
-      const operationsArray = data.operations || [];
 
       const response = await fetch(url, {
         method,
@@ -117,7 +116,7 @@ export default function MaintenanceRangesPage() {
         },
         body: JSON.stringify({
           ...data,
-          operations: operationsArray,
+          operations: selectedOperations,
           companyId: session?.user?.companyId,
         }),
       });
@@ -126,6 +125,7 @@ export default function MaintenanceRangesPage() {
         await fetchMaintenanceRanges(currentPage);
         setShowModal(false);
         setEditingRange(null);
+        setSelectedOperations([]);
         reset();
         toast.success(editingRange ? t("maintenanceRanges.rangeUpdated") : t("maintenanceRanges.rangeCreated"));
       } else {
@@ -139,11 +139,11 @@ export default function MaintenanceRangesPage() {
 
   const handleEdit = (range: MaintenanceRange) => {
     setEditingRange(range);
+    setSelectedOperations(range.operations.map(op => op._id));
     reset({
       name: range.name,
       type: range.type,
       description: range.description,
-      operations: range.operations.map(op => op.name),
     });
     setShowModal(true);
   };
@@ -161,7 +161,19 @@ export default function MaintenanceRangesPage() {
         setDeleteModal({ isOpen: false, range: null });
         toast.success(t("maintenanceRanges.rangeDeleted"));
       } else {
-        toast.error(t("maintenanceRanges.rangeError"));
+        const errorData = await response.json();
+        
+        // Check if it's a validation error (range in use)
+        if (response.status === 400 && errorData.workOrdersCount) {
+          toast.error(
+            t("maintenanceRanges.rangeInUse", { 
+              count: errorData.workOrdersCount,
+              workOrders: errorData.workOrdersCount > 1 ? t("common.workOrders") : t("common.workOrder")
+            })
+          );
+        } else {
+          toast.error(errorData.message || t("maintenanceRanges.rangeError"));
+        }
       }
     } catch (error) {
       console.error('Error deleting maintenance range:', error);
@@ -224,6 +236,7 @@ export default function MaintenanceRangesPage() {
         <FormButton
           onClick={() => {
             setEditingRange(null);
+            setSelectedOperations([]);
             reset();
             setShowModal(true);
           }}
@@ -318,6 +331,7 @@ export default function MaintenanceRangesPage() {
         onClose={() => {
           setShowModal(false);
           setEditingRange(null);
+          setSelectedOperations([]);
           reset();
         }}
         title={editingRange ? t("maintenanceRanges.editRange") : t("maintenanceRanges.newRange")}
@@ -364,13 +378,19 @@ export default function MaintenanceRangesPage() {
 
           <FormGroup>
             <FormLabel>{t("maintenanceRanges.operations")}</FormLabel>
-            <FormInput
-              {...register('operations')}
+            <MultiSelect
+              options={(operations || []).map(op => ({
+                value: op._id,
+                label: op.name,
+                description: op.description
+              }))}
+              selectedValues={selectedOperations}
+              onChange={setSelectedOperations}
+              placeholder={t("placeholders.selectOperations")}
               error={errors.operations?.message}
-              placeholder={t("placeholders.operationNames")}
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              {t("placeholders.operationNamesHelp")}
+              {t("placeholders.operationsHelp")}
             </p>
           </FormGroup>
 
@@ -381,6 +401,7 @@ export default function MaintenanceRangesPage() {
               onClick={() => {
                 setShowModal(false);
                 setEditingRange(null);
+                setSelectedOperations([]);
                 reset();
               }}
             >

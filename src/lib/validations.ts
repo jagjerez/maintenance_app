@@ -78,8 +78,9 @@ export const machineUpdateSchema = machineSchema.partial();
 export const operationSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
   description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
-  estimatedTime: z.number().min(1, 'Estimated time must be at least 1 minute'),
-  requiredResources: z.array(z.string()).default([]),
+  type: z.enum(['text', 'date', 'time', 'datetime', 'boolean'], {
+    message: 'Type must be one of: text, date, time, datetime, boolean'
+  }),
   companyId: z.string().min(1, 'Company is required'),
 });
 

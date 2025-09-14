@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/db';
-import { Operation } from '@/models';
+import { Operation, MaintenanceRange } from '@/models';
 import { operationUpdateSchema } from '@/lib/validations';
 import { authOptions } from '@/lib/auth';
 
@@ -104,7 +104,9 @@ export async function DELETE(
 
     await connectDB();
     const { id } = await params;
-    const operation = await Operation.findOneAndDelete({ 
+    
+    // Verificar si la operación existe
+    const operation = await Operation.findOne({ 
       _id: id, 
       companyId: session.user.companyId 
     });
@@ -115,6 +117,31 @@ export async function DELETE(
         { status: 404 }
       );
     }
+
+    // Verificar si la operación está siendo usada en algún maintenance range
+    const maintenanceRangesUsingOperation = await MaintenanceRange.find({
+      operations: id,
+      companyId: session.user.companyId
+    });
+
+    if (maintenanceRangesUsingOperation.length > 0) {
+      return NextResponse.json(
+        { 
+          error: 'Cannot delete operation', 
+          message: 'This operation is being used in one or more maintenance ranges and cannot be deleted',
+          details: {
+            maintenanceRanges: maintenanceRangesUsingOperation.map(range => ({
+              id: range._id,
+              name: range.name
+            }))
+          }
+        },
+        { status: 400 }
+      );
+    }
+
+    // Si no está siendo usada, proceder con la eliminación
+    await Operation.findByIdAndDelete(id);
     
     return NextResponse.json({ message: 'Operation deleted successfully' });
   } catch (error) {

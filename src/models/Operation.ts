@@ -1,11 +1,10 @@
-import mongoose, { Schema, Document } from 'mongoose';
+import mongoose, { Schema } from 'mongoose';
 
 export interface IOperation {
   _id: string;
   name: string;
   description: string;
-  estimatedTime: number; // in minutes
-  requiredResources: string[];
+  type: 'text' | 'date' | 'time' | 'datetime' | 'boolean';
   companyId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -22,15 +21,11 @@ const OperationSchema = new Schema({
     required: [true, 'Description is required'],
     trim: true,
   },
-  estimatedTime: {
-    type: Number,
-    required: [true, 'Estimated time is required'],
-    min: [1, 'Estimated time must be at least 1 minute'],
-  },
-  requiredResources: [{
+  type: {
     type: String,
-    trim: true,
-  }],
+    required: [true, 'Type is required'],
+    enum: ['text', 'date', 'time', 'datetime', 'boolean'],
+  },
   companyId: {
     type: Schema.Types.ObjectId,
     ref: 'Company',
@@ -44,4 +39,9 @@ const OperationSchema = new Schema({
 OperationSchema.index({ name: 1 });
 OperationSchema.index({ companyId: 1 });
 
-export default mongoose.models.Operation || mongoose.model<IOperation>('Operation', OperationSchema);
+// Force recreation of the model to avoid cached schema issues
+if (mongoose.models.Operation) {
+  delete mongoose.models.Operation;
+}
+
+export default mongoose.model<IOperation>('Operation', OperationSchema);

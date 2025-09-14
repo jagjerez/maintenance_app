@@ -5,7 +5,7 @@ import { Operation } from '@/models';
 import { operationSchema } from '@/lib/validations';
 import { authOptions } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.companyId) {
@@ -16,10 +16,35 @@ export async function GET() {
     }
 
     await connectDB();
+    
+    // Obtener parámetros de paginación de la URL
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const skip = (page - 1) * limit;
+
+    // Contar total de operaciones
+    const totalItems = await Operation.countDocuments({ 
+      companyId: session.user.companyId 
+    });
+
+    // Obtener operaciones con paginación
     const operations = await Operation.find({ 
       companyId: session.user.companyId 
-    }).sort({ createdAt: -1 });
-    return NextResponse.json(operations);
+    })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit);
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return NextResponse.json({
+      operations,
+      totalItems,
+      totalPages,
+      currentPage: page,
+      itemsPerPage: limit
+    });
   } catch (error) {
     console.error('Error fetching operations:', error);
     return NextResponse.json(

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/db';
-import { MaintenanceRange } from '@/models';
+import { MaintenanceRange, WorkOrder } from '@/models';
 import { maintenanceRangeUpdateSchema } from '@/lib/validations';
 import { authOptions } from '@/lib/auth';
 
@@ -104,7 +104,9 @@ export async function DELETE(
 
     await connectDB();
     const { id } = await params;
-    const maintenanceRange = await MaintenanceRange.findOneAndDelete({ 
+    
+    // Check if maintenance range exists
+    const maintenanceRange = await MaintenanceRange.findOne({ 
       _id: id, 
       companyId: session.user.companyId 
     });
@@ -115,6 +117,29 @@ export async function DELETE(
         { status: 404 }
       );
     }
+
+    // Check if maintenance range is being used in any work orders
+    const workOrdersUsingRange = await WorkOrder.countDocuments({
+      maintenanceRange: id,
+      companyId: session.user.companyId
+    });
+
+    if (workOrdersUsingRange > 0) {
+      return NextResponse.json(
+        { 
+          error: 'Cannot delete maintenance range',
+          message: `This maintenance range is being used in ${workOrdersUsingRange} work order${workOrdersUsingRange > 1 ? 's' : ''}. Please remove it from all work orders before deleting.`,
+          workOrdersCount: workOrdersUsingRange
+        },
+        { status: 400 }
+      );
+    }
+
+    // If not in use, proceed with deletion
+    await MaintenanceRange.findOneAndDelete({ 
+      _id: id, 
+      companyId: session.user.companyId 
+    });
     
     return NextResponse.json({ message: 'Maintenance range deleted successfully' });
   } catch (error) {
