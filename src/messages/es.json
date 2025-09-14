@@ -22,7 +22,16 @@
     "all": "Todos",
     "none": "Ninguno",
     "required": "Requerido",
-    "optional": "Opcional"
+    "optional": "Opcional",
+    "year": "Año",
+    "brand": "Marca",
+    "manufacturer": "Fabricante",
+    "name": "Nombre",
+    "createdAt": "Creado",
+    "noDataAvailable": "No hay datos disponibles",
+    "saving": "Guardando...",
+    "update": "Actualizar",
+    "machine": "Máquina"
   },
   "navigation": {
     "dashboard": "Panel de Control",
@@ -34,9 +43,6 @@
     "settings": "Configuración",
     "signOut": "Cerrar Sesión",
     "profile": "Perfil"
-  },
-  "dashboard": {
-    "subtitle": "Resumen del sistema de mantenimiento"
   },
   "auth": {
     "signIn": "Iniciar Sesión",
@@ -68,7 +74,18 @@
     "nextMaintenance": "Próximo Mantenimiento",
     "active": "Activa",
     "inactive": "Inactiva",
-    "maintenance": "En Mantenimiento"
+    "maintenance": "En Mantenimiento",
+    "noMachines": "No hay máquinas",
+    "startAddingMachine": "Comienza agregando una nueva máquina al sistema.",
+    "selectModel": "Seleccionar Modelo",
+    "newMachine": "Nueva Máquina",
+    "subtitle": "Gestión de máquinas",
+    "machineCreated": "Máquina creada correctamente",
+    "machineUpdated": "Máquina actualizada correctamente",
+    "machineDeleted": "Máquina eliminada correctamente",
+    "machineError": "Error al guardar la máquina",
+    "machineLoadError": "Error al cargar las máquinas",
+    "companyError": "Error al obtener la información de la empresa"
   },
   "machineModels": {
     "title": "Modelos de Máquinas",
@@ -80,7 +97,15 @@
     "description": "Descripción",
     "specifications": "Especificaciones",
     "maintenanceInterval": "Intervalo de Mantenimiento",
-    "warrantyPeriod": "Período de Garantía"
+    "warrantyPeriod": "Período de Garantía",
+    "newModel": "Nuevo Modelo",
+    "updateModel": "Actualizar Modelo",
+    "subtitle": "Gestión de modelos de máquinas",
+    "modelUpdated": "Modelo actualizado correctamente",
+    "modelCreated": "Modelo creado correctamente",
+    "modelError": "Error al guardar el modelo",
+    "modelDeleted": "Modelo eliminado correctamente",
+    "companyError": "Error al obtener la información de la empresa"
   },
   "maintenanceRanges": {
     "title": "Rangos de Mantenimiento",
@@ -123,7 +148,10 @@
     "pending": "Pendiente",
     "inProgress": "En Progreso",
     "completed": "Completada",
-    "cancelled": "Cancelada"
+    "cancelled": "Cancelada",
+    "viewAll": "Ver todas",
+    "noWorkOrders": "No hay órdenes de trabajo",
+    "startCreatingWorkOrder": "Comienza creando una nueva orden de trabajo."
   },
   "settings": {
     "title": "Configuración",
@@ -134,6 +162,68 @@
     "company": "Empresa",
     "users": "Usuarios",
     "preferences": "Preferencias"
+  },
+  "success": {
+    "saved": "Guardado exitosamente",
+    "deleted": "Eliminado exitosamente",
+    "created": "Creado exitosamente",
+    "updated": "Actualizado exitosamente",
+    "sent": "Enviado exitosamente"
+  },
+  "language": {
+    "select": "Seleccionar idioma",
+    "current": "Idioma actual"
+  },
+  "placeholders": {
+    "operationName": "Nombre de la operación",
+    "operationDescription": "Descripción de la operación",
+    "estimatedTimeMinutes": "Tiempo estimado en minutos",
+    "requiredResources": "Separados por comas (ej: herramienta1, herramienta2)",
+    "modelName": "Nombre del modelo",
+    "manufacturerName": "Nombre del fabricante",
+    "manufacturerBrand": "Marca del fabricante",
+    "manufacturingYear": "Año de fabricación",
+    "machineLocation": "Ubicación de la máquina",
+    "companyName": "Nombre de la empresa",
+    "appName": "Nombre de la aplicación",
+    "email": "tu@email.com",
+    "fullName": "Tu nombre completo",
+    "password": "Tu contraseña",
+    "confirmPassword": "Confirma tu contraseña",
+    "workOrderDescription": "Descripción de la orden de trabajo",
+    "technicianName": "Nombre del técnico",
+    "additionalNotes": "Notas adicionales",
+    "maintenanceRangeName": "Nombre del rango de mantenimiento",
+    "maintenanceRangeDescription": "Descripción del rango de mantenimiento",
+    "operationNames": "Nombres de operaciones separados por comas",
+    "operationNamesHelp": "Escribe los nombres de las operaciones separados por comas",
+    "key": "Clave",
+    "value": "Valor"
+  },
+  "dynamicProperties": {
+    "title": "Propiedades Dinámicas",
+    "add": "Agregar",
+    "noProperties": "No hay propiedades dinámicas. Haz clic en \"Agregar\" para añadir una."
+  },
+  "modals": {
+    "deleteOperation": "Eliminar Operación",
+    "deleteOperationMessage": "¿Estás seguro de que quieres eliminar esta operación? Esta acción no se puede deshacer.",
+    "confirmDeletion": "Confirmar Eliminación",
+    "deleteModelMessage": "¿Estás seguro de que quieres eliminar este modelo de máquina?",
+    "deleteMachine": "Eliminar Máquina",
+    "deleteMachineMessage": "¿Estás seguro de que quieres eliminar esta máquina? Esta acción no se puede deshacer.",
+    "deleteWorkOrder": "Eliminar Orden de Trabajo",
+    "deleteWorkOrderMessage": "¿Estás seguro de que quieres eliminar esta orden de trabajo? Esta acción no se puede deshacer.",
+    "deleteMaintenanceRange": "Eliminar Rango de Mantenimiento",
+    "deleteMaintenanceRangeMessage": "¿Estás seguro de que quieres eliminar este rango de mantenimiento? Esta acción no se puede deshacer."
+  },
+  "dashboard": {
+    "subtitle": "Resumen del sistema de mantenimiento",
+    "preventive": "Preventivo",
+    "corrective": "Correctivo",
+    "systemSummary": "Resumen del sistema",
+    "fastActions": "Acciones Rápidas",
+    "recentWorkOrders": "Órdenes de Trabajo Recientes"
   },
   "errors": {
     "required": "Este campo es requerido",
@@ -147,17 +237,17 @@
     "networkError": "Error de red",
     "unauthorized": "No autorizado",
     "forbidden": "Acceso denegado",
-    "notFound": "No encontrado"
+    "notFound": "No encontrado",
+    "fetchWorkOrdersFailed": "Error al obtener las órdenes de trabajo",
+    "fetchDashboardDataError": "Error al obtener los datos del panel"
   },
-  "success": {
-    "saved": "Guardado exitosamente",
-    "deleted": "Eliminado exitosamente",
-    "created": "Creado exitosamente",
-    "updated": "Actualizado exitosamente",
-    "sent": "Enviado exitosamente"
+  "app": {
+    "defaultName": "Mantenimiento"
   },
-  "language": {
-    "select": "Seleccionar idioma",
-    "current": "Idioma actual"
+  "pagination": {
+    "showing": "Mostrando",
+    "to": "a",
+    "results": "resultados",
+    "of": "de"
   }
 }

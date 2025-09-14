@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sistema de Mantenimiento",
+  title: "Maintenance System",
   description: "Sistema de gestión de mantenimiento preventivo y correctivo",
 };
 

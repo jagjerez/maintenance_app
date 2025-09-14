@@ -410,7 +410,7 @@ export default function WorkOrdersPage() {
             <FormTextarea
               {...register('description')}
               error={errors.description?.message}
-              placeholder="Descripción de la orden de trabajo"
+              placeholder={t("placeholders.workOrderDescription")}
               rows={3}
             />
           </FormGroup>
@@ -453,7 +453,7 @@ export default function WorkOrdersPage() {
               <FormInput
                 {...register('assignedTo')}
                 error={errors.assignedTo?.message}
-                placeholder="Nombre del técnico"
+                placeholder={t("placeholders.technicianName")}
               />
             </FormGroup>
           </div>
@@ -463,7 +463,7 @@ export default function WorkOrdersPage() {
             <FormTextarea
               {...register('notes')}
               error={errors.notes?.message}
-              placeholder="Notas adicionales"
+              placeholder={t("placeholders.additionalNotes")}
               rows={2}
             />
           </FormGroup>
@@ -495,10 +495,10 @@ export default function WorkOrdersPage() {
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, workOrder: null })}
         onConfirm={handleDelete}
-        title="Eliminar Orden de Trabajo"
-        message="¿Estás seguro de que quieres eliminar esta orden de trabajo? Esta acción no se puede deshacer."
-        confirmText="Eliminar"
-        cancelText="Cancelar"
+        title={t("modals.deleteWorkOrder")}
+        message={t("modals.deleteWorkOrderMessage")}
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
         variant="danger"
         itemDetails={deleteModal.workOrder ? {
           name: `${deleteModal.workOrder.machine.model.name} - ${deleteModal.workOrder.machine.location}`,

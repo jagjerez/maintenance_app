@@ -63,7 +63,7 @@ export default function Dashboard() {
       // Fetch work orders
       const workOrdersResponse = await fetch("/api/work-orders");
       if (!workOrdersResponse.ok) {
-        throw new Error("Failed to fetch work orders");
+        throw new Error(t("errors.fetchWorkOrdersFailed"));
       }
       const workOrdersData = await workOrdersResponse.json();
       setWorkOrders(workOrdersData.slice(0, 5)); // Show only latest 5
@@ -106,7 +106,7 @@ export default function Dashboard() {
         totalOperations: operations.length,
       });
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      console.error(t("errors.fetchDashboardDataError"), error);
       toast.error(t("errors.serverError"));
     } finally {
       setLoading(false);
@@ -260,7 +260,7 @@ export default function Dashboard() {
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
-              Acciones Rápidas
+              {t("dashboard.fastActions")}
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <Link
@@ -284,7 +284,7 @@ export default function Dashboard() {
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
-              Resumen del Sistema
+              {t("dashboard.systemSummary")}
             </h3>
             <dl className="grid grid-cols-2 gap-4">
               <div>
@@ -329,13 +329,13 @@ export default function Dashboard() {
         <div className="px-4 py-5 sm:p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-              Órdenes de Trabajo Recientes
+              {t("dashboard.recentWorkOrders")}
             </h3>
             <Link
               href="/work-orders"
               className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
             >
-              Ver todas
+              {t("workOrders.viewAll")}
             </Link>
           </div>
 
@@ -343,10 +343,10 @@ export default function Dashboard() {
             <div className="text-center py-8">
               <FileText className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
               <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                No hay órdenes de trabajo
+                {t("workOrders.noWorkOrders")}
               </h3>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Comienza creando una nueva orden de trabajo.
+                {t("workOrders.startCreatingWorkOrder")}
               </p>
               <div className="mt-6">
                 <Link
@@ -406,8 +406,8 @@ export default function Dashboard() {
                           )}`}
                         >
                           {workOrder.maintenanceRange.type === "preventive"
-                            ? "Preventivo"
-                            : "Correctivo"}
+                            ? t("dashboard.preventive")
+                            : t("dashboard.corrective")}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

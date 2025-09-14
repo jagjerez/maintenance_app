@@ -88,7 +88,7 @@ export default function Navigation() {
             <div className="flex-shrink-0 flex items-center">
               <Wrench className="h-8 w-8 text-blue-600 dark:text-blue-400" />
               <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white truncate max-w-32 sm:max-w-none">
-                {session.user.company?.appName || "Mantenimiento"}
+                {session.user.company?.appName || t("app.defaultName")}
               </span>
             </div>
 

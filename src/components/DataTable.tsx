@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/hooks/useTranslations';
 
 interface Column<T> {
   key: keyof T;
@@ -25,10 +26,11 @@ export default function DataTable<T extends { _id: string }>({
   onDelete,
   className
 }: DataTableProps<T>) {
+  const { t } = useTranslations();
   if (data.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500 dark:text-gray-400">No hay datos disponibles</p>
+        <p className="text-gray-500 dark:text-gray-400">{t("common.noDataAvailable")}</p>
       </div>
     );
   }
@@ -80,7 +82,7 @@ export default function DataTable<T extends { _id: string }>({
                         onClick={() => onEdit(item)}
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                       >
-                        Editar
+                        {t("common.edit")}
                       </button>
                     )}
                     {onDelete && (
@@ -88,7 +90,7 @@ export default function DataTable<T extends { _id: string }>({
                         onClick={() => onDelete(item)}
                         className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                       >
-                        Eliminar
+                        {t("common.delete")}
                       </button>
                     )}
                   </div>

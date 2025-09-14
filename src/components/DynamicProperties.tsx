@@ -1,6 +1,7 @@
 'use client';
 import { Plus, X } from 'lucide-react';
 import { DynamicProperty } from '@/lib/validations';
+import { useTranslations } from '@/hooks/useTranslations';
 
 interface DynamicPropertiesProps {
   properties: DynamicProperty[];
@@ -13,6 +14,7 @@ export default function DynamicProperties({
   onChange, 
   className = '' 
 }: DynamicPropertiesProps) {
+  const { t } = useTranslations();
   const addProperty = () => {
     onChange([...properties, { key: '', value: '' }]);
   };
@@ -32,7 +34,7 @@ export default function DynamicProperties({
     <div className={`space-y-4 ${className}`}>
       <div className="flex items-center justify-between">
         <label className="text-sm font-medium text-gray-700">
-          Propiedades Dinámicas
+          {t("dynamicProperties.title")}
         </label>
         <button
           type="button"
@@ -40,7 +42,7 @@ export default function DynamicProperties({
           className="inline-flex items-center px-3 py-1.5 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
           <Plus className="h-4 w-4 mr-1" />
-          Agregar
+          {t("dynamicProperties.add")}
         </button>
       </div>
 
@@ -48,14 +50,14 @@ export default function DynamicProperties({
         <div key={index} className="flex gap-2">
           <input
             type="text"
-            placeholder="Clave"
+            placeholder={t("placeholders.key")}
             value={property.key}
             onChange={(e) => updateProperty(index, 'key', e.target.value)}
             className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
           <input
             type="text"
-            placeholder="Valor"
+            placeholder={t("placeholders.value")}
             value={property.value}
             onChange={(e) => updateProperty(index, 'value', e.target.value)}
             className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -72,7 +74,7 @@ export default function DynamicProperties({
 
       {properties.length === 0 && (
         <p className="text-sm text-gray-500 italic">
-          No hay propiedades dinámicas. Haz clic en &quot;Agregar&quot; para añadir una.
+          {t("dynamicProperties.noProperties")}
         </p>
       )}
     </div>

@@ -9,7 +9,7 @@ import { MongoClient } from 'mongodb';
 const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017/maintenance_app');
 
 export const authOptions: NextAuthOptions = {
-  adapter: MongoDBAdapter(client),
+  // adapter: MongoDBAdapter(client), // Temporarily disabled due to type conflicts
   providers: [
     CredentialsProvider({
       name: 'credentials',
@@ -82,7 +82,6 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/auth/signin',
-    signUp: '/auth/signup',
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

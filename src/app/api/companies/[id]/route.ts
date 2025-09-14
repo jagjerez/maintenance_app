@@ -21,8 +21,8 @@ export async function GET(
     await connectDB();
     const { id } = await params;
     const company = await Company.findOne({ 
-      _id: id, 
-      _id: session.user.companyId 
+      _id: id,
+      companyId: session.user.companyId 
     });
     
     if (!company) {

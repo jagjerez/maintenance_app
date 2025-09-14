@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useTranslations } from '@/hooks/useTranslations';
 
 interface PaginationProps {
   currentPage: number;
@@ -20,6 +21,7 @@ export function Pagination({
   itemsPerPage,
   className
 }: PaginationProps) {
+  const { t } = useTranslations();
   const startItem = (currentPage - 1) * itemsPerPage + 1;
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
@@ -71,9 +73,9 @@ export function Pagination({
       <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-gray-700 dark:text-gray-300">
-            Mostrando <span className="font-medium">{startItem}</span> a{' '}
-            <span className="font-medium">{endItem}</span> de{' '}
-            <span className="font-medium">{totalItems}</span> resultados
+            {t("pagination.showing")} <span className="font-medium">{totalPages <= 1 ? 0 : startItem}</span> {t("pagination.to")} {' '}
+            <span className="font-medium">{endItem}</span> {t("pagination.of")}{' '}
+            <span className="font-medium">{totalItems}</span> {t("pagination.results")}
           </p>
         </div>
         <div>

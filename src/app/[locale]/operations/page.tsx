@@ -288,7 +288,7 @@ export default function OperationsPage() {
             <FormInput
               {...register('name')}
               error={errors.name?.message}
-              placeholder="Nombre de la operación"
+              placeholder={t("placeholders.operationName")}
             />
           </FormGroup>
 
@@ -297,7 +297,7 @@ export default function OperationsPage() {
             <FormTextarea
               {...register('description')}
               error={errors.description?.message}
-              placeholder="Descripción de la operación"
+              placeholder={t("placeholders.operationDescription")}
               rows={3}
             />
           </FormGroup>
@@ -308,7 +308,7 @@ export default function OperationsPage() {
               type="number"
               {...register('estimatedTime', { valueAsNumber: true })}
               error={errors.estimatedTime?.message}
-              placeholder="Tiempo estimado en minutos"
+              placeholder={t("placeholders.estimatedTimeMinutes")}
             />
           </FormGroup>
 
@@ -317,7 +317,7 @@ export default function OperationsPage() {
             <FormInput
               {...register('requiredResources')}
               error={errors.requiredResources?.message}
-              placeholder="Separados por comas (ej: herramienta1, herramienta2)"
+              placeholder={t("placeholders.requiredResources")}
             />
           </FormGroup>
 
@@ -348,10 +348,10 @@ export default function OperationsPage() {
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, operation: null })}
         onConfirm={handleDelete}
-        title="Eliminar Operación"
-        message="¿Estás seguro de que quieres eliminar esta operación? Esta acción no se puede deshacer."
-        confirmText="Eliminar"
-        cancelText="Cancelar"
+        title={t("modals.deleteOperation")}
+        message={t("modals.deleteOperationMessage")}
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
         variant="danger"
         itemDetails={deleteModal.operation ? {
           name: deleteModal.operation.name,

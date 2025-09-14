@@ -65,11 +65,11 @@ export default function MachineModelsPage() {
         setTotalPages(data.totalPages || Math.ceil((data.machineModels || data).length / ITEMS_PER_PAGE));
         setTotalItems(data.totalItems || (data.machineModels || data).length);
       } else {
-        toast.error('Error al cargar los modelos de máquinas');
+        toast.error(t("machineModels.modelError"));
       }
     } catch (error) {
       console.error('Error fetching machine models:', error);
-      toast.error('Error al cargar los modelos de máquinas');
+      toast.error(t("machineModels.modelError"));
     } finally {
       setLoading(false);
     }
@@ -78,7 +78,7 @@ export default function MachineModelsPage() {
   const onSubmit = async (data: { name: string; manufacturer: string; brand: string; year: number; companyId: string; }) => {
     try {
       if (!session?.user?.companyId) {
-        toast.error('No se pudo obtener la información de la empresa');
+        toast.error(t("machineModels.companyError"));
         return;
       }
 
@@ -94,18 +94,18 @@ export default function MachineModelsPage() {
       });
 
       if (response.ok) {
-        toast.success(editingModel ? 'Modelo actualizado correctamente' : 'Modelo creado correctamente');
+        toast.success(editingModel ? t("machineModels.modelUpdated") : t("machineModels.modelCreated"));
         fetchMachineModels(currentPage);
         setShowModal(false);
         setEditingModel(null);
         reset();
       } else {
         const error = await response.json();
-        toast.error(error.error || 'Error al guardar el modelo');
+        toast.error(error.error || t("machineModels.modelError"));
       }
     } catch (error) {
       console.error('Error saving machine model:', error);
-      toast.error('Error al guardar el modelo');
+      toast.error(t("machineModels.modelError"));
     }
   };
 
@@ -132,14 +132,14 @@ export default function MachineModelsPage() {
       });
 
       if (response.ok) {
-        toast.success('Modelo eliminado correctamente');
+        toast.success(t("machineModels.modelDeleted"));
         fetchMachineModels(currentPage);
       } else {
-        toast.error('Error al eliminar el modelo');
+        toast.error(t("machineModels.modelError"));
       }
     } catch (error) {
       console.error('Error deleting machine model:', error);
-      toast.error('Error al eliminar el modelo');
+      toast.error(t("machineModels.modelError"));
     } finally {
       setShowDeleteModal(false);
       setModelToDelete(null);
@@ -159,23 +159,23 @@ export default function MachineModelsPage() {
   const columns = [
     {
       key: 'name' as keyof MachineModel,
-      label: 'Nombre',
+      label: t("common.name"),
     },
     {
       key: 'manufacturer' as keyof MachineModel,
-      label: 'Fabricante',
+      label: t("common.manufacturer"),
     },
     {
       key: 'brand' as keyof MachineModel,
-      label: 'Marca',
+      label: t("common.brand"),
     },
     {
       key: 'year' as keyof MachineModel,
-      label: 'Año',
+      label: t("common.year"),
     },
     {
       key: 'createdAt' as keyof MachineModel,
-      label: 'Creado',
+      label: t("common.createdAt"),
       render: (value: unknown) => formatDateSafe(value as string),
     },
   ];
@@ -204,7 +204,7 @@ export default function MachineModelsPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('machineModels.title')}</h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400">
-              Gestiona los modelos de máquinas del sistema
+               {t("machineModels.subtitle")}
             </p>
           </div>
           <button
@@ -212,7 +212,7 @@ export default function MachineModelsPage() {
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Nuevo Modelo
+            {t("machineModels.newModel")}
           </button>
         </div>
       </div>
@@ -246,7 +246,7 @@ export default function MachineModelsPage() {
           setEditingModel(null);
           reset();
         }}
-        title={editingModel ? 'Editar Modelo' : 'Nuevo Modelo'}
+        title={editingModel ? t("machineModels.editModel") : t("machineModels.newModel")}
         size="md"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
@@ -258,39 +258,39 @@ export default function MachineModelsPage() {
           />
           
           <FormGroup>
-            <FormLabel required>Nombre</FormLabel>
+            <FormLabel required>{t("common.name")}</FormLabel>
             <FormInput
               {...register('name')}
               error={errors.name?.message}
-              placeholder="Nombre del modelo"
+              placeholder={t("placeholders.modelName")}
             />
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>Fabricante</FormLabel>
+            <FormLabel required>{t("common.manufacturer")}</FormLabel>
             <FormInput
               {...register('manufacturer')}
               error={errors.manufacturer?.message}
-              placeholder="Nombre del fabricante"
+              placeholder={t("placeholders.manufacturerName")}
             />
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>Marca</FormLabel>
+            <FormLabel required>{t("common.brand")}</FormLabel>
             <FormInput
               {...register('brand')}
               error={errors.brand?.message}
-              placeholder="Marca del fabricante"
+              placeholder={t("placeholders.manufacturerBrand")}
             />
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>Año</FormLabel>
+            <FormLabel required>{t("common.year")}</FormLabel>
             <FormInput
               type="number"
               {...register('year', { valueAsNumber: true })}
               error={errors.year?.message}
-              placeholder="Año de fabricación"
+              placeholder={t("placeholders.manufacturingYear")}
             />
           </FormGroup>
 
@@ -305,10 +305,10 @@ export default function MachineModelsPage() {
                 reset();
               }}
             >
-              Cancelar
+              {t("common.cancel")}
             </FormButton>
             <FormButton type="submit">
-              {editingModel ? 'Actualizar' : 'Crear'}
+              {editingModel ? t("common.update") : t("common.create")}
             </FormButton>
           </div>
         </Form>
@@ -319,9 +319,9 @@ export default function MachineModelsPage() {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={confirmDelete}
-        title="Confirmar Eliminación"
-        message="¿Estás seguro de que quieres eliminar este modelo de máquina?"
-        confirmText="Eliminar"
+        title={t("modals.confirmDeletion")}
+        message={t("modals.deleteModelMessage")}
+        confirmText={t("common.delete")}
         variant="danger"
         itemDetails={modelToDelete ? {
           name: modelToDelete.name,

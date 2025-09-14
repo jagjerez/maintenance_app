@@ -83,7 +83,7 @@ export default function SignInPage() {
                 type="email"
                 autoComplete="email"
                 className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                placeholder="tu@email.com"
+                placeholder={t("placeholders.email")}
               />
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600 dark:text-red-400">
@@ -101,7 +101,7 @@ export default function SignInPage() {
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="current-password"
                   className="appearance-none relative block w-full px-3 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-md placeholder-gray-500 dark:placeholder-gray-400 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
-                  placeholder="Tu contraseña"
+                  placeholder={t("placeholders.password")}
                 />
                 <button
                   type="button"

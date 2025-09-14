@@ -321,7 +321,7 @@ export default function MaintenanceRangesPage() {
             <FormInput
               {...register('name')}
               error={errors.name?.message}
-              placeholder="Nombre del rango de mantenimiento"
+              placeholder={t("placeholders.maintenanceRangeName")}
             />
           </FormGroup>
 
@@ -342,7 +342,7 @@ export default function MaintenanceRangesPage() {
             <FormTextarea
               {...register('description')}
               error={errors.description?.message}
-              placeholder="Descripción del rango de mantenimiento"
+              placeholder={t("placeholders.maintenanceRangeDescription")}
               rows={3}
             />
           </FormGroup>
@@ -352,10 +352,10 @@ export default function MaintenanceRangesPage() {
             <FormInput
               {...register('operations')}
               error={errors.operations?.message}
-              placeholder="Nombres de operaciones separados por comas"
+              placeholder={t("placeholders.operationNames")}
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-              Escribe los nombres de las operaciones separados por comas
+              {t("placeholders.operationNamesHelp")}
             </p>
           </FormGroup>
 
@@ -386,10 +386,10 @@ export default function MaintenanceRangesPage() {
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, range: null })}
         onConfirm={handleDelete}
-        title="Eliminar Rango de Mantenimiento"
-        message="¿Estás seguro de que quieres eliminar este rango de mantenimiento? Esta acción no se puede deshacer."
-        confirmText="Eliminar"
-        cancelText="Cancelar"
+        title={t("modals.deleteMaintenanceRange")}
+        message={t("modals.deleteMaintenanceRangeMessage")}
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
         variant="danger"
         itemDetails={deleteModal.range ? {
           name: deleteModal.range.name,

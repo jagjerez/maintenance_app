@@ -44,7 +44,7 @@ export default function SettingsPage() {
       setSettings(prev => ({
         ...prev,
         [parent]: {
-          ...prev[parent as keyof typeof prev],
+          ...(prev[parent as keyof typeof prev] as any),
           [child]: value,
         },
       }));
@@ -82,7 +82,7 @@ export default function SettingsPage() {
               <FormInput
                 value={settings.companyName}
                 onChange={(e) => handleInputChange('companyName', e.target.value)}
-                placeholder="Nombre de la empresa"
+                placeholder={t("placeholders.companyName")}
               />
             </FormGroup>
             <FormGroup>
@@ -90,7 +90,7 @@ export default function SettingsPage() {
               <FormInput
                 value={settings.appName}
                 onChange={(e) => handleInputChange('appName', e.target.value)}
-                placeholder="Nombre de la aplicación"
+                placeholder={t("placeholders.appName")}
               />
             </FormGroup>
           </div>
@@ -112,7 +112,7 @@ export default function SettingsPage() {
               <FormInput
                 value={settings.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="tu@email.com"
+                placeholder={t("placeholders.email")}
                 type="email"
               />
             </FormGroup>

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from '@/hooks/useTranslations';
 import { Plus, Edit, Trash2, MapPin, Wrench } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import Modal from '@/components/Modal';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { Form, FormGroup, FormLabel, FormInput, FormSelect, FormButton } from '@/components/Form';
@@ -68,7 +69,7 @@ export default function MachinesPage() {
   });
 
   // Fetch machines with pagination
-  const fetchMachines = async (page = 1) => {
+  const fetchMachines = useCallback(async (page = 1) => {
     try {
       const response = await fetch(`/api/machines?page=${page}&limit=${ITEMS_PER_PAGE}`);
       if (response.ok) {
@@ -76,24 +77,30 @@ export default function MachinesPage() {
         setMachines(data.machines || data);
         setTotalPages(data.totalPages || Math.ceil((data.machines || data).length / ITEMS_PER_PAGE));
         setTotalItems(data.totalItems || (data.machines || data).length);
+      } else {
+        toast.error(t("machines.machineLoadError"));
       }
     } catch (error) {
       console.error('Error fetching machines:', error);
+      toast.error(t("machines.machineLoadError"));
     }
-  };
+  }, [t]);
 
   // Fetch machine models
-  const fetchMachineModels = async () => {
+  const fetchMachineModels = useCallback(async () => {
     try {
       const response = await fetch('/api/machine-models');
       if (response.ok) {
         const data = await response.json();
         setMachineModels(data);
+      } else {
+        toast.error(t("machineModels.modelError"));
       }
     } catch (error) {
       console.error('Error fetching machine models:', error);
+      toast.error(t("machineModels.modelError"));
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -102,7 +109,7 @@ export default function MachinesPage() {
       setLoading(false);
     };
     loadData();
-  }, [currentPage]);
+  }, [currentPage, fetchMachines, fetchMachineModels]);
 
   // Check if we should open the modal automatically (from dashboard)
   useEffect(() => {
@@ -117,6 +124,11 @@ export default function MachinesPage() {
 
   const onSubmit = async (data: { model: string; location: string; properties: Record<string, unknown>; companyId: string }) => {
     try {
+      if (!session?.user?.companyId) {
+        toast.error(t("machines.companyError"));
+        return;
+      }
+
       const url = editingMachine ? `/api/machines/${editingMachine._id}` : '/api/machines';
       const method = editingMachine ? 'PUT' : 'POST';
 
@@ -132,13 +144,18 @@ export default function MachinesPage() {
       });
 
       if (response.ok) {
+        toast.success(editingMachine ? t("machines.machineUpdated") : t("machines.machineCreated"));
         await fetchMachines(currentPage);
         setShowModal(false);
         setEditingMachine(null);
         reset();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || t("machines.machineError"));
       }
     } catch (error) {
       console.error('Error saving machine:', error);
+      toast.error(t("machines.machineError"));
     }
   };
 
@@ -161,11 +178,15 @@ export default function MachinesPage() {
       });
 
       if (response.ok) {
+        toast.success(t("machines.machineDeleted"));
         await fetchMachines(currentPage);
         setDeleteModal({ isOpen: false, machine: null });
+      } else {
+        toast.error(t("machines.machineError"));
       }
     } catch (error) {
       console.error('Error deleting machine:', error);
+      toast.error(t("machines.machineError"));
     }
   };
 
@@ -179,7 +200,7 @@ export default function MachinesPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('machines.title')}</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Gestiona las máquinas del sistema
+            {t("machines.subtitle")}
           </p>
         </div>
         
@@ -199,7 +220,7 @@ export default function MachinesPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('machines.title')}</h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Gestiona las máquinas del sistema
+          {t("machines.subtitle")}
         </p>
       </div>
 
@@ -208,7 +229,7 @@ export default function MachinesPage() {
         <div className="flex items-center space-x-2">
           <Wrench className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {totalItems} máquina{totalItems !== 1 ? 's' : ''}
+            {totalItems} {t("common.machine")}{totalItems !== 1 ? 's' : ''}
           </span>
         </div>
         <FormButton
@@ -220,7 +241,7 @@ export default function MachinesPage() {
           className="flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
-          <span>Nueva Máquina</span>
+          <span>{t("machines.newMachine")}</span>
         </FormButton>
       </div>
 
@@ -230,10 +251,10 @@ export default function MachinesPage() {
           <div className="text-center py-12">
             <Wrench className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
             <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-              No hay máquinas
+              {t("machines.noMachines")}
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Comienza agregando una nueva máquina al sistema.
+              {t("machines.startAddingMachine")}
             </p>
           </div>
         ) : (
@@ -309,7 +330,7 @@ export default function MachinesPage() {
           setEditingMachine(null);
           reset();
         }}
-        title={editingMachine ? 'Editar Máquina' : 'Nueva Máquina'}
+        title={editingMachine ? t("machines.editMachine") : t("machines.newMachine")}
         size="md"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
@@ -321,12 +342,12 @@ export default function MachinesPage() {
           />
           
           <FormGroup>
-            <FormLabel required>Modelo de Máquina</FormLabel>
+            <FormLabel required>{t("machines.machineModel")}</FormLabel>
             <FormSelect
               {...register('model')}
               error={errors.model?.message}
             >
-              <option value="">Selecciona un modelo</option>
+              <option value="">{t("machines.selectModel")}</option>
               {machineModels.map((model) => (
                 <option key={model._id} value={model._id}>
                   {model.name} - {model.manufacturer} {model.brand} ({model.year})
@@ -336,11 +357,11 @@ export default function MachinesPage() {
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>Ubicación</FormLabel>
+            <FormLabel required>{t("machines.location")}</FormLabel>
             <FormInput
               {...register('location')}
               error={errors.location?.message}
-              placeholder="Ubicación de la máquina"
+              placeholder={t("placeholders.machineLocation")}
             />
           </FormGroup>
 
@@ -354,13 +375,13 @@ export default function MachinesPage() {
                 reset();
               }}
             >
-              Cancelar
+              {t("common.cancel")}
             </FormButton>
             <FormButton
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Guardando...' : editingMachine ? 'Actualizar' : 'Crear'}
+              {isSubmitting ? t("common.saving") : editingMachine ? t("common.update") : t("common.create")}
             </FormButton>
           </div>
         </Form>
@@ -371,10 +392,10 @@ export default function MachinesPage() {
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, machine: null })}
         onConfirm={handleDelete}
-        title="Eliminar Máquina"
-        message="¿Estás seguro de que quieres eliminar esta máquina? Esta acción no se puede deshacer."
-        confirmText="Eliminar"
-        cancelText="Cancelar"
+        title={t("modals.deleteMachine")}
+        message={t("modals.deleteMachineMessage")}
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
         variant="danger"
         itemDetails={deleteModal.machine ? {
           name: deleteModal.machine.model.name,
