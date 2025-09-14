@@ -120,7 +120,9 @@ export default function Navigation() {
       )}>
         <div className="px-2 pt-2 pb-3 space-y-1 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
           {navigation.map((item) => {
-            const isActive = pathname === item.href;
+            // Extract the path without locale (e.g., /en/dashboard -> /dashboard)
+            const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}/, '') || '/';
+            const isActive = pathWithoutLocale === item.href;
             return (
               <Link
                 key={item.name}
@@ -130,7 +132,7 @@ export default function Navigation() {
                   "block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors transform",
                   mobileMenuOpen ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
                   isActive
-                    ? "bg-blue-50 dark:bg-blue-900/20 border-blue-500 text-blue-700 dark:text-blue-400"
+                    ? "bg-gray-200 dark:bg-gray-700 border-blue-500 text-gray-900 dark:text-white"
                     : "border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300"
                 )}
                 style={{
