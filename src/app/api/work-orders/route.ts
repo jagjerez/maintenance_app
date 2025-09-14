@@ -8,31 +8,53 @@ export async function GET(request: NextRequest) {
     await connectDB();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
-    const machine = searchParams.get('machine');
     const type = searchParams.get('type');
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const skip = (page - 1) * limit;
     
-    const query: Record<string, string> = {};
+    const query: Record<string, any> = {};
     
     if (status) query.status = status;
-    if (machine) query.machine = machine;
-    if (type) {
-      // This would require a more complex query with population
-      // For now, we'll handle this in the frontend
-    }
+    if (type) query.type = type;
     
     const workOrders = await WorkOrder.find(query)
-      .populate('machine')
       .populate({
-        path: 'machine',
+        path: 'machines',
         populate: {
           path: 'model',
           model: 'MachineModel'
         }
       })
-      .populate('maintenanceRange')
-      .sort({ createdAt: -1 });
+      .populate({
+        path: 'machines',
+        populate: {
+          path: 'maintenanceRanges',
+          populate: {
+            path: 'operations',
+            model: 'Operation'
+          }
+        }
+      })
+      .populate('operations')
+      .populate({
+        path: 'filledOperations.operationId',
+        model: 'Operation'
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
     
-    return NextResponse.json(workOrders);
+    const totalItems = await WorkOrder.countDocuments(query);
+    const totalPages = Math.ceil(totalItems / limit);
+    
+    return NextResponse.json({
+      workOrders,
+      totalItems,
+      totalPages,
+      currentPage: page,
+      itemsPerPage: limit
+    });
   } catch (error) {
     console.error('Error fetching work orders:', error);
     return NextResponse.json(
@@ -46,6 +68,7 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
     const body = await request.json();
+    
     const validatedData = workOrderSchema.parse(body);
     
     // Convert date strings to Date objects
@@ -59,15 +82,28 @@ export async function POST(request: NextRequest) {
     await workOrder.save();
     
     const populatedWorkOrder = await WorkOrder.findById(workOrder._id)
-      .populate('machine')
       .populate({
-        path: 'machine',
+        path: 'machines',
         populate: {
           path: 'model',
           model: 'MachineModel'
         }
       })
-      .populate('maintenanceRange');
+      .populate({
+        path: 'machines',
+        populate: {
+          path: 'maintenanceRanges',
+          populate: {
+            path: 'operations',
+            model: 'Operation'
+          }
+        }
+      })
+      .populate('operations')
+      .populate({
+        path: 'filledOperations.operationId',
+        model: 'Operation'
+      });
     
     return NextResponse.json(populatedWorkOrder, { status: 201 });
   } catch (error) {

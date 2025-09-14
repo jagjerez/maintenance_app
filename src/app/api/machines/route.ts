@@ -8,7 +8,13 @@ export async function GET() {
     await connectDB();
     const machines = await Machine.find()
       .populate('model')
-      .populate('maintenanceRanges')
+      .populate({
+        path: 'maintenanceRanges',
+        populate: {
+          path: 'operations',
+          model: 'Operation'
+        }
+      })
       .populate('operations')
       .sort({ createdAt: -1 });
     return NextResponse.json(machines);

@@ -198,7 +198,6 @@ export default function LocationsPage() {
   };
 
   const handleLocationSelect = (location: Location) => {
-    console.log('Selected location:', location);
   };
 
   const handleLocationEdit = (location: Location) => {

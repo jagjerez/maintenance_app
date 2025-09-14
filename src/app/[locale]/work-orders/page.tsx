@@ -6,13 +6,18 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from '@/hooks/useTranslations';
-import { Plus, Edit, Trash2, FileText, Calendar, User, AlertCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, FileText, Calendar, User, AlertCircle, Settings } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Modal from '@/components/Modal';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { Form, FormGroup, FormLabel, FormInput, FormTextarea, FormSelect, FormButton } from '@/components/Form';
 import { Pagination } from '@/components/Pagination';
-import { workOrderSchema, WorkOrderInput } from '@/lib/validations';
+import MultiSelect from '@/components/MultiSelect';
+import DynamicProperties from '@/components/DynamicProperties';
+import FilledOperationsManager from '@/components/FilledOperationsManager';
+import { workOrderSchema, WorkOrderInput, FilledOperationInput } from '@/lib/validations';
+import { IFilledOperation } from '@/models/WorkOrder';
+import { IOperation } from '@/models/Operation';
 
 interface Machine {
   _id: string;
@@ -21,24 +26,29 @@ interface Machine {
     name: string;
     manufacturer: string;
   };
-}
-
-interface MaintenanceRange {
-  _id: string;
-  name: string;
-  type: 'preventive' | 'corrective';
+  operations?: IOperation[];
+  maintenanceRanges?: Array<{
+    _id: string;
+    name: string;
+    type: 'preventive' | 'corrective';
+    operations: IOperation[];
+  }>;
 }
 
 interface WorkOrder {
   _id: string;
-  machine: Machine;
-  maintenanceRange: MaintenanceRange;
+  customCode?: string;
+  machines: Machine[];
+  type: 'preventive' | 'corrective';
   status: 'pending' | 'in_progress' | 'completed';
   description: string;
   scheduledDate: string;
   completedDate?: string;
   assignedTo?: string;
   notes?: string;
+  operations: IOperation[];
+  filledOperations: IFilledOperation[];
+  properties: Record<string, any>;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,7 +61,7 @@ export default function WorkOrdersPage() {
   const searchParams = useSearchParams();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
-  const [maintenanceRanges, setMaintenanceRanges] = useState<MaintenanceRange[]>([]);
+  const [operations, setOperations] = useState<IOperation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrder | null>(null);
@@ -62,15 +72,27 @@ export default function WorkOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [selectedMachines, setSelectedMachines] = useState<string[]>([]);
+  const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
+  const [workOrderOperations, setWorkOrderOperations] = useState<IOperation[]>([]);
+  const [filledOperations, setFilledOperations] = useState<IFilledOperation[]>([]);
+  const [customProperties, setCustomProperties] = useState<Record<string, any>>({});
+  const [workOrderType, setWorkOrderType] = useState<string>('');
 
   const {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(workOrderSchema),
   });
+
+
+  // Watch the type field to enable/disable form
+  const watchedType = watch('type');
 
   // Fetch work orders with pagination
   const fetchWorkOrders = async (page = 1) => {
@@ -90,7 +112,7 @@ export default function WorkOrdersPage() {
     }
   };
 
-  // Fetch machines and maintenance ranges for dropdowns
+  // Fetch machines and operations for dropdowns
   const fetchMachines = async () => {
     try {
       const response = await fetch('/api/machines');
@@ -106,25 +128,25 @@ export default function WorkOrdersPage() {
     }
   };
 
-  const fetchMaintenanceRanges = async () => {
+  const fetchOperations = async () => {
     try {
-      const response = await fetch('/api/maintenance-ranges');
+      const response = await fetch('/api/operations');
       if (response.ok) {
         const data = await response.json();
-        setMaintenanceRanges(data.maintenanceRanges || data);
+        setOperations(data.operations || data);
       } else {
-        toast.error(t("maintenanceRanges.rangeLoadError"));
+        toast.error(t("operations.operationLoadError"));
       }
     } catch (error) {
-      console.error('Error fetching maintenance ranges:', error);
-      toast.error(t("maintenanceRanges.rangeLoadError"));
+      console.error('Error fetching operations:', error);
+      toast.error(t("operations.operationLoadError"));
     }
   };
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchWorkOrders(currentPage), fetchMachines(), fetchMaintenanceRanges()]);
+      await Promise.all([fetchWorkOrders(currentPage), fetchMachines(), fetchOperations()]);
       setLoading(false);
     };
     loadData();
@@ -133,13 +155,84 @@ export default function WorkOrdersPage() {
   // Check if we should open the modal automatically (from dashboard)
   useEffect(() => {
     if (searchParams.get('new') === 'true') {
+      setEditingWorkOrder(null);
+      reset();
+      resetForm(true);
       setShowModal(true);
       // Clean up the URL parameter
       const url = new URL(window.location.href);
       url.searchParams.delete('new');
       window.history.replaceState({}, '', url.toString());
     }
-  }, [searchParams, loading, machines.length, maintenanceRanges.length]);
+  }, [searchParams, loading, machines.length, operations.length]);
+
+  // Handle machine selection changes and work order type
+  useEffect(() => {
+    if (selectedMachines.length > 0 && workOrderType) {
+      // Get operations from selected machines based on work order type
+      const machineOperations: IOperation[] = [];
+      const operationIds = new Set<string>(); // To track unique operation IDs
+      
+      selectedMachines.forEach(machineId => {
+        const machine = machines.find(m => m._id === machineId);
+        
+        // First, add operations from maintenance ranges that match the work order type
+        if (machine?.maintenanceRanges) {
+          machine.maintenanceRanges.forEach(range => {
+            // Only include maintenance ranges that match the work order type
+            if (range?.type === workOrderType && range?.operations) {
+              range.operations.forEach(operation => {
+                if (operation && operation._id && !operationIds.has(operation._id)) {
+                  operationIds.add(operation._id);
+                  machineOperations.push(operation);
+                }
+              });
+            }
+          });
+        }
+        
+        // Then, add operations directly from machine ONLY if they don't already exist
+        if (machine?.operations) {
+          machine.operations.forEach(operation => {
+            if (operation && operation._id && !operationIds.has(operation._id)) {
+              operationIds.add(operation._id);
+              machineOperations.push(operation);
+            }
+          });
+        }
+      });
+      
+      setWorkOrderOperations(machineOperations);
+    } else if (!editingWorkOrder) {
+      // Only clear operations if not in edit mode
+      setWorkOrderOperations([]);
+    }
+  }, [selectedMachines, machines, workOrderType, editingWorkOrder]);
+
+  // Update workOrderType when form type changes
+  useEffect(() => {
+    if (watchedType !== workOrderType) {
+      setWorkOrderType(watchedType || '');
+    }
+  }, [watchedType, workOrderType]);
+
+  // Reset operations and machines when type changes (only in create mode)
+  useEffect(() => {
+    if (workOrderType && !editingWorkOrder) {
+      setWorkOrderOperations([]);
+      setSelectedOperations([]);
+      setFilledOperations([]);
+      setSelectedMachines([]);
+      // Clear form values
+      setValue('machines', []);
+      setValue('operations', []);
+    }
+  }, [workOrderType, setValue, editingWorkOrder]);
+
+  // Use watchedType for form control instead of workOrderType
+  // In edit mode, don't disable the form
+  const isFormDisabled = !watchedType && !editingWorkOrder;
+
 
   const onSubmit = async (data: WorkOrderInput) => {
     try {
@@ -153,6 +246,10 @@ export default function WorkOrdersPage() {
         },
         body: JSON.stringify({
           ...data,
+          machines: selectedMachines,
+          operations: selectedOperations,
+          filledOperations,
+          properties: customProperties,
           companyId: session?.user?.companyId,
         }),
       });
@@ -162,6 +259,7 @@ export default function WorkOrdersPage() {
         setShowModal(false);
         setEditingWorkOrder(null);
         reset();
+        resetForm(false);
         toast.success(editingWorkOrder ? t("workOrders.workOrderUpdated") : t("workOrders.workOrderCreated"));
       } else {
         toast.error(t("workOrders.workOrderError"));
@@ -172,18 +270,77 @@ export default function WorkOrdersPage() {
     }
   };
 
+  const resetForm = (isCreateMode = true) => {
+    setWorkOrderType('');
+    setSelectedMachines([]);
+    setSelectedOperations([]);
+    setWorkOrderOperations([]);
+    setFilledOperations([]);
+    setCustomProperties({});
+    // Clear all form values
+    setValue('machines', []);
+    setValue('operations', []);
+    setValue('type', '' as any);
+    setValue('customCode', '');
+    setValue('description', '');
+    setValue('completedDate', '');
+    setValue('assignedTo', '');
+    setValue('notes', '');
+    
+    // Set default values only in create mode
+    if (isCreateMode) {
+      const today = new Date().toISOString().split('T')[0];
+      setValue('scheduledDate', today);
+      setValue('status', 'pending');
+    } else {
+      setValue('scheduledDate', '');
+      setValue('status', 'pending');
+    }
+  };
+
+  const handleAddOperation = (operationId: string) => {
+    if (!selectedOperations.includes(operationId)) {
+      setSelectedOperations([...selectedOperations, operationId]);
+    }
+  };
+
+  const handleRemoveOperation = (operationId: string) => {
+    setSelectedOperations(selectedOperations.filter(id => id !== operationId));
+    // Also remove from filled operations if it was filled
+    setFilledOperations(filledOperations.filter(filled => filled.operationId !== operationId));
+  };
+
+  const handleUpdateFilledOperations = (newFilledOperations: IFilledOperation[]) => {
+    setFilledOperations(newFilledOperations);
+  };
+
   const handleEdit = (workOrder: WorkOrder) => {
     setEditingWorkOrder(workOrder);
+    
+    // Get machine IDs and operation IDs
+    const machineIds = workOrder.machines.map(m => m._id);
+    const operationIds = workOrder.operations.map(op => op._id);
+    
     reset({
-      machine: workOrder.machine._id,
-      maintenanceRange: workOrder.maintenanceRange._id,
+      customCode: workOrder.customCode || '',
+      type: workOrder.type,
       status: workOrder.status,
       description: workOrder.description,
       scheduledDate: workOrder.scheduledDate.split('T')[0],
       completedDate: workOrder.completedDate ? workOrder.completedDate.split('T')[0] : '',
       assignedTo: workOrder.assignedTo || '',
       notes: workOrder.notes || '',
+      machines: machineIds,
+      operations: operationIds,
     });
+    
+    // Set the state for the new fields
+    setWorkOrderType(workOrder.type);
+    setSelectedMachines(machineIds);
+    setSelectedOperations(operationIds);
+    setFilledOperations(workOrder.filledOperations || []);
+    setCustomProperties(workOrder.properties || {});
+    
     setShowModal(true);
   };
 
@@ -238,6 +395,21 @@ export default function WorkOrdersPage() {
     }
   };
 
+  const getOperationTypeLabel = (type: string) => {
+    // Handle undefined, null, or empty types
+    if (!type || type === 'undefined' || type === 'null') {
+      return 'Unknown';
+    }
+    
+    const translationKey = `operations.types.${type}`;
+    const translation = t(translationKey);
+    // If translation is the same as the key, it means the translation doesn't exist
+    if (translation === translationKey) {
+      return type.charAt(0).toUpperCase() + type.slice(1);
+    }
+    return translation;
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('es-ES', {
       year: 'numeric',
@@ -288,6 +460,7 @@ export default function WorkOrdersPage() {
           onClick={() => {
             setEditingWorkOrder(null);
             reset();
+            resetForm(true);
             setShowModal(true);
           }}
           className="flex items-center space-x-2"
@@ -322,10 +495,17 @@ export default function WorkOrdersPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center space-x-2">
                           <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate">
-                            {workOrder.machine.model.name} - {workOrder.machine.location}
+                            {workOrder.customCode || workOrder._id} - {workOrder.machines.map(m => m.model.name).join(', ')}
                           </h3>
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(workOrder.status)}`}>
                             {getStatusLabel(workOrder.status)}
+                          </span>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            workOrder.type === 'preventive' 
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                              : 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300'
+                          }`}>
+                            {workOrder.type === 'preventive' ? t("workOrders.preventive") : t("workOrders.corrective")}
                           </span>
                         </div>
                         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
@@ -337,8 +517,8 @@ export default function WorkOrdersPage() {
                             <span>{formatDate(workOrder.scheduledDate)}</span>
                           </div>
                           <div className="flex items-center space-x-1">
-                            <AlertCircle className="h-4 w-4" />
-                            <span>{workOrder.maintenanceRange.name}</span>
+                            <Settings className="h-4 w-4" />
+                            <span>{workOrder.operations.length} {t("workOrders.operations")}</span>
                           </div>
                           {workOrder.assignedTo && (
                             <div className="flex items-center space-x-1">
@@ -392,6 +572,7 @@ export default function WorkOrdersPage() {
           setShowModal(false);
           setEditingWorkOrder(null);
           reset();
+          resetForm(false);
         }}
         title={editingWorkOrder ? t("workOrders.editWorkOrder") : t("workOrders.newWorkOrder")}
         size="lg"
@@ -404,37 +585,86 @@ export default function WorkOrdersPage() {
             value={session?.user?.companyId || ''}
           />
           
+          {/* Work Order ID (solo en edición) */}
+          {editingWorkOrder && (
+            <FormGroup>
+              <FormLabel>{t("workOrders.workOrderId")}</FormLabel>
+              <FormInput
+                value={editingWorkOrder._id}
+                disabled
+                className="bg-gray-100 dark:bg-gray-700"
+              />
+            </FormGroup>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormGroup>
-              <FormLabel required>{t("common.machine")}</FormLabel>
-              <FormSelect
-                {...register('machine')}
-                error={errors.machine?.message}
-              >
-                <option value="">{t("machines.selectModel")}</option>
-                {machines.map((machine) => (
-                  <option key={machine._id} value={machine._id}>
-                    {machine.model.name} - {machine.location}
-                  </option>
-                ))}
-              </FormSelect>
+              <FormLabel>{t("workOrders.customCode")}</FormLabel>
+              <FormInput
+                {...register('customCode')}
+                error={errors.customCode?.message}
+                placeholder={t("placeholders.customCode")}
+              />
             </FormGroup>
 
             <FormGroup>
-              <FormLabel required>{t("workOrders.maintenanceRange")}</FormLabel>
+              <FormLabel required>{t("workOrders.type")}</FormLabel>
               <FormSelect
-                {...register('maintenanceRange')}
-                error={errors.maintenanceRange?.message}
+                {...register('type', {
+                  onChange: (e) => {
+                    setWorkOrderType(e.target.value);
+                    // In edit mode, don't reset operations when type changes
+                    if (!editingWorkOrder) {
+                      setWorkOrderOperations([]);
+                      setSelectedOperations([]);
+                      setFilledOperations([]);
+                    }
+                  }
+                })}
+                error={errors.type?.message}
+                disabled={editingWorkOrder?.status === 'completed'}
               >
-                <option value="">{t("maintenanceRanges.selectType")}</option>
-                {maintenanceRanges.map((range) => (
-                  <option key={range._id} value={range._id}>
-                    {range.name} ({range.type === 'preventive' ? t("maintenanceRanges.preventive") : t("maintenanceRanges.corrective")})
-                  </option>
-                ))}
+                <option value="">{t("placeholders.selectWorkOrderType")}</option>
+                <option value="preventive">{t("workOrders.preventive")}</option>
+                <option value="corrective">{t("workOrders.corrective")}</option>
               </FormSelect>
             </FormGroup>
           </div>
+
+          {isFormDisabled && !editingWorkOrder && (
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center">
+                <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
+                <div>
+                  <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                    {t("workOrders.selectTypeFirst")}
+                  </p>
+                  <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                    {t("workOrders.selectTypeDescription")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <FormGroup>
+            <FormLabel required>{t("workOrders.machines")}</FormLabel>
+            <MultiSelect
+              options={machines.map(machine => ({
+                value: machine._id,
+                label: `${machine.model.name} - ${machine.location}`,
+                description: machine.model.manufacturer
+              }))}
+              selectedValues={selectedMachines}
+              onChange={(values) => {
+                setSelectedMachines(values);
+                setValue('machines', values);
+              }}
+              placeholder={t("placeholders.selectMachines")}
+              error={selectedMachines.length === 0 ? t("errors.required") : undefined}
+              disabled={isFormDisabled}
+            />
+          </FormGroup>
 
           <FormGroup>
             <FormLabel required>{t("workOrders.description")}</FormLabel>
@@ -443,6 +673,7 @@ export default function WorkOrdersPage() {
               error={errors.description?.message}
               placeholder={t("placeholders.workOrderDescription")}
               rows={3}
+              disabled={isFormDisabled}
             />
           </FormGroup>
 
@@ -453,6 +684,7 @@ export default function WorkOrdersPage() {
                 type="date"
                 {...register('scheduledDate')}
                 error={errors.scheduledDate?.message}
+                disabled={isFormDisabled}
               />
             </FormGroup>
 
@@ -462,6 +694,7 @@ export default function WorkOrdersPage() {
                 type="date"
                 {...register('completedDate')}
                 error={errors.completedDate?.message}
+                disabled={isFormDisabled}
               />
             </FormGroup>
           </div>
@@ -472,6 +705,7 @@ export default function WorkOrdersPage() {
               <FormSelect
                 {...register('status')}
                 error={errors.status?.message}
+                disabled={isFormDisabled}
               >
                 <option value="pending">{t("workOrders.pending")}</option>
                 <option value="in_progress">{t("workOrders.inProgress")}</option>
@@ -485,9 +719,199 @@ export default function WorkOrdersPage() {
                 {...register('assignedTo')}
                 error={errors.assignedTo?.message}
                 placeholder={t("placeholders.technicianName")}
+                disabled={isFormDisabled}
               />
             </FormGroup>
           </div>
+
+          {/* Operations Management */}
+          <FormGroup>
+            <FormLabel>{t("workOrders.operations")}</FormLabel>
+            <div className={`space-y-4 ${isFormDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
+              {/* Operations from machines */}
+              {workOrderOperations.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {t("workOrders.operationsFromMachines")} ({workOrderOperations.length})
+                    </span>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      {workOrderType === 'preventive' ? t("workOrders.preventive") : t("workOrders.corrective")} {t("workOrders.type")}
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {workOrderOperations
+                      .filter(operation => operation && operation._id && operation.name)
+                      .map((operation) => {
+                        // Determine the source of the operation
+                        const isFromMaintenanceRange = selectedMachines.some(machineId => {
+                          const machine = machines.find(m => m._id === machineId);
+                          return machine?.maintenanceRanges?.some(range => 
+                            range?.type === workOrderType && 
+                            range?.operations?.some(op => op._id === operation._id)
+                          );
+                        });
+                        
+                        const isFromMachine = selectedMachines.some(machineId => {
+                          const machine = machines.find(m => m._id === machineId);
+                          return machine?.operations?.some(op => op._id === operation._id);
+                        });
+                        
+                        const source = isFromMaintenanceRange ? 'maintenanceRange' : 'machine';
+                        
+                        return (
+                          <div
+                            key={operation._id}
+                            className={`flex items-center justify-between p-3 rounded-lg border ${
+                              source === 'maintenanceRange' 
+                                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                                : 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                            }`}
+                          >
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900 dark:text-white">
+                                {operation.name}
+                              </div>
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
+                                {operation.description}
+                              </div>
+                              <div className={`text-xs mt-1 ${
+                                source === 'maintenanceRange' 
+                                  ? 'text-blue-600 dark:text-blue-400'
+                                  : 'text-green-600 dark:text-green-400'
+                              }`}>
+                                {getOperationTypeLabel(operation.type)} • {
+                                  source === 'maintenanceRange' 
+                                    ? t("workOrders.fromMaintenanceRange")
+                                    : t("workOrders.fromMachine")
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              ) : workOrderType && selectedMachines.length > 0 ? (
+                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <div className="flex items-center">
+                    <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <div>
+                      <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                        {t("workOrders.noMaintenanceRangesForType")}
+                      </p>
+                      <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                        {t("workOrders.addCustomOperationsInstead")}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {/* Additional operations selector */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t("workOrders.addAdditionalOperations")}
+                </label>
+                <MultiSelect
+                  options={operations
+                    .filter(op => !workOrderOperations.some(woOp => woOp._id === op._id))
+                    .map(operation => ({
+                      value: operation._id,
+                      label: operation.name,
+                      description: operation.description
+                    }))}
+                  selectedValues={selectedOperations}
+                  onChange={(values) => {
+                    setSelectedOperations(values);
+                    setValue('operations', values);
+                  }}
+                  placeholder={t("placeholders.selectOperations")}
+                />
+              </div>
+
+              {/* Selected additional operations */}
+              {selectedOperations.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {t("workOrders.additionalOperations")} ({selectedOperations.length})
+                    </span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {selectedOperations.map(operationId => {
+                      const operation = operations.find(op => op._id === operationId);
+                      if (!operation) return null;
+                      
+                      return (
+                        <div
+                          key={operationId}
+                          className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
+                        >
+                          <div className="flex-1">
+                            <div className="font-medium text-gray-900 dark:text-white">
+                              {operation.name}
+                            </div>
+                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                              {operation.description}
+                            </div>
+                            <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                              {getOperationTypeLabel(operation.type)} • {t("workOrders.additional")}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveOperation(operationId)}
+                            className="ml-2 p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </FormGroup>
+
+          {/* Filled Operations Manager */}
+          {(workOrderOperations.length > 0 || selectedOperations.length > 0) && (
+            <FormGroup>
+              <FilledOperationsManager
+                operations={[
+                  ...workOrderOperations,
+                  ...selectedOperations.map(id => operations.find(op => op._id === id)).filter(Boolean) as IOperation[]
+                ]}
+                filledOperations={filledOperations}
+                onUpdateFilledOperations={handleUpdateFilledOperations}
+                disabled={editingWorkOrder?.status === 'completed'}
+              />
+            </FormGroup>
+          )}
+
+          {/* Custom Properties */}
+          <FormGroup>
+            <FormLabel>{t("workOrders.customProperties")}</FormLabel>
+            <div className={isFormDisabled ? 'opacity-50 pointer-events-none' : ''}>
+              <DynamicProperties
+                properties={Object.entries(customProperties).map(([key, value]) => ({ key, value }))}
+                onChange={(props) => {
+                  const newProperties: Record<string, any> = {};
+                  props.forEach(prop => {
+                    newProperties[prop.key] = prop.value;
+                  });
+                  setCustomProperties(newProperties);
+                }}
+              />
+            </div>
+          </FormGroup>
 
           <FormGroup>
             <FormLabel>{t("workOrders.notes")}</FormLabel>
@@ -496,6 +920,7 @@ export default function WorkOrdersPage() {
               error={errors.notes?.message}
               placeholder={t("placeholders.additionalNotes")}
               rows={2}
+              disabled={isFormDisabled}
             />
           </FormGroup>
 
@@ -513,7 +938,7 @@ export default function WorkOrdersPage() {
             </FormButton>
             <FormButton
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isFormDisabled}
             >
               {isSubmitting ? t("common.saving") : editingWorkOrder ? t("common.update") : t("common.create")}
             </FormButton>
@@ -532,7 +957,7 @@ export default function WorkOrdersPage() {
         cancelText={t("common.cancel")}
         variant="danger"
         itemDetails={deleteModal.workOrder ? {
-          name: `${deleteModal.workOrder.machine.model.name} - ${deleteModal.workOrder.machine.location}`,
+          name: `${deleteModal.workOrder.customCode || deleteModal.workOrder._id} - ${deleteModal.workOrder.machines.map(m => m.model.name).join(', ')}`,
           description: deleteModal.workOrder.description,
         } : undefined}
       />

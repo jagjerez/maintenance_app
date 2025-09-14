@@ -11,15 +11,18 @@ export async function GET(
     await connectDB();
     const { id } = await params;
     const workOrder = await WorkOrder.findById(id)
-      .populate('machine')
       .populate({
-        path: 'machine',
+        path: 'machines',
         populate: {
           path: 'model',
           model: 'MachineModel'
         }
       })
-      .populate('maintenanceRange');
+      .populate('operations')
+      .populate({
+        path: 'filledOperations.operationId',
+        model: 'Operation'
+      });
     
     if (!workOrder) {
       return NextResponse.json(
@@ -47,21 +50,31 @@ export async function PUT(
     const body = await request.json();
     const validatedData = workOrderUpdateSchema.parse(body);
     
+    // Convert date strings to Date objects if they exist
+    const updateData = {
+      ...validatedData,
+      ...(validatedData.scheduledDate && { scheduledDate: new Date(validatedData.scheduledDate) }),
+      ...(validatedData.completedDate && { completedDate: new Date(validatedData.completedDate) }),
+    };
+    
     const { id } = await params;
     const workOrder = await WorkOrder.findByIdAndUpdate(
       id,
-      validatedData,
+      updateData,
       { new: true, runValidators: true }
     )
-      .populate('machine')
       .populate({
-        path: 'machine',
+        path: 'machines',
         populate: {
           path: 'model',
           model: 'MachineModel'
         }
       })
-      .populate('maintenanceRange');
+      .populate('operations')
+      .populate({
+        path: 'filledOperations.operationId',
+        model: 'Operation'
+      });
     
     if (!workOrder) {
       return NextResponse.json(

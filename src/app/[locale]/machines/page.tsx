@@ -100,9 +100,6 @@ export default function MachinesPage() {
     },
   });
 
-  // Watch maintenanceRanges value for debugging
-  const maintenanceRangesValue = watch('maintenanceRanges');
-  console.log('Current maintenanceRanges value:', maintenanceRangesValue);
 
   // Custom properties handlers
   const addCustomProperty = () => {
@@ -219,8 +216,6 @@ export default function MachinesPage() {
   }, [t]);
 
   const handleEdit = useCallback((machine: Machine) => {
-    console.log('Editing machine:', machine);
-    console.log('Maintenance ranges:', machine.maintenanceRanges);
     
     setEditingMachine(machine);
     
@@ -282,9 +277,6 @@ export default function MachinesPage() {
 
   // Check if we should open the modal automatically (from dashboard)
   useEffect(() => {
-    console.log('searchParams', searchParams);
-    console.log('loading', loading);
-    console.log('machineModels.length', machineModels.length);
     
     if (searchParams.get('new') === 'true') {
       setShowModal(true);
@@ -305,9 +297,6 @@ export default function MachinesPage() {
   }, [searchParams, loading, machineModels.length, loadMachineForEdit]);
 
   const onSubmit = async (data: { model: string; location: string; locationId?: string; description?: string; maintenanceRanges?: string[]; operations?: string[]; properties: Record<string, unknown>; companyId: string }) => {
-    console.log('Form submitted with data:', data);
-    console.log('Selected maintenance ranges:', selectedMaintenanceRanges);
-    console.log('Selected location:', selectedLocation);
     
     try {
       if (!session?.user?.companyId) {
@@ -556,7 +545,6 @@ export default function MachinesPage() {
         size="md"
       >
         <Form onSubmit={(e) => {
-          console.log('Form submit event triggered');
           handleSubmit(onSubmit)(e);
         }}>
           {/* Campos ocultos para valores del formulario */}
@@ -621,15 +609,12 @@ export default function MachinesPage() {
                      }}
                      onLocationEdit={(location) => {
                        // Handle location edit - could navigate to locations page
-                       console.log('Edit location:', location);
                      }}
                      onLocationDelete={(location) => {
                        // Handle location delete - could show confirmation
-                       console.log('Delete location:', location);
                      }}
                      onLocationAdd={(parentLocation) => {
                        // Handle location add - could navigate to locations page
-                       console.log('Add location under:', parentLocation);
                      }}
                      showActions={false}
                      showMachines={false}

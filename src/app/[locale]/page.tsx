@@ -12,21 +12,37 @@ import LocationTreeView from "@/components/LocationTreeView";
 
 interface WorkOrder {
   _id: string;
+  customCode?: string;
   status: "pending" | "in_progress" | "completed";
+  type: "preventive" | "corrective";
   description: string;
   scheduledDate: string;
-  machine: {
+  completedDate?: string;
+  assignedTo?: string;
+  notes?: string;
+  machines: Array<{
     _id: string;
     location: string;
     model: {
       name: string;
       manufacturer: string;
     };
-  };
-  maintenanceRange: {
+  }>;
+  operations?: Array<{
+    _id: string;
     name: string;
-    type: "preventive" | "corrective";
-  };
+  }>;
+  filledOperations?: Array<{
+    operationId: string;
+    value: any;
+    description?: string;
+    filledAt: string;
+    filledBy?: string;
+  }>;
+  properties?: Record<string, any>;
+  companyId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Stats {
@@ -68,7 +84,7 @@ export default function Dashboard() {
         throw new Error(t("errors.fetchWorkOrdersFailed"));
       }
       const workOrdersData = await workOrdersResponse.json();
-      setWorkOrders(workOrdersData.slice(0, 5)); // Show only latest 5
+      setWorkOrders(workOrdersData.workOrders?.slice(0, 5) || []); // Show only latest 5
 
       // Fetch stats
       const [machinesRes, modelsRes, rangesRes, operationsRes] =
@@ -86,14 +102,15 @@ export default function Dashboard() {
         operationsRes.json(),
       ]);
 
-      const totalWorkOrders = workOrdersData.length;
-      const pendingWorkOrders = workOrdersData.filter(
+      const workOrders = workOrdersData.workOrders || [];
+      const totalWorkOrders = workOrders.length;
+      const pendingWorkOrders = workOrders.filter(
         (wo: WorkOrder) => wo.status === "pending"
       ).length;
-      const inProgressWorkOrders = workOrdersData.filter(
+      const inProgressWorkOrders = workOrders.filter(
         (wo: WorkOrder) => wo.status === "in_progress"
       ).length;
-      const completedWorkOrders = workOrdersData.filter(
+      const completedWorkOrders = workOrders.filter(
         (wo: WorkOrder) => wo.status === "completed"
       ).length;
 
@@ -343,7 +360,6 @@ export default function Dashboard() {
           </div>
           <LocationTreeView
             onLocationClick={(location) => {
-              console.log('Selected location:', location);
             }}
             onMachineClick={(machine) => {
               // Navigate to machines page with edit parameter
@@ -423,26 +439,35 @@ export default function Dashboard() {
                         {workOrder.description}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        <div 
-                          className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          onClick={() => router.push(`/machines?edit=${workOrder.machine._id}`)}
-                          title={t('machines.clickToEdit')}
-                        >
-                          <div className="font-medium">
-                            {workOrder.machine.model.name}
-                          </div>
-                          <div className="text-gray-500 dark:text-gray-400">
-                            {workOrder.machine.location}
-                          </div>
+                        <div className="space-y-1">
+                          {workOrder.machines?.map((machine: any, index: number) => (
+                            <div 
+                              key={machine._id}
+                              className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                              onClick={() => router.push(`/machines?edit=${machine._id}`)}
+                              title={t('machines.clickToEdit')}
+                            >
+                              <div className="font-medium">
+                                {machine.model?.name || 'Unknown Model'}
+                              </div>
+                              <div className="text-gray-500 dark:text-gray-400">
+                                {machine.location}
+                              </div>
+                            </div>
+                          )) || (
+                            <div className="text-gray-500 dark:text-gray-400">
+                              No machines assigned
+                            </div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(
-                            workOrder.maintenanceRange.type
+                            workOrder.type
                           )}`}
                         >
-                          {workOrder.maintenanceRange.type === "preventive"
+                          {workOrder.type === "preventive"
                             ? t("dashboard.preventive")
                             : t("dashboard.corrective")}
                         </span>

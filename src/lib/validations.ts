@@ -105,18 +105,39 @@ export const maintenanceRangeUpdateSchema = maintenanceRangeSchema.partial();
 
 // Work Order validations
 export const workOrderSchema = z.object({
-  machine: z.string().min(1, 'Machine is required'),
-  maintenanceRange: z.string().min(1, 'Maintenance range is required'),
+  customCode: z.string().optional(),
+  machines: z.array(z.string()).min(1, 'At least one machine is required'),
+  type: z.enum(['preventive', 'corrective'], {
+    message: 'Type must be preventive or corrective',
+  }),
   status: z.enum(['pending', 'in_progress', 'completed']).optional().default('pending'),
   description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
   scheduledDate: z.string(),
   completedDate: z.string().optional(),
   assignedTo: z.string().optional(),
   notes: z.string().optional(),
+  operations: z.array(z.string()).optional().default([]),
+  filledOperations: z.array(z.object({
+    operationId: z.string(),
+    value: z.any(),
+    description: z.string().optional(),
+    filledBy: z.string().optional(),
+  })).optional().default([]),
+  properties: z.record(z.string(), z.unknown()).optional().default({}),
   companyId: z.string().min(1, 'Company is required'),
 });
 
 export const workOrderUpdateSchema = workOrderSchema.partial();
+
+// Filled Operation validations
+export const filledOperationSchema = z.object({
+  operationId: z.string().min(1, 'Operation ID is required'),
+  value: z.any(),
+  description: z.string().optional(),
+  filledBy: z.string().optional(),
+});
+
+export const filledOperationUpdateSchema = filledOperationSchema.partial();
 
 // Location validations
 export const locationSchema = z.object({
@@ -149,6 +170,8 @@ export type MaintenanceRangeInput = z.infer<typeof maintenanceRangeSchema>;
 export type MaintenanceRangeUpdateInput = z.infer<typeof maintenanceRangeUpdateSchema>;
 export type WorkOrderInput = z.infer<typeof workOrderSchema>;
 export type WorkOrderUpdateInput = z.infer<typeof workOrderUpdateSchema>;
+export type FilledOperationInput = z.infer<typeof filledOperationSchema>;
+export type FilledOperationUpdateInput = z.infer<typeof filledOperationUpdateSchema>;
 export type LocationInput = z.infer<typeof locationSchema>;
 export type LocationUpdateInput = z.infer<typeof locationUpdateSchema>;
 export type DynamicProperty = z.infer<typeof dynamicPropertySchema>;
