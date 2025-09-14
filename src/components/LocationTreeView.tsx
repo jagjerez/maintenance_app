@@ -16,11 +16,11 @@ interface Machine {
     brand: string;
     year: number;
   };
-  maintenanceRange?: {
+  maintenanceRanges?: {
     _id: string;
     name: string;
     type: 'preventive' | 'corrective';
-  };
+  }[];
   location: string;
 }
 
@@ -36,32 +36,35 @@ interface LocationNode {
 }
 
 interface LocationTreeViewProps {
-  onLocationSelect?: (location: LocationNode) => void;
-  onMachineSelect?: (machine: Machine) => void;
-  onLocationEdit?: (location: LocationNode) => void;
-  onLocationDelete?: (location: LocationNode) => void;
-  onLocationAdd?: (parentLocation?: LocationNode) => void;
+  onLocationClick?: (location: LocationNode, event: React.MouseEvent) => void;
+  onLocationEdit?: (location: LocationNode, event: React.MouseEvent) => void;
+  onLocationDelete?: (location: LocationNode, event: React.MouseEvent) => void;
+  onLocationAdd?: (parentLocation?: LocationNode, event?: React.MouseEvent) => void;
+  onMachineClick?: (machine: Machine, event: React.MouseEvent) => void;
   selectedLocationId?: string;
-  selectedMachineId?: string;
   showActions?: boolean;
   className?: string;
   refreshTrigger?: number; // Add this to trigger refresh
+  showMachines?: boolean; // New prop to control machine display
+  preventFormSubmit?: boolean; // New prop to prevent form submission
 }
 
 export default function LocationTreeView({
-  onLocationSelect,
-  onMachineSelect,
+  onLocationClick,
   onLocationEdit,
   onLocationDelete,
   onLocationAdd,
+  onMachineClick,
   selectedLocationId,
-  selectedMachineId,
   showActions = true,
   className = '',
   refreshTrigger,
+  showMachines = false,
+  preventFormSubmit = false,
 }: LocationTreeViewProps) {
   const { t } = useTranslations();
   const [tree, setTree] = useState<LocationNode[]>([]);
+  
   const [loading, setLoading] = useState(true);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [deleteModal, setDeleteModal] = useState<{
@@ -105,20 +108,58 @@ export default function LocationTreeView({
     });
   };
 
-  const handleLocationClick = (location: LocationNode) => {
-    if (onLocationSelect) {
-      onLocationSelect(location);
+  const handleLocationClick = (location: LocationNode, event: React.MouseEvent) => {
+    if (preventFormSubmit) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (onLocationClick) {
+      onLocationClick(location, event);
     }
   };
 
-  const handleMachineClick = (machine: Machine) => {
-    if (onMachineSelect) {
-      onMachineSelect(machine);
+  const handleLocationEdit = (location: LocationNode, event: React.MouseEvent) => {
+    if (preventFormSubmit) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (onLocationEdit) {
+      onLocationEdit(location, event);
+    }
+  };
+
+  const handleLocationDelete = (location: LocationNode, event: React.MouseEvent) => {
+    if (preventFormSubmit) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (onLocationDelete) {
+      onLocationDelete(location, event);
+    }
+  };
+
+  const handleLocationAdd = (parentLocation: LocationNode | undefined, event: React.MouseEvent) => {
+    if (preventFormSubmit) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (onLocationAdd) {
+      onLocationAdd(parentLocation, event);
+    }
+  };
+
+  const handleMachineClick = (machine: Machine, event: React.MouseEvent) => {
+    if (preventFormSubmit) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    if (onMachineClick) {
+      onMachineClick(machine, event);
     }
   };
 
   const handleDelete = async () => {
-    if (!deleteModal.location || !onLocationDelete) return;
+    if (!deleteModal.location) return;
 
     try {
       const response = await fetch(`/api/locations/${deleteModal.location._id}`, {
@@ -127,7 +168,6 @@ export default function LocationTreeView({
 
       if (response.ok) {
         toast.success(t("locations.deleteSuccess"));
-        onLocationDelete(deleteModal.location);
         setDeleteModal({ isOpen: false, location: null });
         // Reload tree
         window.location.reload();
@@ -151,7 +191,7 @@ export default function LocationTreeView({
     const isExpanded = expandedNodes.has(node._id);
     const isSelected = selectedLocationId === node._id;
     const hasChildren = node.children && node.children.length > 0;
-    const hasMachines = node.machines && node.machines.length > 0;
+    const hasMachines = showMachines && node.machines && node.machines.length > 0;
 
     return (
       <div key={node._id} className="select-none">
@@ -160,10 +200,15 @@ export default function LocationTreeView({
             isSelected ? 'bg-blue-100 dark:bg-blue-900' : ''
           }`}
           style={{ paddingLeft: `${level * 20 + 8}px` }}
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Expand/Collapse Button */}
           <button
-            onClick={() => toggleExpanded(node._id)}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleExpanded(node._id);
+            }}
             className="mr-1 p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded"
             disabled={!hasChildren && !hasMachines}
           >
@@ -188,9 +233,10 @@ export default function LocationTreeView({
           </div>
 
           {/* Location Name */}
-          <div
-            className="flex-1 flex items-center"
-            onClick={() => handleLocationClick(node)}
+          <button
+            type="button"
+            className="flex-1 flex items-center text-left"
+            onClick={(e) => handleLocationClick(node, e)}
           >
             <span className="text-sm font-medium text-gray-900 dark:text-white">
               {node.name}
@@ -200,7 +246,7 @@ export default function LocationTreeView({
                 - {node.description}
               </span>
             )}
-          </div>
+          </button>
 
           {/* Machine Count */}
           {hasMachines && (
@@ -216,10 +262,7 @@ export default function LocationTreeView({
               <FormButton
                 type="button"
                 variant="secondary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onLocationAdd) onLocationAdd(node);
-                }}
+                onClick={(e) => handleLocationAdd(node, e)}
                 className="p-1 text-xs"
                 title={t('locations.addChild')}
               >
@@ -228,10 +271,7 @@ export default function LocationTreeView({
               <FormButton
                 type="button"
                 variant="secondary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (onLocationEdit) onLocationEdit(node);
-                }}
+                onClick={(e) => handleLocationEdit(node, e)}
                 className="p-1 text-xs"
                 title={t('common.edit')}
               >
@@ -240,10 +280,7 @@ export default function LocationTreeView({
               <FormButton
                 type="button"
                 variant="danger"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteModal({ isOpen: true, location: node });
-                }}
+                onClick={(e) => handleLocationDelete(node, e)}
                 className="p-1 text-xs"
                 title={t('common.delete')}
               >
@@ -253,17 +290,16 @@ export default function LocationTreeView({
           )}
         </div>
 
-        {/* Machines in this location */}
-        {isExpanded && hasMachines && (
-          <div className="ml-4">
+        {/* Machines in this location - only show if showMachines is true */}
+        {isExpanded && hasMachines && showMachines && (
+          <div className="ml-4" onClick={(e) => e.stopPropagation()}>
             {node.machines.map((machine) => (
               <div
                 key={machine._id}
-                className={`flex items-center py-1 px-2 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                  selectedMachineId === machine._id ? 'bg-green-100 dark:bg-green-900' : ''
-                }`}
+                className="flex items-center py-1 px-2 rounded cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-l-2 hover:border-blue-500 dark:hover:border-blue-400 transition-colors"
                 style={{ paddingLeft: `${(level + 1) * 20 + 8}px` }}
-                onClick={() => handleMachineClick(machine)}
+                onClick={(e) => handleMachineClick(machine, e)}
+                title={t('machines.clickToEdit')}
               >
                 <Wrench className="h-4 w-4 text-gray-500 dark:text-gray-400 mr-2" />
                 <div className="flex-1">

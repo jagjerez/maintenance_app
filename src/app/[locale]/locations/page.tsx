@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from '@/hooks/useTranslations';
 import { Plus, Edit, Trash2, MapPin, Folder, FolderOpen } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -43,11 +44,11 @@ interface Location {
   children: Location[];
 }
 
-const ITEMS_PER_PAGE = 10;
 
 export default function LocationsPage() {
   const { t } = useTranslations();
   const { data: session } = useSession();
+  const router = useRouter();
   const [locations, setLocations] = useState<Location[]>([]);
   const [parentLocations, setParentLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,15 +73,18 @@ export default function LocationsPage() {
     resolver: zodResolver(locationSchema),
   });
 
-  // Fetch locations with pagination
-  const fetchLocations = useCallback(async (page = 1) => {
+  // Fetch all locations for list view
+  const fetchLocations = useCallback(async () => {
     try {
-      const response = await fetch(`/api/locations?page=${page}&limit=${ITEMS_PER_PAGE}`);
+      const response = await fetch('/api/locations?includeChildren=true&flat=true');
       if (response.ok) {
         const data = await response.json();
-        setLocations(data.locations || data);
-        setTotalPages(data.totalPages || Math.ceil((data.locations || data).length / ITEMS_PER_PAGE));
-        setTotalItems(data.totalItems || (data.locations || data).length);
+        setTotalItems(data.length);
+        setTotalPages(Math.ceil(data.length / 10)); // 10 items per page
+        // Set current page items
+        const startIndex = (currentPage - 1) * 10;
+        const endIndex = startIndex + 10;
+        setLocations(data.slice(startIndex, endIndex));
       } else {
         toast.error(t("locations.locationLoadError"));
       }
@@ -88,7 +92,7 @@ export default function LocationsPage() {
       console.error('Error fetching locations:', error);
       toast.error(t("locations.locationLoadError"));
     }
-  }, [t]);
+  }, [t, currentPage]);
 
   // Fetch all locations for parent selection
   const fetchAllLocations = useCallback(async () => {
@@ -109,13 +113,13 @@ export default function LocationsPage() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchLocations(currentPage), fetchAllLocations()]);
+      await Promise.all([fetchLocations(), fetchAllLocations()]);
       setLoading(false);
     };
     loadData();
-  }, [currentPage, fetchLocations, fetchAllLocations]);
+  }, [fetchLocations, fetchAllLocations]);
 
-  const onSubmit = async (data: { name: string; description?: string; parentId?: string; companyId: string }) => {
+  const onSubmit = async (data: { name: string; description?: string; parentId?: string | null; companyId: string }) => {
     try {
       const url = editingLocation ? `/api/locations/${editingLocation._id}` : '/api/locations';
       const method = editingLocation ? 'PUT' : 'POST';
@@ -133,7 +137,7 @@ export default function LocationsPage() {
 
       if (response.ok) {
         toast.success(editingLocation ? t("locations.locationUpdated") : t("locations.locationCreated"));
-        await fetchLocations(currentPage);
+        await fetchLocations();
         await fetchAllLocations();
         setRefreshTrigger(prev => prev + 1); // Trigger tree refresh
         setShowModal(false);
@@ -169,7 +173,7 @@ export default function LocationsPage() {
 
       if (response.ok) {
         toast.success(t("locations.locationDeleted"));
-        await fetchLocations(currentPage);
+        await fetchLocations();
         await fetchAllLocations();
         setRefreshTrigger(prev => prev + 1); // Trigger tree refresh
         setDeleteModal({ isOpen: false, location: null });
@@ -213,6 +217,11 @@ export default function LocationsPage() {
       parentId: parentLocation?._id || '',
     });
     setShowModal(true);
+  };
+
+  const handleMachineClick = (machine: Machine) => {
+    // Navigate to machines page with edit parameter
+    router.push(`/machines?edit=${machine._id}`);
   };
 
   if (loading) {
@@ -291,11 +300,13 @@ export default function LocationsPage() {
       {/* Content */}
       {viewMode === 'tree' ? (
         <LocationTreeView
-          onLocationSelect={handleLocationSelect}
-          onLocationEdit={handleLocationEdit}
-          onLocationDelete={handleLocationDelete}
-          onLocationAdd={handleLocationAdd}
+          onLocationClick={(location) => handleLocationSelect(location)}
+          onLocationEdit={(location) => handleLocationEdit(location)}
+          onLocationDelete={(location) => handleLocationDelete(location)}
+          onLocationAdd={(parentLocation) => handleLocationAdd(parentLocation)}
+          onMachineClick={(machine) => handleMachineClick(machine)}
           showActions={true}
+          showMachines={true}
           refreshTrigger={refreshTrigger}
           className="bg-white dark:bg-gray-800 shadow rounded-lg p-6"
         />
@@ -379,7 +390,7 @@ export default function LocationsPage() {
           totalPages={totalPages}
           onPageChange={handlePageChange}
           totalItems={totalItems}
-          itemsPerPage={ITEMS_PER_PAGE}
+          itemsPerPage={10}
           className="mt-6"
         />
       )}

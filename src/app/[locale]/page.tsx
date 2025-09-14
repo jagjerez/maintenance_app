@@ -41,7 +41,7 @@ interface Stats {
 }
 
 export default function Dashboard() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const { t } = useTranslations();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
@@ -342,13 +342,15 @@ export default function Dashboard() {
             </Link>
           </div>
           <LocationTreeView
-            onLocationSelect={(location) => {
+            onLocationClick={(location) => {
               console.log('Selected location:', location);
             }}
-            onMachineSelect={(machine) => {
-              console.log('Selected machine:', machine);
+            onMachineClick={(machine) => {
+              // Navigate to machines page with edit parameter
+              router.push(`/machines?edit=${machine._id}`);
             }}
             showActions={false}
+            showMachines={true}
             className="max-h-96"
             refreshTrigger={0}
           />
@@ -421,7 +423,11 @@ export default function Dashboard() {
                         {workOrder.description}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        <div>
+                        <div 
+                          className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                          onClick={() => router.push(`/machines?edit=${workOrder.machine._id}`)}
+                          title={t('machines.clickToEdit')}
+                        >
                           <div className="font-medium">
                             {workOrder.machine.model.name}
                           </div>

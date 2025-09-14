@@ -8,6 +8,7 @@ export interface IMachine {
   locationId?: string;
   description?: string;
   maintenanceRanges?: string[];
+  operations?: string[];
   properties: Map<string, unknown>;
   companyId: string;
   createdAt: Date;
@@ -37,6 +38,10 @@ const MachineSchema = new Schema({
   maintenanceRanges: [{
     type: Schema.Types.ObjectId,
     ref: 'MaintenanceRange',
+  }],
+  operations: [{
+    type: Schema.Types.ObjectId,
+    ref: 'Operation',
   }],
   properties: {
     type: Map,

@@ -71,6 +71,7 @@ export const machineSchema = z.object({
   locationId: z.string().optional(),
   description: z.string().max(500, 'Description too long').optional(),
   maintenanceRanges: z.array(z.string()).min(1, 'At least one maintenance range is required'),
+  operations: z.array(z.string()).optional(),
   properties: z.record(z.string(), z.unknown()).default({}),
   companyId: z.string().min(1, 'Company is required'),
 });
@@ -121,7 +122,7 @@ export const workOrderUpdateSchema = workOrderSchema.partial();
 export const locationSchema = z.object({
   name: z.string().min(1, 'Location name is required').max(100, 'Location name too long'),
   description: z.string().max(500, 'Description too long').optional(),
-  parentId: z.string().optional(),
+  parentId: z.string().nullable().optional().transform(val => val === '' ? null : val),
   companyId: z.string().min(1, 'Company is required'),
 });
 

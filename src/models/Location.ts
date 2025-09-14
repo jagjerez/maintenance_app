@@ -30,13 +30,7 @@ const LocationSchema = new Schema({
   parentId: {
     type: Schema.Types.ObjectId,
     ref: 'Location',
-    default: null,
-    validate: {
-      validator: function(v: unknown) {
-        return v === null || v === undefined || v === '' || (typeof v === 'string' && mongoose.Types.ObjectId.isValid(v));
-      },
-      message: 'Invalid parentId'
-    }
+    default: null
   },
   path: {
     type: String,
@@ -92,16 +86,20 @@ LocationSchema.virtual('machinesCount', {
 LocationSchema.set('toJSON', { virtuals: true });
 LocationSchema.set('toObject', { virtuals: true });
 
+// Pre-validate middleware to clean parentId
+LocationSchema.pre('validate', function(next) {
+  // Clean parentId first - convert empty string or undefined to null
+  if (this.parentId === '' || this.parentId === undefined) {
+    (this as unknown as { parentId: null }).parentId = null;
+  }
+  next();
+});
+
 // Pre-save middleware to update path and level
 LocationSchema.pre('save', async function(next) {
   // Always calculate path and level
-  // Handle empty string parentId
-  if (this.parentId && this.parentId.toString() === '') {
-    (this as any).parentId = null;
-  }
-  
-  if (this.parentId) {
-    const parent = await this.constructor.findById(this.parentId);
+  if (this.parentId && this.parentId !== null) {
+    const parent = await (this.constructor as any).findById(this.parentId);
     if (parent) {
       this.path = `${parent.path}/${this.name}`;
       this.level = parent.level + 1;
@@ -118,7 +116,7 @@ LocationSchema.pre('save', async function(next) {
 
 // Pre-save middleware to update parent's isLeaf status
 LocationSchema.post('save', async function() {
-  if (this.parentId && this.parentId !== '') {
+  if (this.parentId && this.parentId !== '' && this.parentId !== null) {
     const parent = await this.constructor.findById(this.parentId);
     if (parent) {
       parent.isLeaf = false;
@@ -146,7 +144,7 @@ LocationSchema.pre('remove', async function(next) {
   }
 
   // Update parent's isLeaf status if this was the only child
-  if (this.parentId && this.parentId !== '') {
+  if (this.parentId && this.parentId !== '' && this.parentId !== null) {
     const siblingsCount = await this.constructor.countDocuments({ parentId: this.parentId });
     if (siblingsCount === 1) { // Only this location is a child
       const parent = await this.constructor.findById(this.parentId);

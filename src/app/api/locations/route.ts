@@ -92,6 +92,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    
+    // Clean parentId before validation
+    if (body.parentId === '' || body.parentId === undefined) {
+      body.parentId = null;
+    }
+    
     const validatedData = locationSchema.parse({
       ...body,
       companyId: session.user.companyId,
@@ -100,7 +106,7 @@ export async function POST(request: NextRequest) {
     await connectDB();
 
     // Check if parent exists and belongs to the same company
-    if (validatedData.parentId && validatedData.parentId !== '') {
+    if (validatedData.parentId && validatedData.parentId !== null) {
       const parent = await Location.findOne({
         _id: validatedData.parentId,
         companyId: session.user.companyId,
@@ -111,9 +117,6 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
-    } else {
-      // Set parentId to null if empty string
-      validatedData.parentId = undefined;
     }
 
     // Check for duplicate names at the same level
