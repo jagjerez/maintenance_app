@@ -89,16 +89,17 @@ export default function Navigation() {
           <div className="flex items-center min-w-0 flex-1">
             <div className="flex-shrink-0 flex items-center">
               <Wrench className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-              <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white truncate max-w-32 sm:max-w-none">
+              <span className="ml-2 text-xl font-bold text-gray-900 dark:text-white truncate max-w-20 sm:max-w-32 md:max-w-none">
                 {session.user.company?.appName || t("app.defaultName")}
               </span>
             </div>
-
           </div>
 
           {/* Menu button - Always visible */}
           <div className="flex items-center space-x-1 flex-shrink-0">
-            <LanguageSelector />
+            <div className="hidden sm:block">
+              <LanguageSelector />
+            </div>
             <ThemeToggle compact />
             <UserDropdown />
             <button
@@ -121,6 +122,11 @@ export default function Navigation() {
         mobileMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
       )}>
         <div className="px-2 pt-2 pb-3 space-y-1 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+          {/* Language selector for mobile */}
+          <div className="sm:hidden px-3 py-2 border-b border-gray-200 dark:border-gray-700 mb-2">
+            <LanguageSelector />
+          </div>
+          
           {navigation.map((item) => {
             // Extract the path without locale (e.g., /en/dashboard -> /dashboard)
             const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}/, '') || '/';
