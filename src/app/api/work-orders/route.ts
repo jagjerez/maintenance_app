@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
     
-    const query: Record<string, any> = {};
+    const query: Record<string, unknown> = {};
     
     if (status) query.status = status;
     if (type) query.type = type;

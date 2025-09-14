@@ -8,7 +8,7 @@ export type WorkOrderType = 'preventive' | 'corrective';
 export interface IFilledOperation {
   operationId: string;
   operation: IOperation;
-  value: any;
+  value: unknown;
   description?: string;
   filledAt: Date;
   filledBy?: string;

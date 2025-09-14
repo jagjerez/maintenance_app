@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { useTranslations } from '@/hooks/useTranslations';
 import { FormInput, FormTextarea, FormSelect, FormButton } from '@/components/Form';
 import { Plus, Trash2, Edit3, Check, X } from 'lucide-react';
-import { IOperation, IFilledOperation } from '@/models/WorkOrder';
+import { IFilledOperation } from '@/models/WorkOrder';
+import { IOperation } from '@/models/Operation';
 
 interface FilledOperationsManagerProps {
   operations: IOperation[];
@@ -21,7 +22,7 @@ export default function FilledOperationsManager({
 }: FilledOperationsManagerProps) {
   const { t } = useTranslations();
   const [editingOperation, setEditingOperation] = useState<string | null>(null);
-  const [tempValue, setTempValue] = useState<any>('');
+  const [tempValue, setTempValue] = useState<unknown>('');
   const [tempDescription, setTempDescription] = useState('');
 
   const getOperationById = (id: string) => {
@@ -58,7 +59,7 @@ export default function FilledOperationsManager({
     };
 
     const existingIndex = filledOperations.findIndex(filled => filled.operationId === editingOperation);
-    let newFilledOperations = [...filledOperations];
+    const newFilledOperations = [...filledOperations];
 
     if (existingIndex >= 0) {
       newFilledOperations[existingIndex] = newFilledOperation;
@@ -113,24 +114,24 @@ export default function FilledOperationsManager({
     return translation;
   };
 
-  const formatValue = (value: any, type: string) => {
+  const formatValue = (value: unknown, type: string) => {
     if (value === null || value === undefined) return '-';
     
     switch (type) {
       case 'boolean':
         return value ? t('common.yes') : t('common.no');
       case 'date':
-        return new Date(value).toLocaleDateString();
+        return value ? new Date(value as string).toLocaleDateString() : '-';
       case 'time':
-        return value;
+        return String(value);
       case 'datetime':
-        return new Date(value).toLocaleString();
+        return value ? new Date(value as string).toLocaleString() : '-';
       default:
         return String(value);
     }
   };
 
-  const renderInput = (operation: IOperation, value: any, onChange: (value: any) => void) => {
+  const renderInput = (operation: IOperation, value: unknown, onChange: (value: unknown) => void) => {
     switch (operation.type) {
       case 'boolean':
         return (
@@ -143,7 +144,7 @@ export default function FilledOperationsManager({
         return (
           <FormInput
             type="date"
-            value={value}
+            value={value as string}
             onChange={(e) => onChange(e.target.value)}
           />
         );
@@ -151,7 +152,7 @@ export default function FilledOperationsManager({
         return (
           <FormInput
             type="time"
-            value={value}
+            value={value as string}
             onChange={(e) => onChange(e.target.value)}
           />
         );
@@ -159,7 +160,7 @@ export default function FilledOperationsManager({
         return (
           <FormInput
             type="datetime-local"
-            value={value}
+            value={value as string}
             onChange={(e) => onChange(e.target.value)}
           />
         );
@@ -167,7 +168,7 @@ export default function FilledOperationsManager({
         return (
           <FormInput
             type="text"
-            value={value}
+            value={value as string}
             onChange={(e) => onChange(e.target.value)}
             placeholder={t("placeholders.operationValue")}
           />
@@ -213,7 +214,6 @@ export default function FilledOperationsManager({
                         <FormButton
                           type="button"
                           variant="secondary"
-                          size="sm"
                           onClick={handleSaveOperation}
                           disabled={disabled}
                         >
@@ -222,7 +222,6 @@ export default function FilledOperationsManager({
                         <FormButton
                           type="button"
                           variant="danger"
-                          size="sm"
                           onClick={handleCancelEdit}
                           disabled={disabled}
                         >
@@ -234,7 +233,6 @@ export default function FilledOperationsManager({
                         <FormButton
                           type="button"
                           variant="secondary"
-                          size="sm"
                           onClick={() => handleFillOperation(operation._id)}
                           disabled={disabled}
                         >
@@ -244,7 +242,6 @@ export default function FilledOperationsManager({
                           <FormButton
                             type="button"
                             variant="danger"
-                            size="sm"
                             onClick={() => handleRemoveOperation(operation._id)}
                             disabled={disabled}
                           >

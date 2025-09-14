@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +15,7 @@ import { Pagination } from '@/components/Pagination';
 import MultiSelect from '@/components/MultiSelect';
 import DynamicProperties from '@/components/DynamicProperties';
 import FilledOperationsManager from '@/components/FilledOperationsManager';
-import { workOrderSchema, WorkOrderInput, FilledOperationInput } from '@/lib/validations';
+import { workOrderSchema, WorkOrderInput } from '@/lib/validations';
 import { IFilledOperation } from '@/models/WorkOrder';
 import { IOperation } from '@/models/Operation';
 
@@ -48,7 +48,7 @@ interface WorkOrder {
   notes?: string;
   operations: IOperation[];
   filledOperations: IFilledOperation[];
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
 }
@@ -76,7 +76,7 @@ export default function WorkOrdersPage() {
   const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
   const [workOrderOperations, setWorkOrderOperations] = useState<IOperation[]>([]);
   const [filledOperations, setFilledOperations] = useState<IFilledOperation[]>([]);
-  const [customProperties, setCustomProperties] = useState<Record<string, any>>({});
+  const [customProperties, setCustomProperties] = useState<Record<string, unknown>>({});
   const [workOrderType, setWorkOrderType] = useState<string>('');
 
   const {
@@ -150,7 +150,7 @@ export default function WorkOrdersPage() {
       setLoading(false);
     };
     loadData();
-  }, [currentPage]);
+  }, [currentPage, fetchWorkOrders, fetchMachines, fetchOperations]);
 
   // Check if we should open the modal automatically (from dashboard)
   useEffect(() => {
@@ -164,7 +164,7 @@ export default function WorkOrdersPage() {
       url.searchParams.delete('new');
       window.history.replaceState({}, '', url.toString());
     }
-  }, [searchParams, loading, machines.length, operations.length]);
+  }, [searchParams, loading, machines.length, operations.length, reset]);
 
   // Handle machine selection changes and work order type
   useEffect(() => {
@@ -207,7 +207,7 @@ export default function WorkOrdersPage() {
       // Only clear operations if not in edit mode
       setWorkOrderOperations([]);
     }
-  }, [selectedMachines, machines, workOrderType, editingWorkOrder]);
+  }, [selectedMachines, machines, workOrderType, editingWorkOrder, setValue]);
 
   // Update workOrderType when form type changes
   useEffect(() => {
@@ -227,7 +227,7 @@ export default function WorkOrdersPage() {
       setValue('machines', []);
       setValue('operations', []);
     }
-  }, [workOrderType, setValue, editingWorkOrder]);
+  }, [workOrderType, setValue, editingWorkOrder, setSelectedMachines, setSelectedOperations, setWorkOrderOperations, setFilledOperations]);
 
   // Use watchedType for form control instead of workOrderType
   // In edit mode, don't disable the form
@@ -280,7 +280,7 @@ export default function WorkOrdersPage() {
     // Clear all form values
     setValue('machines', []);
     setValue('operations', []);
-    setValue('type', '' as any);
+    setValue('type', 'preventive');
     setValue('customCode', '');
     setValue('description', '');
     setValue('completedDate', '');
@@ -295,12 +295,6 @@ export default function WorkOrdersPage() {
     } else {
       setValue('scheduledDate', '');
       setValue('status', 'pending');
-    }
-  };
-
-  const handleAddOperation = (operationId: string) => {
-    if (!selectedOperations.includes(operationId)) {
-      setSelectedOperations([...selectedOperations, operationId]);
     }
   };
 
@@ -753,10 +747,6 @@ export default function WorkOrdersPage() {
                           );
                         });
                         
-                        const isFromMachine = selectedMachines.some(machineId => {
-                          const machine = machines.find(m => m._id === machineId);
-                          return machine?.operations?.some(op => op._id === operation._id);
-                        });
                         
                         const source = isFromMaintenanceRange ? 'maintenanceRange' : 'machine';
                         
@@ -903,7 +893,7 @@ export default function WorkOrdersPage() {
               <DynamicProperties
                 properties={Object.entries(customProperties).map(([key, value]) => ({ key, value }))}
                 onChange={(props) => {
-                  const newProperties: Record<string, any> = {};
+                  const newProperties: Record<string, unknown> = {};
                   props.forEach(prop => {
                     newProperties[prop.key] = prop.value;
                   });

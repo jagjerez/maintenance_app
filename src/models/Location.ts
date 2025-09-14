@@ -89,7 +89,7 @@ LocationSchema.set('toObject', { virtuals: true });
 // Pre-validate middleware to clean parentId
 LocationSchema.pre('validate', function(next) {
   // Clean parentId first - convert empty string or undefined to null
-  if (this.parentId === '' || this.parentId === undefined) {
+  if (!this.parentId || this.parentId.toString() === '') {
     (this as unknown as { parentId: null }).parentId = null;
   }
   next();
@@ -99,7 +99,7 @@ LocationSchema.pre('validate', function(next) {
 LocationSchema.pre('save', async function(next) {
   // Always calculate path and level
   if (this.parentId && this.parentId !== null) {
-    const parent = await (this.constructor as any).findById(this.parentId);
+    const parent = await mongoose.models.Location?.findById(this.parentId);
     if (parent) {
       this.path = `${parent.path}/${this.name}`;
       this.level = parent.level + 1;
@@ -116,8 +116,8 @@ LocationSchema.pre('save', async function(next) {
 
 // Pre-save middleware to update parent's isLeaf status
 LocationSchema.post('save', async function() {
-  if (this.parentId && this.parentId !== '' && this.parentId !== null) {
-    const parent = await this.constructor.findById(this.parentId);
+  if (this.parentId && this.parentId.toString() !== '' && this.parentId !== null) {
+    const parent = await mongoose.models.Location?.findById(this.parentId);
     if (parent) {
       parent.isLeaf = false;
       await parent.save();
@@ -125,8 +125,8 @@ LocationSchema.post('save', async function() {
   }
 });
 
-// Pre-remove middleware to handle children
-LocationSchema.pre('remove', async function(next) {
+// Pre-deleteOne middleware to handle children
+LocationSchema.pre('deleteOne', { document: true, query: false }, async function(next) {
   // Check if there are machines in this location
   const Machine = mongoose.model('Machine');
   const machinesCount = await Machine.countDocuments({ locationId: this._id });
@@ -137,17 +137,17 @@ LocationSchema.pre('remove', async function(next) {
   }
 
   // Check if there are children
-  const childrenCount = await this.constructor.countDocuments({ parentId: this._id });
+  const childrenCount = await mongoose.models.Location?.countDocuments({ parentId: this._id });
   if (childrenCount > 0) {
     const error = new Error('Cannot delete location with children. Please delete children first.');
     return next(error);
   }
 
   // Update parent's isLeaf status if this was the only child
-  if (this.parentId && this.parentId !== '' && this.parentId !== null) {
-    const siblingsCount = await this.constructor.countDocuments({ parentId: this.parentId });
+  if (this.parentId && this.parentId.toString() !== '' && this.parentId !== null) {
+    const siblingsCount = await mongoose.models.Location?.countDocuments({ parentId: this.parentId });
     if (siblingsCount === 1) { // Only this location is a child
-      const parent = await this.constructor.findById(this.parentId);
+      const parent = await mongoose.models.Location?.findById(this.parentId);
       if (parent) {
         parent.isLeaf = true;
         await parent.save();

@@ -34,12 +34,12 @@ interface WorkOrder {
   }>;
   filledOperations?: Array<{
     operationId: string;
-    value: any;
+    value: unknown;
     description?: string;
     filledAt: string;
     filledBy?: string;
   }>;
-  properties?: Record<string, any>;
+  properties?: Record<string, unknown>;
   companyId: string;
   createdAt: string;
   updatedAt: string;
@@ -440,7 +440,7 @@ export default function Dashboard() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         <div className="space-y-1">
-                          {workOrder.machines?.map((machine: any, index: number) => (
+                          {workOrder.machines?.map((machine, index) => (
                             <div 
                               key={machine._id}
                               className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
