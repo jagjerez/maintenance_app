@@ -35,6 +35,9 @@
     "signOut": "Cerrar Sesión",
     "profile": "Perfil"
   },
+  "dashboard": {
+    "subtitle": "Resumen del sistema de mantenimiento"
+  },
   "auth": {
     "signIn": "Iniciar Sesión",
     "signUp": "Registrarse",

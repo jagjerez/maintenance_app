@@ -35,6 +35,9 @@
     "signOut": "Sign Out",
     "profile": "Profile"
   },
+  "dashboard": {
+    "subtitle": "Maintenance system summary"
+  },
   "auth": {
     "signIn": "Sign In",
     "signUp": "Sign Up",
@@ -90,7 +93,6 @@
     "operations": "Operations"
   },
   "operations": {
-    "title": "Operations",
     "title": "Operations",
     "addOperation": "Add Operation",
     "editOperation": "Edit Operation",

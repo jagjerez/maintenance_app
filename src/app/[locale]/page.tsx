@@ -1,23 +1,17 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { 
-  FileText, 
-  Plus,
-  AlertCircle,
-  CheckCircle,
-  Clock
-} from 'lucide-react';
-import { formatDate, getStatusColor, getTypeColor } from '@/lib/utils';
-import toast from 'react-hot-toast';
-import { useTranslations } from '@/hooks/useTranslations';
+import { useEffect, useState, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { FileText, Plus, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { formatDate, getStatusColor, getTypeColor } from "@/lib/utils";
+import toast from "react-hot-toast";
+import { useTranslations } from "@/hooks/useTranslations";
 
 interface WorkOrder {
   _id: string;
-  status: 'pending' | 'in_progress' | 'completed';
+  status: "pending" | "in_progress" | "completed";
   description: string;
   scheduledDate: string;
   machine: {
@@ -30,7 +24,7 @@ interface WorkOrder {
   };
   maintenanceRange: {
     name: string;
-    type: 'preventive' | 'corrective';
+    type: "preventive" | "corrective";
   };
 }
 
@@ -62,47 +56,44 @@ export default function Dashboard() {
   });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin');
-      return;
-    }
-    if (status === 'authenticated') {
-      fetchDashboardData();
-    }
-  }, [status, router]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Fetch work orders
-      const workOrdersResponse = await fetch('/api/work-orders');
+      const workOrdersResponse = await fetch("/api/work-orders");
       if (!workOrdersResponse.ok) {
-        throw new Error('Failed to fetch work orders');
+        throw new Error("Failed to fetch work orders");
       }
       const workOrdersData = await workOrdersResponse.json();
       setWorkOrders(workOrdersData.slice(0, 5)); // Show only latest 5
 
       // Fetch stats
-      const [machinesRes, modelsRes, rangesRes, operationsRes] = await Promise.all([
-        fetch('/api/machines'),
-        fetch('/api/machine-models'),
-        fetch('/api/maintenance-ranges'),
-        fetch('/api/operations')
-      ]);
+      const [machinesRes, modelsRes, rangesRes, operationsRes] =
+        await Promise.all([
+          fetch("/api/machines"),
+          fetch("/api/machine-models"),
+          fetch("/api/maintenance-ranges"),
+          fetch("/api/operations"),
+        ]);
 
       const [machines, models, ranges, operations] = await Promise.all([
         machinesRes.json(),
         modelsRes.json(),
         rangesRes.json(),
-        operationsRes.json()
+        operationsRes.json(),
       ]);
 
       const totalWorkOrders = workOrdersData.length;
-      const pendingWorkOrders = workOrdersData.filter((wo: WorkOrder) => wo.status === 'pending').length;
-      const inProgressWorkOrders = workOrdersData.filter((wo: WorkOrder) => wo.status === 'in_progress').length;
-      const completedWorkOrders = workOrdersData.filter((wo: WorkOrder) => wo.status === 'completed').length;
+      const pendingWorkOrders = workOrdersData.filter(
+        (wo: WorkOrder) => wo.status === "pending"
+      ).length;
+      const inProgressWorkOrders = workOrdersData.filter(
+        (wo: WorkOrder) => wo.status === "in_progress"
+      ).length;
+      const completedWorkOrders = workOrdersData.filter(
+        (wo: WorkOrder) => wo.status === "completed"
+      ).length;
 
       setStats({
         totalWorkOrders,
@@ -115,34 +106,47 @@ export default function Dashboard() {
         totalOperations: operations.length,
       });
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      toast.error(t('errors.serverError'));
+      console.error("Error fetching dashboard data:", error);
+      toast.error(t("errors.serverError"));
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/signin");
+      return;
+    }
+    if (status === "authenticated") {
+      fetchDashboardData();
+    }
+  }, [status, router, fetchDashboardData]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending':
+      case "pending":
         return <Clock className="h-4 w-4" />;
-      case 'in_progress':
+      case "in_progress":
         return <AlertCircle className="h-4 w-4" />;
-      case 'completed':
+      case "completed":
         return <CheckCircle className="h-4 w-4" />;
       default:
         return <Clock className="h-4 w-4" />;
     }
   };
 
-  if (status === 'loading' || loading) {
+  if (status === "loading" || loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="animate-pulse">
           <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+              <div
+                key={i}
+                className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow"
+              >
                 <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
                 <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
               </div>
@@ -153,16 +157,18 @@ export default function Dashboard() {
     );
   }
 
-  if (status === 'unauthenticated') {
+  if (status === "unauthenticated") {
     return null;
   }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('navigation.dashboard')}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          {t("navigation.dashboard")}
+        </h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400">
-          {t('common.loading')}
+          {t("dashboard.subtitle")}
         </p>
       </div>
 
@@ -177,7 +183,7 @@ export default function Dashboard() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                    {t('workOrders.title')}
+                    {t("workOrders.title")}
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-white">
                     {stats.totalWorkOrders}
@@ -197,7 +203,7 @@ export default function Dashboard() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                    {t('workOrders.pending')}
+                    {t("workOrders.pending")}
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-white">
                     {stats.pendingWorkOrders}
@@ -217,7 +223,7 @@ export default function Dashboard() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                    {t('workOrders.inProgress')}
+                    {t("workOrders.inProgress")}
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-white">
                     {stats.inProgressWorkOrders}
@@ -237,7 +243,7 @@ export default function Dashboard() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                    {t('workOrders.completed')}
+                    {t("workOrders.completed")}
                   </dt>
                   <dd className="text-lg font-medium text-gray-900 dark:text-white">
                     {stats.completedWorkOrders}
@@ -262,14 +268,14 @@ export default function Dashboard() {
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                {t('workOrders.addWorkOrder')}
+                {t("workOrders.addWorkOrder")}
               </Link>
               <Link
                 href="/machines/new"
                 className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                {t('machines.addMachine')}
+                {t("machines.addMachine")}
               </Link>
             </div>
           </div>
@@ -282,20 +288,36 @@ export default function Dashboard() {
             </h3>
             <dl className="grid grid-cols-2 gap-4">
               <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('machines.title')}</dt>
-                <dd className="text-lg font-semibold text-gray-900 dark:text-white">{stats.totalMachines}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {t("machines.title")}
+                </dt>
+                <dd className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {stats.totalMachines}
+                </dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('machineModels.title')}</dt>
-                <dd className="text-lg font-semibold text-gray-900 dark:text-white">{stats.totalModels}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {t("machineModels.title")}
+                </dt>
+                <dd className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {stats.totalModels}
+                </dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('maintenanceRanges.title')}</dt>
-                <dd className="text-lg font-semibold text-gray-900 dark:text-white">{stats.totalMaintenanceRanges}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {t("maintenanceRanges.title")}
+                </dt>
+                <dd className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {stats.totalMaintenanceRanges}
+                </dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('operations.title')}</dt>
-                <dd className="text-lg font-semibold text-gray-900 dark:text-white">{stats.totalOperations}</dd>
+                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  {t("operations.title")}
+                </dt>
+                <dd className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {stats.totalOperations}
+                </dd>
               </div>
             </dl>
           </div>
@@ -316,11 +338,13 @@ export default function Dashboard() {
               Ver todas
             </Link>
           </div>
-          
+
           {workOrders.length === 0 ? (
             <div className="text-center py-8">
               <FileText className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No hay órdenes de trabajo</h3>
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+                No hay órdenes de trabajo
+              </h3>
               <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Comienza creando una nueva orden de trabajo.
               </p>
@@ -330,7 +354,7 @@ export default function Dashboard() {
                   className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  {t('workOrders.addWorkOrder')}
+                  {t("workOrders.addWorkOrder")}
                 </Link>
               </div>
             </div>
@@ -340,45 +364,65 @@ export default function Dashboard() {
                 <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      {t('workOrders.description')}
+                      {t("workOrders.description")}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      {t('workOrders.machine')}
+                      {t("workOrders.machine")}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Tipo
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      {t('workOrders.status')}
+                      {t("workOrders.status")}
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      {t('workOrders.scheduledDate')}
+                      {t("workOrders.scheduledDate")}
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {workOrders.map((workOrder) => (
-                    <tr key={workOrder._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <tr
+                      key={workOrder._id}
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         {workOrder.description}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                         <div>
-                          <div className="font-medium">{workOrder.machine.model.name}</div>
-                          <div className="text-gray-500 dark:text-gray-400">{workOrder.machine.location}</div>
+                          <div className="font-medium">
+                            {workOrder.machine.model.name}
+                          </div>
+                          <div className="text-gray-500 dark:text-gray-400">
+                            {workOrder.machine.location}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(workOrder.maintenanceRange.type)}`}>
-                          {workOrder.maintenanceRange.type === 'preventive' ? 'Preventivo' : 'Correctivo'}
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(
+                            workOrder.maintenanceRange.type
+                          )}`}
+                        >
+                          {workOrder.maintenanceRange.type === "preventive"
+                            ? "Preventivo"
+                            : "Correctivo"}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(workOrder.status)}`}>
+                        <span
+                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                            workOrder.status
+                          )}`}
+                        >
                           {getStatusIcon(workOrder.status)}
                           <span className="ml-1">
-                            {workOrder.status === 'pending' ? t('workOrders.pending') : 
-                             workOrder.status === 'in_progress' ? t('workOrders.inProgress') : t('workOrders.completed')}
+                            {workOrder.status === "pending"
+                              ? t("workOrders.pending")
+                              : workOrder.status === "in_progress"
+                              ? t("workOrders.inProgress")
+                              : t("workOrders.completed")}
                           </span>
                         </span>
                       </td>
