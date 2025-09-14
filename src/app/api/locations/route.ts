@@ -1,0 +1,186 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
+import { connectDB } from '@/lib/db';
+import { Location } from '@/models';
+import { locationSchema } from '@/lib/validations';
+
+interface LocationWithChildren {
+  _id: string;
+  name: string;
+  description?: string;
+  parentId?: string;
+  path: string;
+  level: number;
+  children: LocationWithChildren[];
+  machines?: unknown[];
+}
+
+interface FlatLocation {
+  _id: string;
+  name: string;
+  description?: string;
+  parentId?: string;
+  path: string;
+  level: number;
+  machines?: unknown[];
+}
+
+// GET /api/locations - Get all locations for a company
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    await connectDB();
+
+    const { searchParams } = new URL(request.url);
+    const parentId = searchParams.get('parentId');
+    const includeChildren = searchParams.get('includeChildren') === 'true';
+    const includeMachines = searchParams.get('includeMachines') === 'true';
+    const flat = searchParams.get('flat') === 'true';
+
+    const query: Record<string, unknown> = { companyId: session.user.companyId };
+
+    if (parentId) {
+      query.parentId = parentId;
+    } else if (!includeChildren) {
+      // Only get root locations (no parent)
+      query.parentId = { $exists: false };
+    }
+
+    let populateFields = '';
+    if (includeMachines) {
+      populateFields = 'machines';
+    }
+
+    const locations = await Location.find(query)
+      .populate(populateFields)
+      .sort({ name: 1 })
+      .lean();
+
+    // If includeChildren is true, build the tree structure
+    if (includeChildren) {
+      if (flat) {
+        // Return flat array with level information for dropdown
+        const flatLocations = flattenLocationTree(locations as LocationWithChildren[]);
+        return NextResponse.json(flatLocations);
+      } else {
+        const tree = buildLocationTree(locations as LocationWithChildren[]);
+        return NextResponse.json(tree);
+      }
+    }
+
+    return NextResponse.json(locations);
+  } catch (error) {
+    console.error('Error fetching locations:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/locations - Create a new location
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const validatedData = locationSchema.parse({
+      ...body,
+      companyId: session.user.companyId,
+    });
+
+    await connectDB();
+
+    // Check if parent exists and belongs to the same company
+    if (validatedData.parentId && validatedData.parentId !== '') {
+      const parent = await Location.findOne({
+        _id: validatedData.parentId,
+        companyId: session.user.companyId,
+      });
+      if (!parent) {
+        return NextResponse.json(
+          { error: 'Parent location not found' },
+          { status: 404 }
+        );
+      }
+    } else {
+      // Set parentId to null if empty string
+      validatedData.parentId = undefined;
+    }
+
+    // Check for duplicate names at the same level
+    const existingLocation = await Location.findOne({
+      name: validatedData.name,
+      parentId: validatedData.parentId || { $exists: false },
+      companyId: session.user.companyId,
+    });
+
+    if (existingLocation) {
+      return NextResponse.json(
+        { error: 'Location with this name already exists at this level' },
+        { status: 400 }
+      );
+    }
+
+    const location = new Location(validatedData);
+    await location.save();
+
+    return NextResponse.json(location, { status: 201 });
+  } catch (error) {
+    console.error('Error creating location:', error);
+    if (error instanceof Error && error.name === 'ValidationError') {
+      return NextResponse.json(
+        { error: 'Validation error', details: error.message },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// Helper function to build location tree
+function buildLocationTree(locations: LocationWithChildren[], parentId: string | null = null): LocationWithChildren[] {
+  const children = locations.filter(loc => 
+    (parentId === null && !loc.parentId) || 
+    (parentId !== null && loc.parentId && loc.parentId.toString() === parentId)
+  );
+
+  return children.map(location => ({
+    ...location,
+    children: buildLocationTree(locations, location._id.toString()),
+  }));
+}
+
+// Helper function to flatten location tree with level information
+function flattenLocationTree(locations: LocationWithChildren[], parentId: string | null = null, level: number = 0): FlatLocation[] {
+  const children = locations.filter(loc => 
+    (parentId === null && !loc.parentId) || 
+    (parentId !== null && loc.parentId && loc.parentId.toString() === parentId)
+  );
+
+  const result: FlatLocation[] = [];
+  
+  children.forEach(location => {
+    result.push({
+      ...location,
+      level: level
+    });
+    
+    // Recursively add children
+    const childLocations = flattenLocationTree(locations, location._id.toString(), level + 1);
+    result.push(...childLocations);
+  });
+
+  return result;
+}

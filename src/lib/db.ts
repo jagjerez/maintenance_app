@@ -38,6 +38,7 @@ async function connectDB() {
 }
 
 export default connectDB;
+export { connectDB };
 
 declare global {
   var mongoose: {

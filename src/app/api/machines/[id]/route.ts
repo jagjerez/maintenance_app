@@ -10,7 +10,9 @@ export async function GET(
   try {
     await connectDB();
     const { id } = await params;
-    const machine = await Machine.findById(id).populate('model');
+    const machine = await Machine.findById(id)
+      .populate('model')
+      .populate('maintenanceRanges');
     
     if (!machine) {
       return NextResponse.json(
@@ -38,12 +40,19 @@ export async function PUT(
     const body = await request.json();
     const validatedData = machineUpdateSchema.parse(body);
     
+    // Clean empty string values for ObjectId fields
+    if (validatedData.locationId === '') {
+      validatedData.locationId = undefined;
+    }
+    
     const { id } = await params;
     const machine = await Machine.findByIdAndUpdate(
       id,
       validatedData,
       { new: true, runValidators: true }
-    ).populate('model');
+    )
+      .populate('model')
+      .populate('maintenanceRanges');
     
     if (!machine) {
       return NextResponse.json(

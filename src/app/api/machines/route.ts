@@ -6,7 +6,10 @@ import { machineSchema } from '@/lib/validations';
 export async function GET() {
   try {
     await connectDB();
-    const machines = await Machine.find().populate('model').sort({ createdAt: -1 });
+    const machines = await Machine.find()
+      .populate('model')
+      .populate('maintenanceRanges')
+      .sort({ createdAt: -1 });
     return NextResponse.json(machines);
   } catch (error) {
     console.error('Error fetching machines:', error);
@@ -23,10 +26,17 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = machineSchema.parse(body);
     
+    // Clean empty string values for ObjectId fields
+    if (validatedData.locationId === '') {
+      validatedData.locationId = undefined;
+    }
+    
     const machine = new Machine(validatedData);
     await machine.save();
     
-    const populatedMachine = await Machine.findById(machine._id).populate('model');
+    const populatedMachine = await Machine.findById(machine._id)
+      .populate('model')
+      .populate('maintenanceRanges');
     return NextResponse.json(populatedMachine, { status: 201 });
   } catch (error) {
     console.error('Error creating machine:', error);

@@ -5,6 +5,9 @@ export interface IMachine {
   _id: string;
   model: string;
   location: string;
+  locationId?: string;
+  description?: string;
+  maintenanceRanges?: string[];
   properties: Map<string, unknown>;
   companyId: string;
   createdAt: Date;
@@ -22,6 +25,19 @@ const MachineSchema = new Schema({
     required: [true, 'Location is required'],
     trim: true,
   },
+  locationId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Location',
+  },
+  description: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Description cannot exceed 500 characters'],
+  },
+  maintenanceRanges: [{
+    type: Schema.Types.ObjectId,
+    ref: 'MaintenanceRange',
+  }],
   properties: {
     type: Map,
     of: Schema.Types.Mixed,

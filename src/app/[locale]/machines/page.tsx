@@ -6,13 +6,15 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useSearchParams } from 'next/navigation';
 import { useTranslations } from '@/hooks/useTranslations';
-import { Plus, Edit, Trash2, MapPin, Wrench } from 'lucide-react';
+import { Plus, Edit, Trash2, MapPin, Wrench, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Modal from '@/components/Modal';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { Form, FormGroup, FormLabel, FormInput, FormSelect, FormButton } from '@/components/Form';
 import { Pagination } from '@/components/Pagination';
 import { machineSchema } from '@/lib/validations';
+import LocationTreeView from '@/components/LocationTreeView';
+import MultiSelect from '@/components/MultiSelect';
 
 interface MachineModel {
   _id: string;
@@ -20,6 +22,13 @@ interface MachineModel {
   manufacturer: string;
   brand: string;
   year: number;
+}
+
+interface MaintenanceRange {
+  _id: string;
+  name: string;
+  type: 'preventive' | 'corrective';
+  description: string;
 }
 
 interface Machine {
@@ -32,6 +41,13 @@ interface Machine {
     year: number;
   };
   location: string;
+  locationId?: string;
+  description?: string;
+  maintenanceRanges?: {
+    _id: string;
+    name: string;
+    type: 'preventive' | 'corrective';
+  }[];
   properties: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -43,6 +59,7 @@ export default function MachinesPage() {
   const searchParams = useSearchParams();
   const [machines, setMachines] = useState<Machine[]>([]);
   const [machineModels, setMachineModels] = useState<MachineModel[]>([]);
+  const [maintenanceRanges, setMaintenanceRanges] = useState<MaintenanceRange[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
@@ -53,6 +70,11 @@ export default function MachinesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [showLocationSelector, setShowLocationSelector] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<{ _id: string; name: string; path: string } | null>(null);
+  const [newPropertyKey, setNewPropertyKey] = useState('');
+  const [newPropertyValue, setNewPropertyValue] = useState('');
+  const [selectedMaintenanceRanges, setSelectedMaintenanceRanges] = useState<string[]>([]);
 
   const ITEMS_PER_PAGE = 10;
 
@@ -60,13 +82,63 @@ export default function MachinesPage() {
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(machineSchema),
     defaultValues: {
       properties: {},
+      companyId: session?.user?.companyId || '',
     },
   });
+
+  // Watch maintenanceRanges value for debugging
+  const maintenanceRangesValue = watch('maintenanceRanges');
+  console.log('Current maintenanceRanges value:', maintenanceRangesValue);
+
+  // Custom properties handlers
+  const addCustomProperty = () => {
+    if (newPropertyKey.trim() && newPropertyValue.trim()) {
+      const currentProperties = watch('properties') || {};
+      setValue('properties', {
+        ...currentProperties,
+        [newPropertyKey.trim()]: newPropertyValue.trim()
+      });
+      setNewPropertyKey('');
+      setNewPropertyValue('');
+    }
+  };
+
+  const removeCustomProperty = (key: string) => {
+    const currentProperties = watch('properties') || {};
+    const newProperties = { ...currentProperties };
+    delete newProperties[key];
+    setValue('properties', newProperties);
+  };
+
+
+
+
+  // Update form values when session or selectedLocation changes
+  useEffect(() => {
+    if (session?.user?.companyId) {
+      setValue('companyId', session.user.companyId);
+    }
+  }, [session?.user?.companyId, setValue]);
+
+  useEffect(() => {
+    if (selectedLocation) {
+      setValue('location', selectedLocation.path);
+      setValue('locationId', selectedLocation._id);
+    }
+  }, [selectedLocation, setValue]);
+
+  // Update maintenanceRanges field when selectedMaintenanceRanges changes
+  useEffect(() => {
+    setValue('maintenanceRanges', selectedMaintenanceRanges);
+  }, [selectedMaintenanceRanges, setValue]);
+
 
   // Fetch machines with pagination
   const fetchMachines = useCallback(async (page = 1) => {
@@ -102,14 +174,30 @@ export default function MachinesPage() {
     }
   }, [t]);
 
+  // Fetch maintenance ranges
+  const fetchMaintenanceRanges = useCallback(async () => {
+    try {
+      const response = await fetch('/api/maintenance-ranges?limit=1000');
+      if (response.ok) {
+        const data = await response.json();
+        setMaintenanceRanges(data.maintenanceRanges || data);
+      } else {
+        toast.error(t("maintenanceRanges.rangeError"));
+      }
+    } catch (error) {
+      console.error('Error fetching maintenance ranges:', error);
+      toast.error(t("maintenanceRanges.rangeError"));
+    }
+  }, [t]);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchMachines(currentPage), fetchMachineModels()]);
+      await Promise.all([fetchMachines(currentPage), fetchMachineModels(), fetchMaintenanceRanges()]);
       setLoading(false);
     };
     loadData();
-  }, [currentPage, fetchMachines, fetchMachineModels]);
+  }, [currentPage, fetchMachines, fetchMachineModels, fetchMaintenanceRanges]);
 
   // Check if we should open the modal automatically (from dashboard)
   useEffect(() => {
@@ -126,10 +214,24 @@ export default function MachinesPage() {
     }
   }, [searchParams, loading, machineModels.length]);
 
-  const onSubmit = async (data: { model: string; location: string; properties: Record<string, unknown>; companyId: string }) => {
+  const onSubmit = async (data: { model: string; location: string; locationId?: string; description?: string; maintenanceRanges?: string[]; properties: Record<string, unknown>; companyId: string }) => {
+    console.log('Form submitted with data:', data);
+    console.log('Selected maintenance ranges:', selectedMaintenanceRanges);
+    console.log('Selected location:', selectedLocation);
+    
     try {
       if (!session?.user?.companyId) {
         toast.error(t("machines.companyError"));
+        return;
+      }
+
+      if (!selectedLocation) {
+        toast.error(t("machines.locationRequired"));
+        return;
+      }
+
+      if (selectedMaintenanceRanges.length === 0) {
+        toast.error(t("machines.atLeastOneMaintenanceRangeRequired"));
         return;
       }
 
@@ -143,6 +245,7 @@ export default function MachinesPage() {
         },
         body: JSON.stringify({
           ...data,
+          maintenanceRanges: selectedMaintenanceRanges,
           companyId: session?.user?.companyId,
         }),
       });
@@ -152,6 +255,9 @@ export default function MachinesPage() {
         await fetchMachines(currentPage);
         setShowModal(false);
         setEditingMachine(null);
+        setSelectedLocation(null);
+        setShowLocationSelector(false);
+        setSelectedMaintenanceRanges([]);
         reset();
       } else {
         const error = await response.json();
@@ -164,12 +270,34 @@ export default function MachinesPage() {
   };
 
   const handleEdit = (machine: Machine) => {
+    console.log('Editing machine:', machine);
+    console.log('Maintenance ranges:', machine.maintenanceRanges);
+    
     setEditingMachine(machine);
-    reset({
-      model: machine.model._id,
-      location: machine.location,
-      properties: machine.properties,
-    });
+    
+    // Set form values using setValue
+    setValue('model', machine.model._id);
+    setValue('location', machine.location);
+    setValue('locationId', machine.locationId || '');
+    setValue('description', machine.description || '');
+    setValue('properties', machine.properties);
+    setValue('companyId', session?.user?.companyId || '');
+    
+    // Set selected maintenance ranges
+    const rangeIds = machine.maintenanceRanges?.map(range => range._id) || [];
+    setSelectedMaintenanceRanges(rangeIds);
+    
+    // Set selected location if machine has locationId
+    if (machine.locationId) {
+      setSelectedLocation({
+        _id: machine.locationId,
+        name: machine.location,
+        path: machine.location,
+      });
+    } else {
+      setSelectedLocation(null);
+    }
+    
     setShowModal(true);
   };
 
@@ -239,6 +367,9 @@ export default function MachinesPage() {
         <FormButton
           onClick={() => {
             setEditingMachine(null);
+            setSelectedLocation(null);
+            setShowLocationSelector(false);
+            setSelectedMaintenanceRanges([]);
             reset();
             setShowModal(true);
           }}
@@ -288,6 +419,24 @@ export default function MachinesPage() {
                           <MapPin className="h-4 w-4" />
                           <span>{machine.location}</span>
                         </div>
+                        {machine.maintenanceRanges && machine.maintenanceRanges.length > 0 && (
+                          <div className="mt-1 flex flex-wrap items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
+                            <Wrench className="h-4 w-4" />
+                            {machine.maintenanceRanges.map((range, index) => (
+                              <span key={range._id} className="flex items-center space-x-1">
+                                <span>{range.name}</span>
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                  range.type === 'preventive' 
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
+                                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
+                                }`}>
+                                  {range.type === 'preventive' ? t("maintenanceRanges.preventive") : t("maintenanceRanges.corrective")}
+                                </span>
+                                {index < machine.maintenanceRanges!.length - 1 && <span>,</span>}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -332,18 +481,22 @@ export default function MachinesPage() {
         onClose={() => {
           setShowModal(false);
           setEditingMachine(null);
+          setSelectedLocation(null);
+          setShowLocationSelector(false);
+          setSelectedMaintenanceRanges([]);
           reset();
         }}
         title={editingMachine ? t("machines.editMachine") : t("machines.newMachine")}
         size="md"
       >
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          {/* Campo oculto para companyId */}
-          <input
-            type="hidden"
-            {...register('companyId')}
-            value={session?.user?.companyId || ''}
-          />
+        <Form onSubmit={(e) => {
+          console.log('Form submit event triggered');
+          handleSubmit(onSubmit)(e);
+        }}>
+          {/* Campos ocultos para valores del formulario */}
+          <input type="hidden" {...register('companyId')} />
+          <input type="hidden" {...register('locationId')} />
+          <input type="hidden" {...register('maintenanceRanges')} />
           
           <FormGroup>
             <FormLabel required>{t("machines.machineModel")}</FormLabel>
@@ -362,11 +515,119 @@ export default function MachinesPage() {
 
           <FormGroup>
             <FormLabel required>{t("machines.location")}</FormLabel>
+            <div className="space-y-2">
+              <div className="flex">
+                <FormInput
+                  {...register('location')}
+                  value={selectedLocation ? selectedLocation.path : ''}
+                  placeholder={t("placeholders.machineLocation")}
+                  className="rounded-r-none"
+                  readOnly
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLocationSelector(!showLocationSelector)}
+                  className="px-3 py-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-md bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {showLocationSelector ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {selectedLocation && (
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  <span className="font-medium">Selected:</span> {selectedLocation.path}
+                </div>
+              )}
+              {showLocationSelector && (
+                <div className="border border-gray-200 dark:border-gray-700 rounded-md p-2 max-h-64 overflow-y-auto">
+                  <LocationTreeView
+                    onLocationSelect={(location) => {
+                      setSelectedLocation({
+                        _id: location._id,
+                        name: location.name,
+                        path: location.path,
+                      });
+                      setShowLocationSelector(false);
+                    }}
+                    showActions={false}
+                    className=""
+                  />
+                </div>
+              )}
+            </div>
+          </FormGroup>
+
+          <FormGroup>
+            <FormLabel>{t("machines.description")}</FormLabel>
             <FormInput
-              {...register('location')}
-              error={errors.location?.message}
-              placeholder={t("placeholders.machineLocation")}
+              {...register('description')}
+              error={errors.description?.message}
+              placeholder={t("placeholders.machineDescription")}
             />
+          </FormGroup>
+
+          <FormGroup>
+            <FormLabel required>{t("machines.maintenanceRanges")}</FormLabel>
+            <MultiSelect
+              options={maintenanceRanges.map(range => ({
+                value: range._id,
+                label: range.name,
+                description: range.type === 'preventive' ? t("maintenanceRanges.preventive") : t("maintenanceRanges.corrective")
+              }))}
+              selectedValues={selectedMaintenanceRanges}
+              onChange={setSelectedMaintenanceRanges}
+              placeholder={t("machines.selectMaintenanceRanges")}
+              error={selectedMaintenanceRanges.length === 0 ? t("machines.atLeastOneMaintenanceRangeRequired") : undefined}
+            />
+          </FormGroup>
+
+          <FormGroup>
+            <FormLabel>{t("machines.customProperties")}</FormLabel>
+            <div className="space-y-2">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                {t("machines.customPropertiesDescription")}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <FormInput
+                  placeholder={t("placeholders.propertyKey")}
+                  value={newPropertyKey}
+                  onChange={(e) => setNewPropertyKey(e.target.value)}
+                />
+                <FormInput
+                  placeholder={t("placeholders.propertyValue")}
+                  value={newPropertyValue}
+                  onChange={(e) => setNewPropertyValue(e.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={addCustomProperty}
+                  className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {t("machines.addProperty")}
+                </button>
+              </div>
+              {Object.keys(watch('properties') || {}).length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {Object.entries(watch('properties') || {}).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                      <span className="text-sm">
+                        <strong>{key}:</strong> {String(value)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeCustomProperty(key)}
+                        className="text-red-600 hover:text-red-800 text-sm"
+                      >
+                        {t("common.remove")}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </FormGroup>
 
           <div className="flex justify-end space-x-3 mt-6">
@@ -376,6 +637,9 @@ export default function MachinesPage() {
               onClick={() => {
                 setShowModal(false);
                 setEditingMachine(null);
+                setSelectedLocation(null);
+                setShowLocationSelector(false);
+                setSelectedMaintenanceRanges([]);
                 reset();
               }}
             >

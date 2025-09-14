@@ -75,7 +75,21 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.sub!;
         session.user.role = token.role as string;
         session.user.companyId = token.companyId as string;
-        session.user.company = token.company as any;
+        session.user.company = token.company as {
+          _id: string;
+          name: string;
+          logo?: string;
+          primaryColor: string;
+          appName: string;
+          theme: 'light' | 'dark' | 'system';
+          branding: {
+            appName: string;
+            logo?: string;
+            primaryColor: string;
+            secondaryColor?: string;
+            accentColor?: string;
+          };
+        };
       }
       return session;
     },

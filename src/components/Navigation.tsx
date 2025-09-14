@@ -19,6 +19,7 @@ import {
   Settings,
   Menu,
   X,
+  MapPin,
 } from "lucide-react";
 
 const getNavigation = (t: (key: string) => string) => [
@@ -28,6 +29,7 @@ const getNavigation = (t: (key: string) => string) => [
   { name: t('navigation.machineModels'), href: "/machine-models", icon: Building2 },
   { name: t('navigation.maintenanceRanges'), href: "/maintenance-ranges", icon: List },
   { name: t('navigation.operations'), href: "/operations", icon: Cog },
+  { name: t('navigation.locations'), href: "/locations", icon: MapPin },
   { name: t('navigation.settings'), href: "/settings", icon: Settings },
 ];
 

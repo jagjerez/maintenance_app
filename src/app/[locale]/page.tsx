@@ -4,10 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FileText, Plus, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { FileText, Plus, AlertCircle, CheckCircle, Clock, MapPin } from "lucide-react";
 import { formatDate, getStatusColor, getTypeColor } from "@/lib/utils";
 import toast from "react-hot-toast";
 import { useTranslations } from "@/hooks/useTranslations";
+import LocationTreeView from "@/components/LocationTreeView";
 
 interface WorkOrder {
   _id: string;
@@ -256,7 +257,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions and System Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
@@ -322,6 +323,35 @@ export default function Dashboard() {
               </div>
             </dl>
           </div>
+        </div>
+      </div>
+
+      {/* Location Tree */}
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-8">
+        <div className="px-4 py-5 sm:p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+              <MapPin className="h-5 w-5 inline mr-2" />
+              {t("locations.title")}
+            </h3>
+            <Link
+              href="/locations"
+              className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
+            >
+              {t("common.viewAll")}
+            </Link>
+          </div>
+          <LocationTreeView
+            onLocationSelect={(location) => {
+              console.log('Selected location:', location);
+            }}
+            onMachineSelect={(machine) => {
+              console.log('Selected machine:', machine);
+            }}
+            showActions={false}
+            className="max-h-96"
+            refreshTrigger={0}
+          />
         </div>
       </div>
 

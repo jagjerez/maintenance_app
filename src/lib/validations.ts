@@ -68,6 +68,9 @@ export const machineModelUpdateSchema = machineModelSchema.partial();
 export const machineSchema = z.object({
   model: z.string().min(1, 'Machine model is required'),
   location: z.string().min(1, 'Location is required').max(200, 'Location too long'),
+  locationId: z.string().optional(),
+  description: z.string().max(500, 'Description too long').optional(),
+  maintenanceRanges: z.array(z.string()).min(1, 'At least one maintenance range is required'),
   properties: z.record(z.string(), z.unknown()).default({}),
   companyId: z.string().min(1, 'Company is required'),
 });
@@ -114,6 +117,16 @@ export const workOrderSchema = z.object({
 
 export const workOrderUpdateSchema = workOrderSchema.partial();
 
+// Location validations
+export const locationSchema = z.object({
+  name: z.string().min(1, 'Location name is required').max(100, 'Location name too long'),
+  description: z.string().max(500, 'Description too long').optional(),
+  parentId: z.string().optional(),
+  companyId: z.string().min(1, 'Company is required'),
+});
+
+export const locationUpdateSchema = locationSchema.partial();
+
 // Dynamic properties validation
 export const dynamicPropertySchema = z.object({
   key: z.string().min(1, 'Property key is required'),
@@ -135,4 +148,6 @@ export type MaintenanceRangeInput = z.infer<typeof maintenanceRangeSchema>;
 export type MaintenanceRangeUpdateInput = z.infer<typeof maintenanceRangeUpdateSchema>;
 export type WorkOrderInput = z.infer<typeof workOrderSchema>;
 export type WorkOrderUpdateInput = z.infer<typeof workOrderUpdateSchema>;
+export type LocationInput = z.infer<typeof locationSchema>;
+export type LocationUpdateInput = z.infer<typeof locationUpdateSchema>;
 export type DynamicProperty = z.infer<typeof dynamicPropertySchema>;

@@ -32,7 +32,21 @@ declare module 'next-auth' {
     name: string;
     role: string;
     companyId: string;
-    company: any;
+    company: {
+      _id: string;
+      name: string;
+      logo?: string;
+      primaryColor: string;
+      appName: string;
+      theme: 'light' | 'dark' | 'system';
+      branding: {
+        appName: string;
+        logo?: string;
+        primaryColor: string;
+        secondaryColor?: string;
+        accentColor?: string;
+      };
+    };
   }
 }
 
@@ -40,6 +54,20 @@ declare module 'next-auth/jwt' {
   interface JWT {
     role: string;
     companyId: string;
-    company: any;
+    company: {
+      _id: string;
+      name: string;
+      logo?: string;
+      primaryColor: string;
+      appName: string;
+      theme: 'light' | 'dark' | 'system';
+      branding: {
+        appName: string;
+        logo?: string;
+        primaryColor: string;
+        secondaryColor?: string;
+        accentColor?: string;
+      };
+    };
   }
 }
