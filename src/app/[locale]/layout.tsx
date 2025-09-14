@@ -20,11 +20,6 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "Sistema de Mantenimiento",
-  description: "Sistema de gestión de mantenimiento preventivo y correctivo",
-};
-
 export default async function LocaleLayout({
   children,
   params

@@ -1,128 +1,194 @@
-# Sistema de Internacionalización (i18n)
+# Sistema de Internacionalización Dinámico
 
-Este proyecto utiliza `next-intl` para manejar la internacionalización y soportar múltiples idiomas.
+Este sistema de internacionalización está diseñado para ser completamente dinámico y soportar cualquier cantidad de idiomas sin necesidad de modificar código.
 
-## Idiomas Soportados
+## 🚀 Características
 
-- **Español (es)** - Idioma por defecto
-- **Inglés (en)**
+- **Detección automática**: El sistema detecta automáticamente todos los idiomas disponibles en la carpeta `src/messages/`
+- **Configuración dinámica**: No necesitas modificar código para agregar nuevos idiomas
+- **Compatible con Edge Runtime**: Funciona perfectamente con middleware de Next.js
+- **Soporte completo**: Incluye nombres de idiomas, banderas y códigos de idioma para más de 100 idiomas
+- **Fallback inteligente**: Si un idioma no está configurado, usa el idioma por defecto
+- **Detección de idioma**: Detecta automáticamente el idioma preferido del usuario
 
-## Estructura de Archivos
+## 📁 Estructura
 
 ```
 src/
 ├── i18n/
-│   ├── config.ts          # Configuración de idiomas
-│   ├── request.ts         # Configuración de next-intl
-│   └── README.md          # Esta documentación
+│   ├── config.ts          # Configuración dinámica de idiomas
+│   ├── routing.ts         # Configuración de rutas de next-intl
+│   ├── request.ts         # Configuración de solicitudes
+│   └── README.md          # Este archivo
 ├── messages/
+│   ├── en.json           # Traducciones en inglés
 │   ├── es.json           # Traducciones en español
-│   └── en.json           # Traducciones en inglés
-└── hooks/
-    └── useTranslations.ts # Hook personalizado para traducciones
+│   └── [idioma].json     # Nuevos idiomas se agregan aquí
+└── components/
+    └── LanguageSelector.tsx # Selector de idioma dinámico
 ```
 
-## Uso
+## 🌍 Agregar un Nuevo Idioma
 
-### 1. Usar traducciones en componentes
+### Método 1: Usando el Script Automático (Recomendado)
+
+```bash
+# Agregar francés
+npm run add-language fr
+
+# Agregar alemán
+npm run add-language de
+
+# Agregar chino
+npm run add-language zh
+```
+
+**O usando el script directamente:**
+```bash
+node scripts/add-language.js fr
+```
+
+### Método 2: Manual
+
+1. **Crear archivo de traducción**:
+   ```bash
+   # Copiar el archivo de plantilla
+   cp src/messages/en.json src/messages/fr.json
+   ```
+
+2. **Traducir el contenido**:
+   - Abrir `src/messages/fr.json`
+   - Traducir todos los valores de string al nuevo idioma
+   - Mantener todas las claves exactamente iguales
+   - Mantener la estructura JSON
+
+3. **Actualizar la configuración**:
+   ```bash
+   npm run update-locales
+   ```
+
+4. **¡Listo!** El sistema detectará automáticamente el nuevo idioma.
+
+## 🔧 Configuración
+
+### Idiomas Soportados
+
+El sistema incluye soporte para más de 100 idiomas con:
+- Nombres nativos de idiomas
+- Banderas de países
+- Códigos de idioma estándar
+
+### Idioma por Defecto
+
+El idioma por defecto se configura en `src/i18n/config.ts`:
+
+```typescript
+export const defaultLocale: Locale = 'es'; // Cambiar aquí si necesario
+```
+
+### Detección de Idioma
+
+El sistema detecta el idioma del usuario en este orden:
+1. **URL de origen**: Si viene de una página con prefijo de idioma
+2. **Header Accept-Language**: Idioma preferido del navegador
+3. **Idioma por defecto**: Si no se puede detectar
+
+## 📝 Estructura de Archivos de Traducción
+
+```json
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel"
+  },
+  "navigation": {
+    "dashboard": "Dashboard",
+    "machines": "Machines"
+  },
+  "errors": {
+    "notFound": "Not found",
+    "notFoundDescription": "The page you are looking for does not exist.",
+    "goBackHome": "Go back home"
+  }
+}
+```
+
+## 🎯 Uso en Componentes
 
 ```tsx
-import { useTranslations } from '@/hooks/useTranslations';
+import { useTranslations, useLanguage } from '@/hooks/useTranslations';
 
-export default function MyComponent() {
+function MyComponent() {
   const { t } = useTranslations();
+  const { locale, locales, getLocaleName, getLocaleFlag } = useLanguage();
   
   return (
     <div>
-      <h1>{t('navigation.dashboard')}</h1>
-      <p>{t('common.loading')}</p>
+      <h1>{t('common.title')}</h1>
+      <p>Current language: {getLocaleName(locale)} {getLocaleFlag(locale)}</p>
     </div>
   );
 }
 ```
 
-### 2. Usar el selector de idiomas
+## 🔄 Actualización Automática
 
-El selector de idiomas ya está incluido en la navegación principal. Los usuarios pueden cambiar el idioma haciendo clic en el selector que muestra la bandera y nombre del idioma actual.
+### Scripts Disponibles
 
-### 3. Agregar nuevas traducciones
+```bash
+# Agregar un nuevo idioma (automático)
+npm run add-language <código-idioma>
 
-1. Agrega las nuevas claves en `src/messages/es.json`:
-```json
-{
-  "nuevaSeccion": {
-    "nuevaClave": "Texto en español"
-  }
-}
+# Actualizar configuración con idiomas detectados
+npm run update-locales
+
+# Ejemplos
+npm run add-language de    # Agregar alemán
+npm run add-language zh    # Agregar chino
+npm run add-language pt    # Agregar portugués
 ```
 
-2. Agrega las traducciones correspondientes en `src/messages/en.json`:
-```json
-{
-  "nuevaSeccion": {
-    "nuevaClave": "Text in English"
-  }
-}
+### Actualización Manual
+
+Si agregas idiomas manualmente, ejecuta:
+```bash
+npm run update-locales
 ```
 
-3. Usa la nueva traducción en tu componente:
-```tsx
-const { t } = useTranslations();
-return <p>{t('nuevaSeccion.nuevaClave')}</p>;
-```
+El sistema se actualiza automáticamente cuando:
+- Se ejecuta `npm run add-language`
+- Se ejecuta `npm run update-locales`
+- Se reinicia el servidor de desarrollo
 
-### 4. Traducciones con parámetros
+## 🚨 Solución de Problemas
 
-Para traducciones que necesitan parámetros dinámicos:
+### El nuevo idioma no aparece
+1. Verificar que el archivo esté en `src/messages/[código].json`
+2. Verificar que el archivo tenga formato JSON válido
+3. Reiniciar el servidor de desarrollo
 
-```json
-{
-  "errors": {
-    "minLength": "Debe tener al menos {min} caracteres"
-  }
-}
-```
+### Error de traducción faltante
+1. Verificar que la clave existe en el archivo de idioma
+2. Verificar que la estructura JSON es correcta
+3. El sistema usará el idioma por defecto como fallback
 
-```tsx
-const { t } = useTranslations();
-return <p>{t('errors.minLength', { min: 6 })}</p>;
-```
+### Problemas de detección de idioma
+1. Verificar que el código de idioma sea válido (2-3 caracteres)
+2. Verificar que esté en la lista de idiomas soportados
+3. El sistema usará el idioma por defecto si no puede detectar
 
-## Configuración
+## 📚 Idiomas Incluidos
 
-### Agregar un nuevo idioma
+El sistema incluye soporte para idiomas de:
+- **Europa**: Inglés, Español, Francés, Alemán, Italiano, Portugués, Ruso, etc.
+- **Asia**: Chino, Japonés, Coreano, Hindi, Tailandés, Vietnamita, etc.
+- **América**: Inglés, Español, Portugués, Francés
+- **África**: Árabe, Swahili, etc.
+- **Oceanía**: Inglés, Maori, etc.
 
-1. Agrega el nuevo idioma en `src/i18n/config.ts`:
-```typescript
-export const locales = ['en', 'es', 'fr'] as const;
-export type Locale = (typeof locales)[number];
+Y muchos más idiomas regionales y locales.
 
-export const localeNames: Record<Locale, string> = {
-  en: 'English',
-  es: 'Español',
-  fr: 'Français'
-};
+## 🎉 ¡Disfruta de la Internacionalización!
 
-export const localeFlags: Record<Locale, string> = {
-  en: '🇺🇸',
-  es: '🇪🇸',
-  fr: '🇫🇷'
-};
-```
-
-2. Crea el archivo de traducciones `src/messages/fr.json`
-3. Actualiza el middleware si es necesario
-
-## Rutas
-
-El sistema maneja automáticamente las rutas con prefijos de idioma:
-- `/es/` - Páginas en español
-- `/en/` - Páginas en inglés
-- `/` - Redirige al idioma por defecto (español)
-
-## Notas Importantes
-
-- Todas las páginas deben estar dentro del directorio `[locale]` para funcionar con el sistema de idiomas
-- El middleware maneja automáticamente la redirección y detección de idioma
-- Las traducciones se cargan automáticamente según el idioma de la URL
-- El idioma se persiste en la URL, permitiendo compartir enlaces en idiomas específicos
+Con este sistema, puedes agregar cualquier idioma simplemente creando un archivo de traducción. ¡No más modificaciones de código para soportar nuevos idiomas!

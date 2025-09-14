@@ -6,11 +6,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from '@/hooks/useTranslations';
 import { Plus, Edit, Trash2, FileText, Calendar, User, AlertCircle } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import Modal from '@/components/Modal';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { Form, FormGroup, FormLabel, FormInput, FormTextarea, FormSelect, FormButton } from '@/components/Form';
 import { Pagination } from '@/components/Pagination';
-import { workOrderSchema } from '@/lib/validations';
+import { workOrderSchema, WorkOrderInput } from '@/lib/validations';
 
 interface Machine {
   _id: string;
@@ -78,9 +79,12 @@ export default function WorkOrdersPage() {
         setWorkOrders(data.workOrders || data);
         setTotalPages(data.totalPages || Math.ceil((data.workOrders || data).length / ITEMS_PER_PAGE));
         setTotalItems(data.totalItems || (data.workOrders || data).length);
+      } else {
+        toast.error(t("workOrders.workOrderLoadError"));
       }
     } catch (error) {
       console.error('Error fetching work orders:', error);
+      toast.error(t("workOrders.workOrderLoadError"));
     }
   };
 
@@ -91,9 +95,12 @@ export default function WorkOrdersPage() {
       if (response.ok) {
         const data = await response.json();
         setMachines(data.machines || data);
+      } else {
+        toast.error(t("machines.machineLoadError"));
       }
     } catch (error) {
       console.error('Error fetching machines:', error);
+      toast.error(t("machines.machineLoadError"));
     }
   };
 
@@ -103,9 +110,12 @@ export default function WorkOrdersPage() {
       if (response.ok) {
         const data = await response.json();
         setMaintenanceRanges(data.maintenanceRanges || data);
+      } else {
+        toast.error(t("maintenanceRanges.rangeLoadError"));
       }
     } catch (error) {
       console.error('Error fetching maintenance ranges:', error);
+      toast.error(t("maintenanceRanges.rangeLoadError"));
     }
   };
 
@@ -118,7 +128,7 @@ export default function WorkOrdersPage() {
     loadData();
   }, [currentPage]);
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: WorkOrderInput) => {
     try {
       const url = editingWorkOrder ? `/api/work-orders/${editingWorkOrder._id}` : '/api/work-orders';
       const method = editingWorkOrder ? 'PUT' : 'POST';
@@ -139,9 +149,13 @@ export default function WorkOrdersPage() {
         setShowModal(false);
         setEditingWorkOrder(null);
         reset();
+        toast.success(editingWorkOrder ? t("workOrders.workOrderUpdated") : t("workOrders.workOrderCreated"));
+      } else {
+        toast.error(t("workOrders.workOrderError"));
       }
     } catch (error) {
       console.error('Error saving work order:', error);
+      toast.error(t("workOrders.workOrderError"));
     }
   };
 
@@ -171,9 +185,13 @@ export default function WorkOrdersPage() {
       if (response.ok) {
         await fetchWorkOrders(currentPage);
         setDeleteModal({ isOpen: false, workOrder: null });
+        toast.success(t("workOrders.workOrderDeleted"));
+      } else {
+        toast.error(t("workOrders.workOrderError"));
       }
     } catch (error) {
       console.error('Error deleting work order:', error);
+      toast.error(t("workOrders.workOrderError"));
     }
   };
 
@@ -197,11 +215,11 @@ export default function WorkOrdersPage() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'Pendiente';
+        return t("workOrders.pending");
       case 'in_progress':
-        return 'En Progreso';
+        return t("workOrders.inProgress");
       case 'completed':
-        return 'Completada';
+        return t("workOrders.completed");
       default:
         return status;
     }
@@ -221,7 +239,7 @@ export default function WorkOrdersPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('workOrders.title')}</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Gestiona las órdenes de trabajo del sistema
+            {t("workOrders.subtitle")}
           </p>
         </div>
         
@@ -241,7 +259,7 @@ export default function WorkOrdersPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('workOrders.title')}</h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Gestiona las órdenes de trabajo del sistema
+          {t("workOrders.subtitle")}
         </p>
       </div>
 
@@ -250,7 +268,7 @@ export default function WorkOrdersPage() {
         <div className="flex items-center space-x-2">
           <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {totalItems} orden{totalItems !== 1 ? 'es' : ''}
+            {totalItems} {t("workOrders.order")}{totalItems !== 1 ? 'es' : ''}
           </span>
         </div>
         <FormButton
@@ -262,7 +280,7 @@ export default function WorkOrdersPage() {
           className="flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
-          <span>Nueva Orden</span>
+          <span>{t("workOrders.newWorkOrder")}</span>
         </FormButton>
       </div>
 
@@ -272,10 +290,10 @@ export default function WorkOrdersPage() {
           <div className="text-center py-12">
             <FileText className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
             <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-              No hay órdenes de trabajo
+              {t("workOrders.noWorkOrders")}
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Comienza agregando una nueva orden de trabajo al sistema.
+              {t("workOrders.startCreatingWorkOrder")}
             </p>
           </div>
         ) : (
@@ -362,7 +380,7 @@ export default function WorkOrdersPage() {
           setEditingWorkOrder(null);
           reset();
         }}
-        title={editingWorkOrder ? 'Editar Orden de Trabajo' : 'Nueva Orden de Trabajo'}
+        title={editingWorkOrder ? t("workOrders.editWorkOrder") : t("workOrders.newWorkOrder")}
         size="lg"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
@@ -375,12 +393,12 @@ export default function WorkOrdersPage() {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormGroup>
-              <FormLabel required>Máquina</FormLabel>
+              <FormLabel required>{t("common.machine")}</FormLabel>
               <FormSelect
                 {...register('machine')}
                 error={errors.machine?.message}
               >
-                <option value="">Selecciona una máquina</option>
+                <option value="">{t("machines.selectModel")}</option>
                 {machines.map((machine) => (
                   <option key={machine._id} value={machine._id}>
                     {machine.model.name} - {machine.location}
@@ -390,15 +408,15 @@ export default function WorkOrdersPage() {
             </FormGroup>
 
             <FormGroup>
-              <FormLabel required>Rango de Mantenimiento</FormLabel>
+              <FormLabel required>{t("workOrders.maintenanceRange")}</FormLabel>
               <FormSelect
                 {...register('maintenanceRange')}
                 error={errors.maintenanceRange?.message}
               >
-                <option value="">Selecciona un rango</option>
+                <option value="">{t("maintenanceRanges.selectType")}</option>
                 {maintenanceRanges.map((range) => (
                   <option key={range._id} value={range._id}>
-                    {range.name} ({range.type === 'preventive' ? 'Preventivo' : 'Correctivo'})
+                    {range.name} ({range.type === 'preventive' ? t("maintenanceRanges.preventive") : t("maintenanceRanges.corrective")})
                   </option>
                 ))}
               </FormSelect>
@@ -406,7 +424,7 @@ export default function WorkOrdersPage() {
           </div>
 
           <FormGroup>
-            <FormLabel required>Descripción</FormLabel>
+            <FormLabel required>{t("common.description")}</FormLabel>
             <FormTextarea
               {...register('description')}
               error={errors.description?.message}
@@ -417,7 +435,7 @@ export default function WorkOrdersPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormGroup>
-              <FormLabel required>Fecha Programada</FormLabel>
+              <FormLabel required>{t("workOrders.scheduledDate")}</FormLabel>
               <FormInput
                 type="date"
                 {...register('scheduledDate')}
@@ -426,7 +444,7 @@ export default function WorkOrdersPage() {
             </FormGroup>
 
             <FormGroup>
-              <FormLabel>Fecha de Completado</FormLabel>
+              <FormLabel>{t("workOrders.completedDate")}</FormLabel>
               <FormInput
                 type="date"
                 {...register('completedDate')}
@@ -437,19 +455,19 @@ export default function WorkOrdersPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormGroup>
-              <FormLabel>Estado</FormLabel>
+              <FormLabel>{t("common.status")}</FormLabel>
               <FormSelect
                 {...register('status')}
                 error={errors.status?.message}
               >
-                <option value="pending">Pendiente</option>
-                <option value="in_progress">En Progreso</option>
-                <option value="completed">Completada</option>
+                <option value="pending">{t("workOrders.pending")}</option>
+                <option value="in_progress">{t("workOrders.inProgress")}</option>
+                <option value="completed">{t("workOrders.completed")}</option>
               </FormSelect>
             </FormGroup>
 
             <FormGroup>
-              <FormLabel>Asignado a</FormLabel>
+              <FormLabel>{t("workOrders.assignedTo")}</FormLabel>
               <FormInput
                 {...register('assignedTo')}
                 error={errors.assignedTo?.message}
@@ -459,7 +477,7 @@ export default function WorkOrdersPage() {
           </div>
 
           <FormGroup>
-            <FormLabel>Notas</FormLabel>
+            <FormLabel>{t("workOrders.notes")}</FormLabel>
             <FormTextarea
               {...register('notes')}
               error={errors.notes?.message}
@@ -478,13 +496,13 @@ export default function WorkOrdersPage() {
                 reset();
               }}
             >
-              Cancelar
+              {t("common.cancel")}
             </FormButton>
             <FormButton
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Guardando...' : editingWorkOrder ? 'Actualizar' : 'Crear'}
+              {isSubmitting ? t("common.saving") : editingWorkOrder ? t("common.update") : t("common.create")}
             </FormButton>
           </div>
         </Form>

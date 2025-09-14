@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from '@/hooks/useTranslations';
 import { Plus, Edit, Trash2, List, Wrench } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import Modal from '@/components/Modal';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { Form, FormGroup, FormLabel, FormInput, FormTextarea, FormSelect, FormButton } from '@/components/Form';
@@ -67,9 +68,12 @@ export default function MaintenanceRangesPage() {
         setMaintenanceRanges(data.maintenanceRanges || data);
         setTotalPages(data.totalPages || Math.ceil((data.maintenanceRanges || data).length / ITEMS_PER_PAGE));
         setTotalItems(data.totalItems || (data.maintenanceRanges || data).length);
+      } else {
+        toast.error(t("maintenanceRanges.rangeLoadError"));
       }
     } catch (error) {
       console.error('Error fetching maintenance ranges:', error);
+      toast.error(t("maintenanceRanges.rangeLoadError"));
     }
   };
 
@@ -80,9 +84,12 @@ export default function MaintenanceRangesPage() {
       if (response.ok) {
         const data = await response.json();
         setOperations(data);
+      } else {
+        toast.error(t("operations.operationError"));
       }
     } catch (error) {
       console.error('Error fetching operations:', error);
+      toast.error(t("operations.operationError"));
     }
   };
 
@@ -95,13 +102,13 @@ export default function MaintenanceRangesPage() {
     loadData();
   }, [currentPage]);
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: { name: string; type: string; description: string; operations: string[]; companyId: string }) => {
     try {
       const url = editingRange ? `/api/maintenance-ranges/${editingRange._id}` : '/api/maintenance-ranges';
       const method = editingRange ? 'PUT' : 'POST';
 
-      // Convert operations string to array
-      const operationsArray = data.operations ? data.operations.split(',').map((op: string) => op.trim()).filter(Boolean) : [];
+      // Operations is already an array
+      const operationsArray = data.operations || [];
 
       const response = await fetch(url, {
         method,
@@ -120,9 +127,13 @@ export default function MaintenanceRangesPage() {
         setShowModal(false);
         setEditingRange(null);
         reset();
+        toast.success(editingRange ? t("maintenanceRanges.rangeUpdated") : t("maintenanceRanges.rangeCreated"));
+      } else {
+        toast.error(t("maintenanceRanges.rangeError"));
       }
     } catch (error) {
       console.error('Error saving maintenance range:', error);
+      toast.error(t("maintenanceRanges.rangeError"));
     }
   };
 
@@ -132,7 +143,7 @@ export default function MaintenanceRangesPage() {
       name: range.name,
       type: range.type,
       description: range.description,
-      operations: range.operations.map(op => op.name).join(', ') as any,
+      operations: range.operations.map(op => op.name),
     });
     setShowModal(true);
   };
@@ -148,9 +159,13 @@ export default function MaintenanceRangesPage() {
       if (response.ok) {
         await fetchMaintenanceRanges(currentPage);
         setDeleteModal({ isOpen: false, range: null });
+        toast.success(t("maintenanceRanges.rangeDeleted"));
+      } else {
+        toast.error(t("maintenanceRanges.rangeError"));
       }
     } catch (error) {
       console.error('Error deleting maintenance range:', error);
+      toast.error(t("maintenanceRanges.rangeError"));
     }
   };
 
@@ -165,7 +180,7 @@ export default function MaintenanceRangesPage() {
   };
 
   const getTypeLabel = (type: string) => {
-    return type === 'preventive' ? 'Preventivo' : 'Correctivo';
+    return type === 'preventive' ? t("maintenanceRanges.preventive") : t("maintenanceRanges.corrective");
   };
 
   if (loading) {
@@ -174,7 +189,7 @@ export default function MaintenanceRangesPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('maintenanceRanges.title')}</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Gestiona los rangos de mantenimiento del sistema
+            {t('maintenanceRanges.subtitle')}
           </p>
         </div>
         
@@ -194,7 +209,7 @@ export default function MaintenanceRangesPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('maintenanceRanges.title')}</h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Gestiona los rangos de mantenimiento del sistema
+          {t('maintenanceRanges.subtitle')}
         </p>
       </div>
 
@@ -203,7 +218,7 @@ export default function MaintenanceRangesPage() {
         <div className="flex items-center space-x-2">
           <List className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {totalItems} rango{totalItems !== 1 ? 's' : ''}
+            {totalItems} {t("maintenanceRanges.range")}{totalItems !== 1 ? 's' : ''}
           </span>
         </div>
         <FormButton
@@ -215,7 +230,7 @@ export default function MaintenanceRangesPage() {
           className="flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
-          <span>Nuevo Rango</span>
+          <span>{t("maintenanceRanges.newRange")}</span>
         </FormButton>
       </div>
 
@@ -225,10 +240,10 @@ export default function MaintenanceRangesPage() {
           <div className="text-center py-12">
             <List className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
             <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-              No hay rangos de mantenimiento
+              {t("maintenanceRanges.noRanges")}
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Comienza agregando un nuevo rango de mantenimiento al sistema.
+              {t("maintenanceRanges.startAddingRange")}
             </p>
           </div>
         ) : (
@@ -256,7 +271,7 @@ export default function MaintenanceRangesPage() {
                         <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
                           <div className="flex items-center space-x-1">
                             <Wrench className="h-4 w-4" />
-                            <span>{range.operations.length} operación{range.operations.length !== 1 ? 'es' : ''}</span>
+                            <span>{range.operations.length} {t("maintenanceRanges.operationsCount")}</span>
                           </div>
                         </div>
                       </div>
@@ -305,7 +320,7 @@ export default function MaintenanceRangesPage() {
           setEditingRange(null);
           reset();
         }}
-        title={editingRange ? 'Editar Rango de Mantenimiento' : 'Nuevo Rango de Mantenimiento'}
+        title={editingRange ? t("maintenanceRanges.editRange") : t("maintenanceRanges.newRange")}
         size="md"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
@@ -317,7 +332,7 @@ export default function MaintenanceRangesPage() {
           />
           
           <FormGroup>
-            <FormLabel required>Nombre del Rango</FormLabel>
+            <FormLabel required>{t("maintenanceRanges.rangeName")}</FormLabel>
             <FormInput
               {...register('name')}
               error={errors.name?.message}
@@ -326,19 +341,19 @@ export default function MaintenanceRangesPage() {
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>Tipo</FormLabel>
+            <FormLabel required>{t("common.type")}</FormLabel>
             <FormSelect
               {...register('type')}
               error={errors.type?.message}
             >
-              <option value="">Selecciona un tipo</option>
-              <option value="preventive">Preventivo</option>
-              <option value="corrective">Correctivo</option>
+              <option value="">{t("maintenanceRanges.selectType")}</option>
+              <option value="preventive">{t("maintenanceRanges.preventive")}</option>
+              <option value="corrective">{t("maintenanceRanges.corrective")}</option>
             </FormSelect>
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>Descripción</FormLabel>
+            <FormLabel required>{t("common.description")}</FormLabel>
             <FormTextarea
               {...register('description')}
               error={errors.description?.message}
@@ -348,7 +363,7 @@ export default function MaintenanceRangesPage() {
           </FormGroup>
 
           <FormGroup>
-            <FormLabel>Operaciones</FormLabel>
+            <FormLabel>{t("maintenanceRanges.operations")}</FormLabel>
             <FormInput
               {...register('operations')}
               error={errors.operations?.message}
@@ -369,13 +384,13 @@ export default function MaintenanceRangesPage() {
                 reset();
               }}
             >
-              Cancelar
+              {t("common.cancel")}
             </FormButton>
             <FormButton
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Guardando...' : editingRange ? 'Actualizar' : 'Crear'}
+              {isSubmitting ? t("common.saving") : editingRange ? t("common.update") : t("common.create")}
             </FormButton>
           </div>
         </Form>

@@ -53,7 +53,7 @@ export default function DataTable<T extends { _id: string }>({
             ))}
             {(onEdit || onDelete) && (
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Acciones
+                {t("common.actions")}
               </th>
             )}
           </tr>

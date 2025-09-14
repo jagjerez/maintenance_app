@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from '@/hooks/useTranslations';
 import { Plus, Edit, Trash2, Clock, Wrench } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import Modal from '@/components/Modal';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { Form, FormGroup, FormLabel, FormInput, FormTextarea, FormButton } from '@/components/Form';
@@ -60,9 +61,12 @@ export default function OperationsPage() {
         setOperations(data.operations || data);
         setTotalPages(data.totalPages || Math.ceil((data.operations || data).length / ITEMS_PER_PAGE));
         setTotalItems(data.totalItems || (data.operations || data).length);
+      } else {
+        toast.error(t("operations.operationLoadError"));
       }
     } catch (error) {
       console.error('Error fetching operations:', error);
+      toast.error(t("operations.operationLoadError"));
     }
   };
 
@@ -97,9 +101,13 @@ export default function OperationsPage() {
         setShowModal(false);
         setEditingOperation(null);
         reset();
+        toast.success(editingOperation ? t("operations.operationUpdated") : t("operations.operationCreated"));
+      } else {
+        toast.error(t("operations.operationError"));
       }
     } catch (error) {
       console.error('Error saving operation:', error);
+      toast.error(t("operations.operationError"));
     }
   };
 
@@ -125,9 +133,13 @@ export default function OperationsPage() {
       if (response.ok) {
         await fetchOperations(currentPage);
         setDeleteModal({ isOpen: false, operation: null });
+        toast.success(t("operations.operationDeleted"));
+      } else {
+        toast.error(t("operations.operationError"));
       }
     } catch (error) {
       console.error('Error deleting operation:', error);
+      toast.error(t("operations.operationError"));
     }
   };
 
@@ -141,7 +153,7 @@ export default function OperationsPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('operations.title')}</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Gestiona las operaciones del sistema
+            {t('operations.subtitle')}
           </p>
         </div>
         
@@ -161,7 +173,7 @@ export default function OperationsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('operations.title')}</h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Gestiona las operaciones del sistema
+          {t('operations.subtitle')}
         </p>
       </div>
 
@@ -170,7 +182,7 @@ export default function OperationsPage() {
         <div className="flex items-center space-x-2">
           <Wrench className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {totalItems} operación{totalItems !== 1 ? 'es' : ''}
+            {totalItems} {t("operations.operation")}{totalItems !== 1 ? 'es' : ''}
           </span>
         </div>
         <FormButton
@@ -182,7 +194,7 @@ export default function OperationsPage() {
           className="flex items-center space-x-2"
         >
           <Plus className="h-4 w-4" />
-          <span>Nueva Operación</span>
+          <span>{t("operations.newOperation")}</span>
         </FormButton>
       </div>
 
@@ -192,10 +204,10 @@ export default function OperationsPage() {
           <div className="text-center py-12">
             <Wrench className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
             <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-              No hay operaciones
+              {t("operations.noOperations")}
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Comienza agregando una nueva operación al sistema.
+              {t("operations.startAddingOperation")}
             </p>
           </div>
         ) : (
@@ -222,7 +234,7 @@ export default function OperationsPage() {
                           </div>
                           {operation.requiredResources.length > 0 && (
                             <div className="flex items-center space-x-1">
-                              <span>Recursos: {operation.requiredResources.join(', ')}</span>
+                              <span>{t("operations.resources")}: {operation.requiredResources.join(', ')}</span>
                             </div>
                           )}
                         </div>
@@ -272,7 +284,7 @@ export default function OperationsPage() {
           setEditingOperation(null);
           reset();
         }}
-        title={editingOperation ? 'Editar Operación' : 'Nueva Operación'}
+        title={editingOperation ? t("operations.editOperation") : t("operations.newOperation")}
         size="md"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
@@ -284,7 +296,7 @@ export default function OperationsPage() {
           />
           
           <FormGroup>
-            <FormLabel required>Nombre de la Operación</FormLabel>
+            <FormLabel required>{t("operations.operationName")}</FormLabel>
             <FormInput
               {...register('name')}
               error={errors.name?.message}
@@ -293,7 +305,7 @@ export default function OperationsPage() {
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>Descripción</FormLabel>
+            <FormLabel required>{t("common.description")}</FormLabel>
             <FormTextarea
               {...register('description')}
               error={errors.description?.message}
@@ -303,7 +315,7 @@ export default function OperationsPage() {
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>Tiempo Estimado (minutos)</FormLabel>
+            <FormLabel required>{t("operations.estimatedTime")}</FormLabel>
             <FormInput
               type="number"
               {...register('estimatedTime', { valueAsNumber: true })}
@@ -313,7 +325,7 @@ export default function OperationsPage() {
           </FormGroup>
 
           <FormGroup>
-            <FormLabel>Recursos Requeridos</FormLabel>
+            <FormLabel>{t("operations.requiredResources")}</FormLabel>
             <FormInput
               {...register('requiredResources')}
               error={errors.requiredResources?.message}
@@ -331,13 +343,13 @@ export default function OperationsPage() {
                 reset();
               }}
             >
-              Cancelar
+              {t("common.cancel")}
             </FormButton>
             <FormButton
               type="submit"
               disabled={isSubmitting}
             >
-              {isSubmitting ? 'Guardando...' : editingOperation ? 'Actualizar' : 'Crear'}
+              {isSubmitting ? t("common.saving") : editingOperation ? t("common.update") : t("common.create")}
             </FormButton>
           </div>
         </Form>

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useTranslations } from '@/hooks/useTranslations';
 import { Settings, User, Bell, Globe, Palette, Building2, Save } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import { Form, FormGroup, FormLabel, FormInput, FormButton } from '@/components/Form';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import LanguageSelector from '@/components/LanguageSelector';
@@ -30,21 +31,23 @@ export default function SettingsPage() {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
       setSaved(true);
+      toast.success(t("settings.settingsSaved"));
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
       console.error('Error saving settings:', error);
+      toast.error(t("settings.settingsError"));
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | boolean) => {
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       setSettings(prev => ({
         ...prev,
         [parent]: {
-          ...(prev[parent as keyof typeof prev] as any),
+          ...(prev[parent as keyof typeof prev] as Record<string, string | boolean>),
           [child]: value,
         },
       }));
@@ -61,7 +64,7 @@ export default function SettingsPage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('settings.title')}</h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400">
-          Configuración del sistema
+          {t("settings.subtitle")}
         </p>
       </div>
       
@@ -78,7 +81,7 @@ export default function SettingsPage() {
           </div>
           <div className="p-6 space-y-4">
             <FormGroup>
-              <FormLabel>Nombre de la Empresa</FormLabel>
+              <FormLabel>{t("settings.companyName")}</FormLabel>
               <FormInput
                 value={settings.companyName}
                 onChange={(e) => handleInputChange('companyName', e.target.value)}
@@ -86,7 +89,7 @@ export default function SettingsPage() {
               />
             </FormGroup>
             <FormGroup>
-              <FormLabel>Nombre de la Aplicación</FormLabel>
+              <FormLabel>{t("settings.appName")}</FormLabel>
               <FormInput
                 value={settings.appName}
                 onChange={(e) => handleInputChange('appName', e.target.value)}
@@ -102,13 +105,13 @@ export default function SettingsPage() {
             <div className="flex items-center space-x-2">
               <User className="h-5 w-5 text-green-600 dark:text-green-400" />
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">
-                Información Personal
+                {t("settings.personalInfo")}
               </h2>
             </div>
           </div>
           <div className="p-6 space-y-4">
             <FormGroup>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>{t("auth.email")}</FormLabel>
               <FormInput
                 value={settings.email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
@@ -125,7 +128,7 @@ export default function SettingsPage() {
             <div className="flex items-center space-x-2">
               <Palette className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">
-                Apariencia
+                {t("settings.appearance")}
               </h2>
             </div>
           </div>
@@ -136,7 +139,7 @@ export default function SettingsPage() {
                   {t('settings.theme')}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Cambia entre tema claro y oscuro
+                  {t("settings.themeDescription")}
                 </p>
               </div>
               <ThemeToggle />
@@ -147,7 +150,7 @@ export default function SettingsPage() {
                   {t('settings.language')}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Selecciona tu idioma preferido
+                  {t("settings.languageDescription")}
                 </p>
               </div>
               <LanguageSelector />
@@ -169,10 +172,10 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                  Notificaciones por Email
+                  {t("settings.emailNotifications")}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Recibe notificaciones importantes por correo
+                  {t("settings.emailNotificationsDescription")}
                 </p>
               </div>
               <input
@@ -185,10 +188,10 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                  Notificaciones Push
+                  {t("settings.pushNotifications")}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Recibe notificaciones en tiempo real
+                  {t("settings.pushNotificationsDescription")}
                 </p>
               </div>
               <input
@@ -210,7 +213,7 @@ export default function SettingsPage() {
           >
             <Save className="h-4 w-4" />
             <span>
-              {loading ? 'Guardando...' : saved ? '¡Guardado!' : 'Guardar Cambios'}
+              {loading ? t("common.saving") : saved ? t("settings.saved") : t("settings.saveChanges")}
             </span>
           </FormButton>
         </div>
