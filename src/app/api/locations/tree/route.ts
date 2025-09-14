@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     // Get all machines for the company
     const machines = await Machine.find({ companyId: session.user.companyId })
       .populate('model')
-      .populate('maintenanceRange')
+      .populate('maintenanceRanges')
       .lean();
 
     // Build the tree structure
