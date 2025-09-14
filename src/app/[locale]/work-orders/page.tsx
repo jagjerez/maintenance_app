@@ -95,7 +95,7 @@ export default function WorkOrdersPage() {
   const watchedType = watch('type');
 
   // Fetch work orders with pagination
-  const fetchWorkOrders = async (page = 1) => {
+  const fetchWorkOrders = useCallback(async (page = 1) => {
     try {
       const response = await fetch(`/api/work-orders?page=${page}&limit=${ITEMS_PER_PAGE}`);
       if (response.ok) {
@@ -110,10 +110,10 @@ export default function WorkOrdersPage() {
       console.error('Error fetching work orders:', error);
       toast.error(t("workOrders.workOrderLoadError"));
     }
-  };
+  }, [t]);
 
   // Fetch machines and operations for dropdowns
-  const fetchMachines = async () => {
+  const fetchMachines = useCallback(async () => {
     try {
       const response = await fetch('/api/machines');
       if (response.ok) {
@@ -126,9 +126,9 @@ export default function WorkOrdersPage() {
       console.error('Error fetching machines:', error);
       toast.error(t("machines.machineLoadError"));
     }
-  };
+  }, [t]);
 
-  const fetchOperations = async () => {
+  const fetchOperations = useCallback(async () => {
     try {
       const response = await fetch('/api/operations');
       if (response.ok) {
@@ -141,7 +141,7 @@ export default function WorkOrdersPage() {
       console.error('Error fetching operations:', error);
       toast.error(t("operations.operationLoadError"));
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     const loadData = async () => {
@@ -164,7 +164,7 @@ export default function WorkOrdersPage() {
       url.searchParams.delete('new');
       window.history.replaceState({}, '', url.toString());
     }
-  }, [searchParams, loading, machines.length, operations.length, reset]);
+  }, [searchParams, reset]);
 
   // Handle machine selection changes and work order type
   useEffect(() => {
@@ -207,7 +207,7 @@ export default function WorkOrdersPage() {
       // Only clear operations if not in edit mode
       setWorkOrderOperations([]);
     }
-  }, [selectedMachines, machines, workOrderType, editingWorkOrder, setValue]);
+  }, [selectedMachines, machines, workOrderType, editingWorkOrder]);
 
   // Update workOrderType when form type changes
   useEffect(() => {
@@ -227,7 +227,7 @@ export default function WorkOrdersPage() {
       setValue('machines', []);
       setValue('operations', []);
     }
-  }, [workOrderType, setValue, editingWorkOrder, setSelectedMachines, setSelectedOperations, setWorkOrderOperations, setFilledOperations]);
+  }, [workOrderType, editingWorkOrder]);
 
   // Use watchedType for form control instead of workOrderType
   // In edit mode, don't disable the form
@@ -280,7 +280,7 @@ export default function WorkOrdersPage() {
     // Clear all form values
     setValue('machines', []);
     setValue('operations', []);
-    setValue('type', 'preventive');
+    setValue('type', '');
     setValue('customCode', '');
     setValue('description', '');
     setValue('completedDate', '');
@@ -616,7 +616,7 @@ export default function WorkOrdersPage() {
                   }
                 })}
                 error={errors.type?.message}
-                disabled={editingWorkOrder?.status === 'completed'}
+                disabled={editingWorkOrder?.status === 'completed' || !!editingWorkOrder}
               >
                 <option value="">{t("placeholders.selectWorkOrderType")}</option>
                 <option value="preventive">{t("workOrders.preventive")}</option>

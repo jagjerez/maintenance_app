@@ -107,7 +107,7 @@ export const maintenanceRangeUpdateSchema = maintenanceRangeSchema.partial();
 export const workOrderSchema = z.object({
   customCode: z.string().optional(),
   machines: z.array(z.string()).min(1, 'At least one machine is required'),
-  type: z.enum(['preventive', 'corrective'], {
+  type: z.enum(['preventive', 'corrective', ''], {
     message: 'Type must be preventive or corrective',
   }),
   status: z.enum(['pending', 'in_progress', 'completed']).optional().default('pending'),
