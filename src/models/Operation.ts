@@ -4,7 +4,7 @@ export interface IOperation {
   _id: string;
   name: string;
   description: string;
-  type: 'text' | 'date' | 'time' | 'datetime' | 'boolean';
+  type: 'text' | 'date' | 'time' | 'datetime' | 'boolean' | 'number';
   companyId: string;
   createdAt: Date;
   updatedAt: Date;

@@ -349,7 +349,7 @@ export default function LocationTreeView({
 
   return (
     <div className={`${className}`}>
-      <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      <div className="overflow-hidden relative z-10">
         {tree.length === 0 ? (
           <div className="text-center py-8">
             <MapPin className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
@@ -361,7 +361,7 @@ export default function LocationTreeView({
             </p>
           </div>
         ) : (
-          <div className="max-h-96 overflow-y-auto">
+          <div className="overflow-y-auto">
             {tree.map((node) => renderLocationNode(node))}
           </div>
         )}

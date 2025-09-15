@@ -1,5 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { IMachineModel } from './MachineModel';
+import mongoose, { Schema } from 'mongoose';
 
 export interface IMachine {
   _id: string;

@@ -16,6 +16,7 @@
     "@hookform/resolvers": "^5.2.1",
     "@types/bcryptjs": "^2.4.6",
     "@types/mongoose": "^5.11.96",
+    "@vercel/blob": "^1.1.1",
     "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
     "lucide-react": "^0.544.0",

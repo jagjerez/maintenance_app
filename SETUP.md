@@ -6,7 +6,7 @@ Crea un archivo `.env.local` en la raíz del proyecto con las siguientes variabl
 
 ```env
 # MongoDB
-MONGODB_URI=mongodb://localhost:27017/maintenance_app
+STORAGE_MONGODB_URI=mongodb://localhost:27017/maintenance_app
 
 # NextAuth
 NEXTAUTH_URL=http://localhost:3000

@@ -107,11 +107,15 @@ export const maintenanceRangeUpdateSchema = maintenanceRangeSchema.partial();
 export const workOrderSchema = z.object({
   customCode: z.string().optional(),
   machines: z.array(z.string()).min(1, 'At least one machine is required'),
+  location: z.string().min(1, 'Location is required'),
+  workOrderLocation: z.string().min(1, 'Work order location is required'),
   type: z.enum(['preventive', 'corrective', ''], {
     message: 'Type must be preventive or corrective',
   }),
   status: z.enum(['pending', 'in_progress', 'completed']).optional().default('pending'),
   description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
+  maintenanceDescription: z.string().optional(),
+  maintenanceDescriptionPerMachine: z.record(z.string(), z.string()).optional().default({}),
   scheduledDate: z.string(),
   completedDate: z.string().optional(),
   assignedTo: z.string().optional(),
@@ -123,11 +127,68 @@ export const workOrderSchema = z.object({
     description: z.string().optional(),
     filledBy: z.string().optional(),
   })).optional().default([]),
+  labor: z.array(z.object({
+    operatorName: z.string().min(1, 'Operator name is required'),
+    startTime: z.string(),
+    endTime: z.string().optional(),
+    isActive: z.boolean().default(true),
+  })).optional().default([]),
+  materials: z.array(z.object({
+    description: z.string().min(1, 'Material description is required'),
+    unitType: z.string().min(1, 'Unit type is required'),
+    quantity: z.number().min(0, 'Quantity must be positive'),
+    unit: z.string().min(1, 'Unit is required'),
+  })).optional().default([]),
+  images: z.array(z.object({
+    url: z.string().url('Invalid image URL'),
+    filename: z.string().min(1, 'Filename is required'),
+    uploadedAt: z.string(),
+    uploadedBy: z.string().optional(),
+  })).optional().default([]),
   properties: z.record(z.string(), z.unknown()).optional().default({}),
   companyId: z.string().min(1, 'Company is required'),
+}).refine((data) => {
+  // If type is corrective, maintenanceDescription is required
+  if (data.type === 'corrective' && (!data.maintenanceDescription || data.maintenanceDescription.trim() === '')) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Maintenance description is required for corrective work orders',
+  path: ['maintenanceDescription'],
 });
 
 export const workOrderUpdateSchema = workOrderSchema.partial();
+
+// Labor validations
+export const laborSchema = z.object({
+  operatorName: z.string().min(1, 'Operator name is required'),
+  startTime: z.string(),
+  endTime: z.string().optional(),
+  isActive: z.boolean().default(true),
+});
+
+export const laborUpdateSchema = laborSchema.partial();
+
+// Material validations
+export const materialSchema = z.object({
+  description: z.string().min(1, 'Material description is required'),
+  unitType: z.string().min(1, 'Unit type is required'),
+  quantity: z.number().min(0, 'Quantity must be positive'),
+  unit: z.string().min(1, 'Unit is required'),
+});
+
+export const materialUpdateSchema = materialSchema.partial();
+
+// Work Order Image validations
+export const workOrderImageSchema = z.object({
+  url: z.string().url('Invalid image URL'),
+  filename: z.string().min(1, 'Filename is required'),
+  uploadedAt: z.string(),
+  uploadedBy: z.string().optional(),
+});
+
+export const workOrderImageUpdateSchema = workOrderImageSchema.partial();
 
 // Filled Operation validations
 export const filledOperationSchema = z.object({
@@ -170,6 +231,12 @@ export type MaintenanceRangeInput = z.infer<typeof maintenanceRangeSchema>;
 export type MaintenanceRangeUpdateInput = z.infer<typeof maintenanceRangeUpdateSchema>;
 export type WorkOrderInput = z.infer<typeof workOrderSchema>;
 export type WorkOrderUpdateInput = z.infer<typeof workOrderUpdateSchema>;
+export type LaborInput = z.infer<typeof laborSchema>;
+export type LaborUpdateInput = z.infer<typeof laborUpdateSchema>;
+export type MaterialInput = z.infer<typeof materialSchema>;
+export type MaterialUpdateInput = z.infer<typeof materialUpdateSchema>;
+export type WorkOrderImageInput = z.infer<typeof workOrderImageSchema>;
+export type WorkOrderImageUpdateInput = z.infer<typeof workOrderImageUpdateSchema>;
 export type FilledOperationInput = z.infer<typeof filledOperationSchema>;
 export type FilledOperationUpdateInput = z.infer<typeof filledOperationUpdateSchema>;
 export type LocationInput = z.infer<typeof locationSchema>;

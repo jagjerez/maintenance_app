@@ -41,12 +41,12 @@ npm install
 Crea un archivo `.env.local` en la raíz del proyecto:
 
 ```env
-MONGODB_URI=mongodb://localhost:27017/maintenance_app
+STORAGE_MONGODB_URI=mongodb://localhost:27017/maintenance_app
 ```
 
 Para MongoDB Atlas:
 ```env
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/maintenance_app?retryWrites=true&w=majority
+STORAGE_MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/maintenance_app?retryWrites=true&w=majority
 ```
 
 ### 3. Ejecutar la aplicación
@@ -151,13 +151,13 @@ El dashboard principal muestra:
 
 ### Vercel (Recomendado)
 1. Conecta tu repositorio a Vercel
-2. Configura la variable de entorno `MONGODB_URI`
+2. Configura la variable de entorno `STORAGE_MONGODB_URI`
 3. Despliega automáticamente
 
 ### Docker
 ```bash
 docker build -t maintenance-app .
-docker run -p 3000:3000 -e MONGODB_URI=your_connection_string maintenance-app
+docker run -p 3000:3000 -e STORAGE_MONGODB_URI=your_connection_string maintenance-app
 ```
 
 ## Contribuir

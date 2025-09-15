@@ -6,7 +6,7 @@ import connectDB from './db';
 import { User, Company } from '@/models';
 import { MongoClient } from 'mongodb';
 
-const client = new MongoClient(process.env.MONGODB_URI || 'mongodb://localhost:27017/maintenance_app');
+const client = new MongoClient(process.env.STORAGE_MONGODB_URI || 'mongodb://localhost:27017/maintenance_app');
 
 export const authOptions: NextAuthOptions = {
   // adapter: MongoDBAdapter(client), // Temporarily disabled due to type conflicts

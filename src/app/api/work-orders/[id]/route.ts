@@ -18,6 +18,7 @@ export async function GET(
           model: 'MachineModel'
         }
       })
+      .populate('location')
       .populate('operations')
       .populate({
         path: 'filledOperations.operationId',
@@ -50,14 +51,63 @@ export async function PUT(
     const body = await request.json();
     const validatedData = workOrderUpdateSchema.parse(body);
     
+    const { id } = await params;
+    
+    // First, get the current work order to check business rules
+    const currentWorkOrder = await WorkOrder.findById(id);
+    
+    if (!currentWorkOrder) {
+      return NextResponse.json(
+        { error: 'Work order not found' },
+        { status: 404 }
+      );
+    }
+    
+    // Check if work order is completed
+    if (currentWorkOrder.status === 'completed') {
+      return NextResponse.json(
+        { error: 'Cannot edit completed work order' },
+        { status: 400 }
+      );
+    }
+    
+    // Check if trying to change machines when there's maintenance data
+    if (validatedData.machines && validatedData.machines.length > 0) {
+      const hasMaintenanceData = 
+        (currentWorkOrder.filledOperations && currentWorkOrder.filledOperations.length > 0) ||
+        (currentWorkOrder.labor && currentWorkOrder.labor.length > 0) ||
+        (currentWorkOrder.materials && currentWorkOrder.materials.length > 0) ||
+        (currentWorkOrder.images && currentWorkOrder.images.length > 0);
+      
+      if (hasMaintenanceData) {
+        return NextResponse.json(
+          { error: 'Cannot change machines when maintenance has been performed' },
+          { status: 400 }
+        );
+      }
+    }
+    
     // Convert date strings to Date objects if they exist
     const updateData = {
       ...validatedData,
       ...(validatedData.scheduledDate && { scheduledDate: new Date(validatedData.scheduledDate) }),
       ...(validatedData.completedDate && { completedDate: new Date(validatedData.completedDate) }),
+      ...(validatedData.labor && {
+        labor: validatedData.labor.map(l => ({
+          ...l,
+          startTime: new Date(l.startTime),
+          endTime: l.endTime ? new Date(l.endTime) : undefined,
+        }))
+      }),
+      ...(validatedData.materials && { materials: validatedData.materials }),
+      ...(validatedData.images && {
+        images: validatedData.images.map(img => ({
+          ...img,
+          uploadedAt: new Date(img.uploadedAt),
+        }))
+      }),
     };
     
-    const { id } = await params;
     const workOrder = await WorkOrder.findByIdAndUpdate(
       id,
       updateData,
@@ -70,6 +120,7 @@ export async function PUT(
           model: 'MachineModel'
         }
       })
+      .populate('location')
       .populate('operations')
       .populate({
         path: 'filledOperations.operationId',
@@ -106,7 +157,9 @@ export async function DELETE(
   try {
     await connectDB();
     const { id } = await params;
-    const workOrder = await WorkOrder.findByIdAndDelete(id);
+    
+    // First, get the work order to check if it can be deleted
+    const workOrder = await WorkOrder.findById(id);
     
     if (!workOrder) {
       return NextResponse.json(
@@ -114,6 +167,30 @@ export async function DELETE(
         { status: 404 }
       );
     }
+    
+    // Check if work order can be deleted based on business rules
+    if (workOrder.status !== 'pending') {
+      return NextResponse.json(
+        { error: 'Cannot delete work order that is not in pending status' },
+        { status: 400 }
+      );
+    }
+    
+    // Check if there's any maintenance data
+    const hasMaintenanceData = 
+      (workOrder.filledOperations && workOrder.filledOperations.length > 0) ||
+      (workOrder.labor && workOrder.labor.length > 0) ||
+      (workOrder.materials && workOrder.materials.length > 0) ||
+      (workOrder.images && workOrder.images.length > 0);
+    
+    if (hasMaintenanceData) {
+      return NextResponse.json(
+        { error: 'Cannot delete work order with maintenance data' },
+        { status: 400 }
+      );
+    }
+    
+    await WorkOrder.findByIdAndDelete(id);
     
     return NextResponse.json({ message: 'Work order deleted successfully' });
   } catch (error) {

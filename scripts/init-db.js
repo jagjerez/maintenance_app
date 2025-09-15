@@ -11,7 +11,7 @@ async function loadModels() {
   User = userModule.default;
 }
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://root:example@localhost:27017/admin';
+const STORAGE_MONGODB_URI = process.env.STORAGE_MONGODB_URI || 'mongodb://root:example@localhost:27017/admin';
 
 async function initDatabase() {
   try {
@@ -19,7 +19,7 @@ async function initDatabase() {
     await loadModels();
     
     // Connect to MongoDB
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(STORAGE_MONGODB_URI);
     console.log('Connected to MongoDB');
 
     // Check if companies already exist
@@ -112,7 +112,7 @@ async function initDatabase() {
       console.log('Please set up MongoDB with one of these options:');
       console.log('1. Use MongoDB Atlas (cloud): https://www.mongodb.com/atlas');
       console.log('2. Install MongoDB locally without authentication');
-      console.log('3. Set MONGODB_URI with credentials: mongodb://username:password@localhost:27017/maintenance_app');
+      console.log('3. Set STORAGE_MONGODB_URI with credentials: mongodb://username:password@localhost:27017/maintenance_app');
       console.log('\nFor local development, you can install MongoDB Community Edition');
       console.log('and run it without authentication for testing.');
     }

@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
           }
         }
       })
+      .populate('location')
       .populate('operations')
       .populate({
         path: 'filledOperations.operationId',
@@ -76,6 +77,16 @@ export async function POST(request: NextRequest) {
       ...validatedData,
       scheduledDate: new Date(validatedData.scheduledDate),
       completedDate: validatedData.completedDate ? new Date(validatedData.completedDate) : undefined,
+      labor: validatedData.labor?.map(l => ({
+        ...l,
+        startTime: new Date(l.startTime),
+        endTime: l.endTime ? new Date(l.endTime) : undefined,
+      })) || [],
+      materials: validatedData.materials || [],
+      images: validatedData.images?.map(img => ({
+        ...img,
+        uploadedAt: new Date(img.uploadedAt),
+      })) || [],
     };
     
     const workOrder = new WorkOrder(workOrderData);
@@ -99,6 +110,7 @@ export async function POST(request: NextRequest) {
           }
         }
       })
+      .populate('location')
       .populate('operations')
       .populate({
         path: 'filledOperations.operationId',
