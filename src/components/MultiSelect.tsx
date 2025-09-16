@@ -17,6 +17,7 @@ interface MultiSelectProps {
   error?: string;
   disabled?: boolean;
   className?: string;
+  hideSelected?: boolean;
 }
 
 export default function MultiSelect({
@@ -27,6 +28,7 @@ export default function MultiSelect({
   error,
   disabled = false,
   className = "",
+  hideSelected = false,
 }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -85,7 +87,7 @@ export default function MultiSelect({
   return (
     <div className={`relative ${className}`} ref={dropdownRef}>
       {/* Selected options display */}
-      {selectedOptions.length > 0 && (
+      {!hideSelected && selectedOptions.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-2">
           {selectedOptions.map((option) => (
             <span

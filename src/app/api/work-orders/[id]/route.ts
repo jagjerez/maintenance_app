@@ -1,16 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/db';
 import { WorkOrder } from '@/models';
 import { workOrderUpdateSchema } from '@/lib/validations';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const { id } = await params;
-    const workOrder = await WorkOrder.findById(id)
+    const workOrder = await WorkOrder.findOne({ 
+      _id: id, 
+      companyId: session.user.companyId 
+    })
       .populate({
         path: 'machines',
         populate: {
@@ -47,6 +60,14 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const body = await request.json();
     const validatedData = workOrderUpdateSchema.parse(body);
@@ -54,7 +75,10 @@ export async function PUT(
     const { id } = await params;
     
     // First, get the current work order to check business rules
-    const currentWorkOrder = await WorkOrder.findById(id);
+    const currentWorkOrder = await WorkOrder.findOne({ 
+      _id: id, 
+      companyId: session.user.companyId 
+    });
     
     if (!currentWorkOrder) {
       return NextResponse.json(
@@ -108,8 +132,8 @@ export async function PUT(
       }),
     };
     
-    const workOrder = await WorkOrder.findByIdAndUpdate(
-      id,
+    const workOrder = await WorkOrder.findOneAndUpdate(
+      { _id: id, companyId: session.user.companyId },
       updateData,
       { new: true, runValidators: true }
     )
@@ -155,11 +179,22 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const { id } = await params;
     
     // First, get the work order to check if it can be deleted
-    const workOrder = await WorkOrder.findById(id);
+    const workOrder = await WorkOrder.findOne({ 
+      _id: id, 
+      companyId: session.user.companyId 
+    });
     
     if (!workOrder) {
       return NextResponse.json(
@@ -190,7 +225,10 @@ export async function DELETE(
       );
     }
     
-    await WorkOrder.findByIdAndDelete(id);
+    await WorkOrder.findOneAndDelete({ 
+      _id: id, 
+      companyId: session.user.companyId 
+    });
     
     return NextResponse.json({ message: 'Work order deleted successfully' });
   } catch (error) {

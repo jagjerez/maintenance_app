@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/db';
 import { MaintenanceRange } from '@/models';
-import { maintenanceRangeSchema } from '@/lib/validations';
+import { maintenanceRangeCreateSchema } from '@/lib/validations';
 import { authOptions } from '@/lib/auth';
 
 export async function GET() {
@@ -43,12 +43,13 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
     const body = await request.json();
-    const validatedData = maintenanceRangeSchema.parse({
-      ...body,
+    const validatedData = maintenanceRangeCreateSchema.parse(body);
+    const dataWithCompany = {
+      ...validatedData,
       companyId: session.user.companyId,
-    });
+    };
     
-    const maintenanceRange = new MaintenanceRange(validatedData);
+    const maintenanceRange = new MaintenanceRange(dataWithCompany);
     await maintenanceRange.save();
     
     const populatedRange = await MaintenanceRange.findById(maintenanceRange._id)

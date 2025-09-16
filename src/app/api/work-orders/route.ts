@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/db';
 import { WorkOrder } from '@/models';
-import { workOrderSchema } from '@/lib/validations';
+import { workOrderCreateSchema } from '@/lib/validations';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -13,7 +23,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
     
-    const query: Record<string, unknown> = {};
+    const query: Record<string, unknown> = { companyId: session.user.companyId };
     
     if (status) query.status = status;
     if (type) query.type = type;
@@ -67,23 +77,35 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const body = await request.json();
     
-    const validatedData = workOrderSchema.parse(body);
+    const validatedData = workOrderCreateSchema.parse(body);
+    const dataWithCompany = {
+      ...validatedData,
+      companyId: session.user.companyId,
+    };
     
     // Convert date strings to Date objects
     const workOrderData = {
-      ...validatedData,
-      scheduledDate: new Date(validatedData.scheduledDate),
-      completedDate: validatedData.completedDate ? new Date(validatedData.completedDate) : undefined,
-      labor: validatedData.labor?.map(l => ({
+      ...dataWithCompany,
+      scheduledDate: new Date(dataWithCompany.scheduledDate),
+      completedDate: dataWithCompany.completedDate ? new Date(dataWithCompany.completedDate) : undefined,
+      labor: dataWithCompany.labor?.map(l => ({
         ...l,
         startTime: new Date(l.startTime),
         endTime: l.endTime ? new Date(l.endTime) : undefined,
       })) || [],
-      materials: validatedData.materials || [],
-      images: validatedData.images?.map(img => ({
+      materials: dataWithCompany.materials || [],
+      images: dataWithCompany.images?.map(img => ({
         ...img,
         uploadedAt: new Date(img.uploadedAt),
       })) || [],

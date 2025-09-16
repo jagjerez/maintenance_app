@@ -1,12 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/db';
 import { Machine } from '@/models';
-import { machineSchema } from '@/lib/validations';
+import { machineCreateSchema } from '@/lib/validations';
+import { authOptions } from '@/lib/auth';
 
 export async function GET() {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
-    const machines = await Machine.find()
+    const machines = await Machine.find({ 
+      companyId: session.user.companyId 
+    })
       .populate('model')
       .populate({
         path: 'maintenanceRanges',
@@ -29,20 +41,32 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const body = await request.json();
-    const validatedData = machineSchema.parse(body);
+    const validatedData = machineCreateSchema.parse(body);
+    const dataWithCompany = {
+      ...validatedData,
+      companyId: session.user.companyId,
+    };
     
     // Clean empty string values for ObjectId fields
-    if (validatedData.locationId === '') {
-      validatedData.locationId = undefined;
+    if (dataWithCompany.locationId === '') {
+      dataWithCompany.locationId = undefined;
     }
     
     // Validate no duplicate model with same maintenance ranges
     const existingMachine = await Machine.findOne({
-      model: validatedData.model,
-      maintenanceRanges: { $all: validatedData.maintenanceRanges },
-      companyId: validatedData.companyId,
+      model: dataWithCompany.model,
+      maintenanceRanges: { $all: dataWithCompany.maintenanceRanges },
+      companyId: session.user.companyId,
     });
     
     if (existingMachine) {
@@ -52,25 +76,8 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Validate no duplicate maintenance range types
-    const { MaintenanceRange } = await import('@/models');
-    const maintenanceRanges = await MaintenanceRange.find({
-      _id: { $in: validatedData.maintenanceRanges },
-      companyId: validatedData.companyId,
-    });
-    
-    const types = maintenanceRanges.map(range => range.type);
-    const uniqueTypes = [...new Set(types)];
-    
-    if (types.length !== uniqueTypes.length) {
-      return NextResponse.json(
-        { error: 'duplicateMaintenanceRangeType' },
-        { status: 400 }
-      );
-    }
-    
     // Validate operations are not duplicated in maintenance ranges
-    if (validatedData.operations && validatedData.operations.length > 0) {
+    /* if (validatedData.operations && validatedData.operations.length > 0) {
       const { Operation } = await import('@/models');
       const operations = await Operation.find({
         _id: { $in: validatedData.operations },
@@ -94,9 +101,9 @@ export async function POST(request: NextRequest) {
           }
         }
       }
-    }
+    } */
     
-    const machine = new Machine(validatedData);
+    const machine = new Machine(dataWithCompany);
     await machine.save();
     
     const populatedMachine = await Machine.findById(machine._id)

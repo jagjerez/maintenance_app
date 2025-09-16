@@ -349,7 +349,7 @@ export default function LocationTreeView({
 
   return (
     <div className={`${className}`}>
-      <div className="overflow-hidden relative z-10">
+      <div className="relative z-10">
         {tree.length === 0 ? (
           <div className="text-center py-8">
             <MapPin className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />

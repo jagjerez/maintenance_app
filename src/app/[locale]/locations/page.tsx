@@ -6,12 +6,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from '@/hooks/useTranslations';
-import { Plus, Edit, Trash2, MapPin, Folder, FolderOpen } from 'lucide-react';
+import { Plus, MapPin, Folder } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Modal from '@/components/Modal';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { Form, FormGroup, FormLabel, FormInput, FormTextarea, FormSelect, FormButton } from '@/components/Form';
 import { Pagination } from '@/components/Pagination';
+import DataTable from '@/components/DataTable';
 import { locationSchema } from '@/lib/validations';
 import LocationTreeView from '@/components/LocationTreeView';
 
@@ -54,10 +55,8 @@ export default function LocationsPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; location: Location | null }>({
-    isOpen: false,
-    location: null,
-  });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -129,10 +128,7 @@ export default function LocationsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...data,
-          companyId: session?.user?.companyId,
-        }),
+        body: JSON.stringify(data),
       });
 
       if (response.ok) {
@@ -163,11 +159,16 @@ export default function LocationsPage() {
     setShowModal(true);
   };
 
-  const handleDelete = async () => {
-    if (!deleteModal.location) return;
+  const handleDelete = (location: Location) => {
+    setLocationToDelete(location);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!locationToDelete) return;
 
     try {
-      const response = await fetch(`/api/locations/${deleteModal.location._id}`, {
+      const response = await fetch(`/api/locations/${locationToDelete._id}`, {
         method: 'DELETE',
       });
 
@@ -176,7 +177,6 @@ export default function LocationsPage() {
         await fetchLocations();
         await fetchAllLocations();
         setRefreshTrigger(prev => prev + 1); // Trigger tree refresh
-        setDeleteModal({ isOpen: false, location: null });
       } else {
         const error = await response.json();
         if (error.machinesCount) {
@@ -190,6 +190,9 @@ export default function LocationsPage() {
     } catch (error) {
       console.error('Error deleting location:', error);
       toast.error(t("locations.locationError"));
+    } finally {
+      setShowDeleteModal(false);
+      setLocationToDelete(null);
     }
   };
 
@@ -197,15 +200,32 @@ export default function LocationsPage() {
     setCurrentPage(page);
   };
 
-  const handleLocationSelect = (location: Location) => {
-  };
+  const columns = [
+    {
+      key: 'name' as keyof Location,
+      label: t("locations.locationName"),
+    },
+    {
+      key: 'description' as keyof Location,
+      label: t("locations.description"),
+      render: (value: unknown) => (value as string) || '-',
+    },
+    {
+      key: 'path' as keyof Location,
+      label: t("locations.path"),
+    },
+    {
+      key: 'level' as keyof Location,
+      label: t("locations.level"),
+    },
+  ];
 
   const handleLocationEdit = (location: Location) => {
     handleEdit(location);
   };
 
   const handleLocationDelete = (location: Location) => {
-    setDeleteModal({ isOpen: true, location });
+    handleDelete(location);
   };
 
   const handleLocationAdd = (parentLocation?: Location) => {
@@ -299,7 +319,7 @@ export default function LocationsPage() {
       {/* Content */}
       {viewMode === 'tree' ? (
         <LocationTreeView
-          onLocationClick={(location) => handleLocationSelect(location)}
+          onLocationClick={() => {}}
           onLocationEdit={(location) => handleLocationEdit(location)}
           onLocationDelete={(location) => handleLocationDelete(location)}
           onLocationAdd={(parentLocation) => handleLocationAdd(parentLocation)}
@@ -310,75 +330,15 @@ export default function LocationsPage() {
           className="bg-white dark:bg-gray-800 shadow rounded-lg p-6"
         />
       ) : (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-          {locations.length === 0 ? (
-            <div className="text-center py-12">
-              <MapPin className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                {t("locations.noLocations")}
-              </h3>
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {t("locations.startAddingLocation")}
-              </p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {locations.map((location) => (
-                <div key={location._id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0">
-                          {location.isLeaf ? (
-                            <Folder className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                          ) : (
-                            <FolderOpen className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate">
-                            {location.name}
-                          </h3>
-                          {location.description && (
-                            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
-                              {location.description}
-                            </p>
-                          )}
-                          <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                            <div className="flex items-center space-x-1">
-                              <MapPin className="h-4 w-4" />
-                              <span>{location.path}</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <span>Level: {location.level}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <FormButton
-                        type="button"
-                        variant="secondary"
-                        onClick={() => handleEdit(location)}
-                        className="p-2"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </FormButton>
-                      <FormButton
-                        type="button"
-                        variant="danger"
-                        onClick={() => setDeleteModal({ isOpen: true, location })}
-                        className="p-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </FormButton>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <DataTable
+              data={locations}
+              columns={columns}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          </div>
         </div>
       )}
 
@@ -403,7 +363,7 @@ export default function LocationsPage() {
           reset();
         }}
         title={editingLocation ? t("locations.editLocation") : t("locations.newLocation")}
-        size="md"
+        size="xl"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
           {/* Campo oculto para companyId */}
@@ -471,17 +431,16 @@ export default function LocationsPage() {
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
-        isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ isOpen: false, location: null })}
-        onConfirm={handleDelete}
-        title={t("modals.deleteLocation")}
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title={t("modals.confirmDeletion")}
         message={t("modals.deleteLocationMessage")}
         confirmText={t("common.delete")}
-        cancelText={t("common.cancel")}
         variant="danger"
-        itemDetails={deleteModal.location ? {
-          name: deleteModal.location.name,
-          description: deleteModal.location.description || '',
+        itemDetails={locationToDelete ? {
+          name: locationToDelete.name,
+          description: locationToDelete.description || '',
         } : undefined}
       />
     </div>

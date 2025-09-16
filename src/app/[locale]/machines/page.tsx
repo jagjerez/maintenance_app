@@ -1,20 +1,35 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useSearchParams } from 'next/navigation';
-import { useTranslations } from '@/hooks/useTranslations';
-import { Plus, Edit, Trash2, MapPin, Wrench, ChevronDown, ChevronRight } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import Modal from '@/components/Modal';
-import { ConfirmationModal } from '@/components/ConfirmationModal';
-import { Form, FormGroup, FormLabel, FormInput, FormSelect, FormButton } from '@/components/Form';
-import { Pagination } from '@/components/Pagination';
-import { machineSchema } from '@/lib/validations';
-import LocationTreeView from '@/components/LocationTreeView';
-import MultiSelect from '@/components/MultiSelect';
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useSearchParams } from "next/navigation";
+import { useTranslations } from "@/hooks/useTranslations";
+import {
+  Plus,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
+import { toast } from "react-hot-toast";
+import Modal from "@/components/Modal";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
+import {
+  Form,
+  FormGroup,
+  FormLabel,
+  FormInput,
+  FormSelect,
+  FormButton,
+} from "@/components/Form";
+import { Pagination } from "@/components/Pagination";
+import DataTable from "@/components/DataTable";
+import { machineCreateSchema } from "@/lib/validations";
+import LocationTreeView from "@/components/LocationTreeView";
+import MultiSelect from "@/components/MultiSelect";
+import OperationsDisplay from "@/components/OperationsDisplay";
+import { IOperation } from "@/models/Operation";
+import { formatDateSafe } from "@/lib/utils";
 
 interface MachineModel {
   _id: string;
@@ -24,11 +39,21 @@ interface MachineModel {
   year: number;
 }
 
+interface Operation {
+  _id: string;
+  name: string;
+  description: string;
+  type: "text" | "date" | "time" | "datetime" | "boolean" | "number";
+  companyId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 interface MaintenanceRange {
   _id: string;
   name: string;
-  type: 'preventive' | 'corrective';
   description: string;
+  operations: Operation[];
 }
 
 interface Machine {
@@ -46,12 +71,12 @@ interface Machine {
   maintenanceRanges?: {
     _id: string;
     name: string;
-    type: 'preventive' | 'corrective';
   }[];
   operations?: {
     _id: string;
     name: string;
     description: string;
+    type?: string;
   }[];
   properties: Record<string, unknown>;
   createdAt: string;
@@ -64,24 +89,30 @@ export default function MachinesPage() {
   const searchParams = useSearchParams();
   const [machines, setMachines] = useState<Machine[]>([]);
   const [machineModels, setMachineModels] = useState<MachineModel[]>([]);
-  const [maintenanceRanges, setMaintenanceRanges] = useState<MaintenanceRange[]>([]);
-  const [operations, setOperations] = useState<{ _id: string; name: string; description: string }[]>([]);
+  const [maintenanceRanges, setMaintenanceRanges] = useState<
+    MaintenanceRange[]
+  >([]);
+  const [operations, setOperations] = useState<Operation[]>([]);
   const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; machine: Machine | null }>({
-    isOpen: false,
-    machine: null,
-  });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [machineToDelete, setMachineToDelete] = useState<Machine | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [showLocationSelector, setShowLocationSelector] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<{ _id: string; name: string; path: string } | null>(null);
-  const [newPropertyKey, setNewPropertyKey] = useState('');
-  const [newPropertyValue, setNewPropertyValue] = useState('');
-  const [selectedMaintenanceRanges, setSelectedMaintenanceRanges] = useState<string[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    _id: string;
+    name: string;
+    path: string;
+  } | null>(null);
+  const [newPropertyKey, setNewPropertyKey] = useState("");
+  const [newPropertyValue, setNewPropertyValue] = useState("");
+  const [selectedMaintenanceRanges, setSelectedMaintenanceRanges] = useState<
+    string[]
+  >([]);
 
   const ITEMS_PER_PAGE = 10;
 
@@ -93,84 +124,80 @@ export default function MachinesPage() {
     watch,
     formState: { errors, isSubmitting },
   } = useForm({
-    resolver: zodResolver(machineSchema),
+    resolver: zodResolver(machineCreateSchema),
     defaultValues: {
       properties: {},
-      companyId: session?.user?.companyId || '',
     },
   });
-
 
   // Custom properties handlers
   const addCustomProperty = () => {
     if (newPropertyKey.trim() && newPropertyValue.trim()) {
-      const currentProperties = watch('properties') || {};
-      setValue('properties', {
+      const currentProperties = watch("properties") || {};
+      setValue("properties", {
         ...currentProperties,
-        [newPropertyKey.trim()]: newPropertyValue.trim()
+        [newPropertyKey.trim()]: newPropertyValue.trim(),
       });
-      setNewPropertyKey('');
-      setNewPropertyValue('');
+      setNewPropertyKey("");
+      setNewPropertyValue("");
     }
   };
 
   const removeCustomProperty = (key: string) => {
-    const currentProperties = watch('properties') || {};
+    const currentProperties = watch("properties") || {};
     const newProperties = { ...currentProperties };
     delete newProperties[key];
-    setValue('properties', newProperties);
+    setValue("properties", newProperties);
   };
 
-
-
-
-  // Update form values when session or selectedLocation changes
-  useEffect(() => {
-    if (session?.user?.companyId) {
-      setValue('companyId', session.user.companyId);
-    }
-  }, [session?.user?.companyId, setValue]);
-
+  // Update form values when selectedLocation changes
   useEffect(() => {
     if (selectedLocation) {
-      setValue('location', selectedLocation.path);
-      setValue('locationId', selectedLocation._id);
+      setValue("location", selectedLocation.path);
+      setValue("locationId", selectedLocation._id);
     }
   }, [selectedLocation, setValue]);
 
   // Update maintenanceRanges field when selectedMaintenanceRanges changes
   useEffect(() => {
-    setValue('maintenanceRanges', selectedMaintenanceRanges);
+    setValue("maintenanceRanges", selectedMaintenanceRanges);
   }, [selectedMaintenanceRanges, setValue]);
 
   // Update operations field when selectedOperations changes
   useEffect(() => {
-    setValue('operations', selectedOperations);
+    setValue("operations", selectedOperations);
   }, [selectedOperations, setValue]);
 
-
   // Fetch machines with pagination
-  const fetchMachines = useCallback(async (page = 1) => {
-    try {
-      const response = await fetch(`/api/machines?page=${page}&limit=${ITEMS_PER_PAGE}`);
-      if (response.ok) {
-        const data = await response.json();
-        setMachines(data.machines || data);
-        setTotalPages(data.totalPages || Math.ceil((data.machines || data).length / ITEMS_PER_PAGE));
-        setTotalItems(data.totalItems || (data.machines || data).length);
-      } else {
+  const fetchMachines = useCallback(
+    async (page = 1) => {
+      try {
+        const response = await fetch(
+          `/api/machines?page=${page}&limit=${ITEMS_PER_PAGE}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setMachines(data.machines || data);
+          setTotalPages(
+            data.totalPages ||
+              Math.ceil((data.machines || data).length / ITEMS_PER_PAGE)
+          );
+          setTotalItems(data.totalItems || (data.machines || data).length);
+        } else {
+          toast.error(t("machines.machineLoadError"));
+        }
+      } catch (error) {
+        console.error("Error fetching machines:", error);
         toast.error(t("machines.machineLoadError"));
       }
-    } catch (error) {
-      console.error('Error fetching machines:', error);
-      toast.error(t("machines.machineLoadError"));
-    }
-  }, [t]);
+    },
+    [t]
+  );
 
   // Fetch machine models
   const fetchMachineModels = useCallback(async () => {
     try {
-      const response = await fetch('/api/machine-models');
+      const response = await fetch("/api/machine-models");
       if (response.ok) {
         const data = await response.json();
         setMachineModels(data);
@@ -178,7 +205,7 @@ export default function MachinesPage() {
         toast.error(t("machineModels.modelError"));
       }
     } catch (error) {
-      console.error('Error fetching machine models:', error);
+      console.error("Error fetching machine models:", error);
       toast.error(t("machineModels.modelError"));
     }
   }, [t]);
@@ -186,7 +213,7 @@ export default function MachinesPage() {
   // Fetch maintenance ranges
   const fetchMaintenanceRanges = useCallback(async () => {
     try {
-      const response = await fetch('/api/maintenance-ranges?limit=1000');
+      const response = await fetch("/api/maintenance-ranges?limit=1000");
       if (response.ok) {
         const data = await response.json();
         setMaintenanceRanges(data.maintenanceRanges || data);
@@ -194,7 +221,7 @@ export default function MachinesPage() {
         toast.error(t("maintenanceRanges.rangeError"));
       }
     } catch (error) {
-      console.error('Error fetching maintenance ranges:', error);
+      console.error("Error fetching maintenance ranges:", error);
       toast.error(t("maintenanceRanges.rangeError"));
     }
   }, [t]);
@@ -202,7 +229,7 @@ export default function MachinesPage() {
   // Fetch operations
   const fetchOperations = useCallback(async () => {
     try {
-      const response = await fetch('/api/operations?limit=1000');
+      const response = await fetch("/api/operations?limit=1000");
       if (response.ok) {
         const data = await response.json();
         setOperations(data.operations || data);
@@ -210,94 +237,117 @@ export default function MachinesPage() {
         toast.error(t("operations.operationError"));
       }
     } catch (error) {
-      console.error('Error fetching operations:', error);
+      console.error("Error fetching operations:", error);
       toast.error(t("operations.operationError"));
     }
   }, [t]);
 
-  const handleEdit = useCallback((machine: Machine) => {
-    
-    setEditingMachine(machine);
-    
-    // Set form values using setValue
-    setValue('model', machine.model._id);
-    setValue('location', machine.location);
-    setValue('locationId', machine.locationId || '');
-    setValue('description', machine.description || '');
-    setValue('properties', machine.properties);
-    setValue('companyId', session?.user?.companyId || '');
-    
-    // Set selected maintenance ranges
-    const rangeIds = machine.maintenanceRanges?.map(range => range._id) || [];
-    setSelectedMaintenanceRanges(rangeIds);
-    
-    // Set selected operations
-    const operationIds = machine.operations?.map(operation => operation._id) || [];
-    setSelectedOperations(operationIds);
-    
-    // Set selected location if machine has locationId
-    if (machine.locationId) {
-      setSelectedLocation({
-        _id: machine.locationId,
-        name: machine.location,
-        path: machine.location,
-      });
-    } else {
-      setSelectedLocation(null);
-    }
-    
-    setShowModal(true);
-  }, [setValue, session?.user?.companyId]);
+  const handleEdit = useCallback(
+    (machine: Machine) => {
+      setEditingMachine(machine);
+
+      // Set form values using setValue
+      setValue("model", machine.model._id);
+      setValue("location", machine.location);
+      setValue("locationId", machine.locationId || "");
+      setValue("description", machine.description || "");
+      setValue("properties", machine.properties);
+
+      // Set selected maintenance ranges
+      const rangeIds =
+        machine.maintenanceRanges?.map((range) => range._id) || [];
+      setSelectedMaintenanceRanges(rangeIds);
+
+      // Set selected operations
+      const operationIds =
+        machine.operations?.map((operation) => operation._id) || [];
+      setSelectedOperations(operationIds);
+
+      // Set selected location if machine has locationId
+      if (machine.locationId) {
+        setSelectedLocation({
+          _id: machine.locationId,
+          name: machine.location,
+          path: machine.location,
+        });
+      } else {
+        setSelectedLocation(null);
+      }
+
+      setShowModal(true);
+    },
+    [setValue]
+  );
 
   // Load full machine data and open edit modal
-  const loadMachineForEdit = useCallback(async (machineId: string) => {
-    try {
-      const response = await fetch(`/api/machines/${machineId}`);
-      if (response.ok) {
-        const fullMachine = await response.json();
-        handleEdit(fullMachine);
-        setShowLocationSelector(false);
-      } else {
+  const loadMachineForEdit = useCallback(
+    async (machineId: string) => {
+      try {
+        const response = await fetch(`/api/machines/${machineId}`);
+        if (response.ok) {
+          const fullMachine = await response.json();
+          handleEdit(fullMachine);
+          setShowLocationSelector(false);
+        } else {
+          toast.error(t("machines.machineLoadError"));
+        }
+      } catch (error) {
+        console.error("Error loading machine:", error);
         toast.error(t("machines.machineLoadError"));
       }
-    } catch (error) {
-      console.error('Error loading machine:', error);
-      toast.error(t("machines.machineLoadError"));
-    }
-  }, [t, handleEdit]);
+    },
+    [t, handleEdit]
+  );
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchMachines(currentPage), fetchMachineModels(), fetchMaintenanceRanges(), fetchOperations()]);
+      await Promise.all([
+        fetchMachines(currentPage),
+        fetchMachineModels(),
+        fetchMaintenanceRanges(),
+        fetchOperations(),
+      ]);
       setLoading(false);
     };
     loadData();
-  }, [currentPage, fetchMachines, fetchMachineModels, fetchMaintenanceRanges, fetchOperations]);
+  }, [
+    currentPage,
+    fetchMachines,
+    fetchMachineModels,
+    fetchMaintenanceRanges,
+    fetchOperations,
+  ]);
 
   // Check if we should open the modal automatically (from dashboard)
   useEffect(() => {
-    
-    if (searchParams.get('new') === 'true') {
+    if (searchParams.get("new") === "true") {
       setShowModal(true);
       // Clean up the URL parameter
       const url = new URL(window.location.href);
-      url.searchParams.delete('new');
-      window.history.replaceState({}, '', url.toString());
-    } else if (searchParams.get('edit')) {
-      const machineId = searchParams.get('edit');
+      url.searchParams.delete("new");
+      window.history.replaceState({}, "", url.toString());
+    } else if (searchParams.get("edit")) {
+      const machineId = searchParams.get("edit");
       if (machineId && !loading && machineModels.length > 0) {
         loadMachineForEdit(machineId);
         // Clean up the URL parameter
         const url = new URL(window.location.href);
-        url.searchParams.delete('edit');
-        window.history.replaceState({}, '', url.toString());
+        url.searchParams.delete("edit");
+        window.history.replaceState({}, "", url.toString());
       }
     }
   }, [searchParams, loading, machineModels.length, loadMachineForEdit]);
 
-  const onSubmit = async (data: { model: string; location: string; locationId?: string; description?: string; maintenanceRanges?: string[]; operations?: string[]; properties: Record<string, unknown>; companyId: string }) => {
-    
+  const onSubmit = async (data: {
+    model: string;
+    location: string;
+    locationId?: string;
+    description?: string;
+    maintenanceRanges?: string[];
+    operations?: string[];
+    properties: Record<string, unknown>;
+  }) => {
     try {
       if (!session?.user?.companyId) {
         toast.error(t("machines.companyError"));
@@ -309,29 +359,29 @@ export default function MachinesPage() {
         return;
       }
 
-      if (selectedMaintenanceRanges.length === 0) {
-        toast.error(t("machines.atLeastOneMaintenanceRangeRequired"));
-        return;
-      }
-
-      const url = editingMachine ? `/api/machines/${editingMachine._id}` : '/api/machines';
-      const method = editingMachine ? 'PUT' : 'POST';
+      const url = editingMachine
+        ? `/api/machines/${editingMachine._id}`
+        : "/api/machines";
+      const method = editingMachine ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...data,
           maintenanceRanges: selectedMaintenanceRanges,
           operations: selectedOperations,
-          companyId: session?.user?.companyId,
         }),
       });
 
       if (response.ok) {
-        toast.success(editingMachine ? t("machines.machineUpdated") : t("machines.machineCreated"));
+        toast.success(
+          editingMachine
+            ? t("machines.machineUpdated")
+            : t("machines.machineCreated")
+        );
         await fetchMachines(currentPage);
         setShowModal(false);
         setEditingMachine(null);
@@ -342,36 +392,43 @@ export default function MachinesPage() {
         reset();
       } else {
         const error = await response.json();
-        if (error.error === 'duplicateMaintenanceRangeType') {
+        if (error.error === "duplicateMaintenanceRangeType") {
           toast.error(t("machines.duplicateMaintenanceRangeType"));
         } else {
           toast.error(error.error || t("machines.machineError"));
         }
       }
     } catch (error) {
-      console.error('Error saving machine:', error);
+      console.error("Error saving machine:", error);
       toast.error(t("machines.machineError"));
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteModal.machine) return;
+  const handleDelete = (machine: Machine) => {
+    setMachineToDelete(machine);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!machineToDelete) return;
 
     try {
-      const response = await fetch(`/api/machines/${deleteModal.machine._id}`, {
-        method: 'DELETE',
+      const response = await fetch(`/api/machines/${machineToDelete._id}`, {
+        method: "DELETE",
       });
 
       if (response.ok) {
         toast.success(t("machines.machineDeleted"));
         await fetchMachines(currentPage);
-        setDeleteModal({ isOpen: false, machine: null });
       } else {
         toast.error(t("machines.machineError"));
       }
     } catch (error) {
-      console.error('Error deleting machine:', error);
+      console.error("Error deleting machine:", error);
       toast.error(t("machines.machineError"));
+    } finally {
+      setShowDeleteModal(false);
+      setMachineToDelete(null);
     }
   };
 
@@ -379,16 +436,46 @@ export default function MachinesPage() {
     setCurrentPage(page);
   };
 
+  const columns = [
+    {
+      key: 'model' as keyof Machine,
+      label: t("machines.machineModel"),
+      render: (value: unknown) => {
+        const machine = value as Machine;
+        return `${machine.model.name} - ${machine.model.manufacturer} ${machine.model.brand} (${machine.model.year})`;
+      },
+    },
+    {
+      key: 'location' as keyof Machine,
+      label: t("machines.location"),
+    },
+    {
+      key: 'maintenanceRanges' as keyof Machine,
+      label: t("machines.maintenanceRanges"),
+      render: (value: unknown) => {
+        const ranges = value as Machine['maintenanceRanges'];
+        return ranges?.map(range => range.name).join(', ') || '-';
+      },
+    },
+    {
+      key: 'createdAt' as keyof Machine,
+      label: t("common.createdAt"),
+      render: (value: unknown) => formatDateSafe(value as string),
+    },
+  ];
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('machines.title')}</h1>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            {t("machines.title")}
+          </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
             {t("machines.subtitle")}
           </p>
         </div>
-        
+
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
           <div className="animate-pulse space-y-4">
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
@@ -403,120 +490,49 @@ export default function MachinesPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('machines.title')}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          {t("machines.title")}
+        </h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400">
           {t("machines.subtitle")}
         </p>
       </div>
 
-      {/* Header with Add Button */}
-      <div className="mb-6 flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <Wrench className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            {totalItems} {t("common.machine")}{totalItems !== 1 ? 's' : ''}
-          </span>
-        </div>
-        <FormButton
-          onClick={() => {
-            setEditingMachine(null);
-            setSelectedLocation(null);
-            setShowLocationSelector(false);
-            setSelectedMaintenanceRanges([]);
-            setSelectedOperations([]);
-            reset();
-            setShowModal(true);
-          }}
-          className="flex items-center space-x-2"
-        >
-          <Plus className="h-4 w-4" />
-          <span>{t("machines.newMachine")}</span>
-        </FormButton>
-      </div>
-
-      {/* Machines List */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-        {machines.length === 0 ? (
-          <div className="text-center py-12">
-            <Wrench className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-              {t("machines.noMachines")}
-            </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {t("machines.startAddingMachine")}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('machines.title')}</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
+              {t("machines.subtitle")}
             </p>
           </div>
-        ) : (
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {machines.map((machine) => (
-              <div key={machine._id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        <Wrench className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate">
-                          {machine.model.name}
-                        </h3>
-                        <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                          <div className="flex items-center space-x-1">
-                            <span className="font-medium">{machine.model.manufacturer}</span>
-                            <span>•</span>
-                            <span>{machine.model.brand}</span>
-                            <span>•</span>
-                            <span>{machine.model.year}</span>
-                          </div>
-                        </div>
-                        <div className="mt-2 flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400">
-                          <MapPin className="h-4 w-4" />
-                          <span>{machine.location}</span>
-                        </div>
-                        {machine.maintenanceRanges && machine.maintenanceRanges.length > 0 && (
-                          <div className="mt-1 flex flex-wrap items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
-                            <Wrench className="h-4 w-4" />
-                            {machine.maintenanceRanges.map((range, index) => (
-                              <span key={range._id} className="flex items-center space-x-1">
-                                <span>{range.name}</span>
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                  range.type === 'preventive' 
-                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300'
-                                    : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300'
-                                }`}>
-                                  {range.type === 'preventive' ? t("maintenanceRanges.preventive") : t("maintenanceRanges.corrective")}
-                                </span>
-                                {index < machine.maintenanceRanges!.length - 1 && <span>,</span>}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <FormButton
-                      type="button"
-                      variant="secondary"
-                      onClick={() => handleEdit(machine)}
-                      className="p-2"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </FormButton>
-                    <FormButton
-                      type="button"
-                      variant="danger"
-                      onClick={() => setDeleteModal({ isOpen: true, machine })}
-                      className="p-2"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </FormButton>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+          <button
+            onClick={() => {
+              setEditingMachine(null);
+              setSelectedLocation(null);
+              setShowLocationSelector(false);
+              setSelectedMaintenanceRanges([]);
+              setSelectedOperations([]);
+              reset();
+              setShowModal(true);
+            }}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {t("machines.newMachine")}
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <DataTable
+            data={machines}
+            columns={columns}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        </div>
       </div>
 
       {/* Pagination */}
@@ -541,28 +557,29 @@ export default function MachinesPage() {
           setSelectedOperations([]);
           reset();
         }}
-        title={editingMachine ? t("machines.editMachine") : t("machines.newMachine")}
-        size="md"
+        title={
+          editingMachine ? t("machines.editMachine") : t("machines.newMachine")
+        }
+        size="xl"
       >
-        <Form onSubmit={(e) => {
-          handleSubmit(onSubmit)(e);
-        }}>
+        <Form
+          onSubmit={(e) => {
+            handleSubmit(onSubmit)(e);
+          }}
+        >
           {/* Campos ocultos para valores del formulario */}
-          <input type="hidden" {...register('companyId')} />
-          <input type="hidden" {...register('locationId')} />
-          <input type="hidden" {...register('maintenanceRanges')} />
-          <input type="hidden" {...register('operations')} />
-          
+          <input type="hidden" {...register("locationId")} />
+          <input type="hidden" {...register("maintenanceRanges")} />
+          <input type="hidden" {...register("operations")} />
+
           <FormGroup>
             <FormLabel required>{t("machines.machineModel")}</FormLabel>
-            <FormSelect
-              {...register('model')}
-              error={errors.model?.message}
-            >
+            <FormSelect {...register("model")} error={errors.model?.message}>
               <option value="">{t("machines.selectModel")}</option>
               {machineModels.map((model) => (
                 <option key={model._id} value={model._id}>
-                  {model.name} - {model.manufacturer} {model.brand} ({model.year})
+                  {model.name} - {model.manufacturer} {model.brand} (
+                  {model.year})
                 </option>
               ))}
             </FormSelect>
@@ -572,11 +589,11 @@ export default function MachinesPage() {
             <FormLabel required>{t("machines.location")}</FormLabel>
             <div className="space-y-2">
               <div className="flex">
-                <FormInput
-                  {...register('location')}
-                  value={selectedLocation ? selectedLocation.path : ''}
+                <input
+                  type="text"
+                  value={selectedLocation ? selectedLocation.path : ""}
                   placeholder={t("placeholders.machineLocation")}
-                  className="rounded-r-none"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   readOnly
                 />
                 <button
@@ -593,76 +610,146 @@ export default function MachinesPage() {
               </div>
               {selectedLocation && (
                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                  <span className="font-medium">Selected:</span> {selectedLocation.path}
+                  <span className="font-medium">Selected:</span>{" "}
+                  {selectedLocation.path}
                 </div>
               )}
-               {showLocationSelector && (
-                 <div className="border border-gray-200 dark:border-gray-700 rounded-md p-2 max-h-64 overflow-y-auto">
-                   <LocationTreeView
-                     onLocationClick={(location) => {
-                       setSelectedLocation({
-                         _id: location._id,
-                         name: location.name,
-                         path: location.path,
-                       });
-                       setShowLocationSelector(false);
-                     }}
-                     onLocationEdit={(location) => {
-                       // Handle location edit - could navigate to locations page
-                     }}
-                     onLocationDelete={(location) => {
-                       // Handle location delete - could show confirmation
-                     }}
-                     onLocationAdd={(parentLocation) => {
-                       // Handle location add - could navigate to locations page
-                     }}
-                     showActions={false}
-                     showMachines={false}
-                     preventFormSubmit={true}
-                     className=""
-                     refreshTrigger={0}
-                   />
-                 </div>
-               )}
+              {showLocationSelector && (
+                <div className="border border-gray-200 dark:border-gray-700 rounded-md p-2 h-auto">
+                  <LocationTreeView
+                    onLocationClick={(location) => {
+                      setSelectedLocation({
+                        _id: location._id,
+                        name: location.name,
+                        path: location.path,
+                      });
+                      setShowLocationSelector(false);
+                    }}
+                    onLocationEdit={() => {
+                      // Handle location edit - could navigate to locations page
+                    }}
+                    onLocationDelete={() => {
+                      // Handle location delete - could show confirmation
+                    }}
+                    onLocationAdd={() => {
+                      // Handle location add - could navigate to locations page
+                    }}
+                    showActions={false}
+                    showMachines={false}
+                    preventFormSubmit={true}
+                    className=""
+                    refreshTrigger={0}
+                  />
+                </div>
+              )}
             </div>
           </FormGroup>
 
           <FormGroup>
             <FormLabel>{t("machines.description")}</FormLabel>
             <FormInput
-              {...register('description')}
+              {...register("description")}
               error={errors.description?.message}
               placeholder={t("placeholders.machineDescription")}
             />
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>{t("machines.maintenanceRanges")}</FormLabel>
+            <FormLabel>{t("machines.maintenanceRanges")}</FormLabel>
             <MultiSelect
-              options={maintenanceRanges.map(range => ({
+              options={maintenanceRanges.map((range) => ({
                 value: range._id,
                 label: range.name,
-                description: range.type === 'preventive' ? t("maintenanceRanges.preventive") : t("maintenanceRanges.corrective")
+                description: range.description,
               }))}
               selectedValues={selectedMaintenanceRanges}
               onChange={setSelectedMaintenanceRanges}
               placeholder={t("machines.selectMaintenanceRanges")}
-              error={selectedMaintenanceRanges.length === 0 ? t("machines.atLeastOneMaintenanceRangeRequired") : undefined}
+              hideSelected={true}
             />
           </FormGroup>
 
           <FormGroup>
             <FormLabel>{t("machines.operations")}</FormLabel>
             <MultiSelect
-              options={operations.map(operation => ({
-                value: operation._id,
-                label: operation.name,
-                description: operation.description
-              }))}
+              options={operations
+                .filter(
+                  (operation) =>
+                    !maintenanceRanges?.some((range) =>
+                      range.operations?.some((op) => op._id === operation._id)
+                    )
+                )
+                .map((operation) => ({
+                  value: operation._id,
+                  label: operation.name,
+                  description: operation.description,
+                }))}
               selectedValues={selectedOperations}
               onChange={setSelectedOperations}
               placeholder={t("machines.selectOperations")}
+              hideSelected={true}
             />
+
+            {/* Operations */}
+            {(selectedOperations.length > 0 ||
+              selectedMaintenanceRanges.length > 0) &&
+              (() => {
+                const machine = machines;
+                if (!machine) return null;
+
+                const automaticOperations: IOperation[] = [];
+                const operationIds = new Set<string>();
+
+                // Add operations from all maintenance ranges of the machine
+                maintenanceRanges
+                  .filter((range) =>
+                    selectedMaintenanceRanges.includes(range._id)
+                  )
+                  .forEach((range) => {
+                    if (range.operations) {
+                      range.operations.forEach((operation) => {
+                        if (
+                          operation &&
+                          operation._id &&
+                          !operationIds.has(operation._id)
+                        ) {
+                          operationIds.add(operation._id);
+                          automaticOperations.push(operation);
+                        }
+                      });
+                    }
+                  });
+
+                // Add operations directly from machine
+                operations
+                  .filter((op) => selectedOperations.includes(op._id))
+                  .forEach((operation) => {
+                    if (
+                      operation &&
+                      operation._id &&
+                      !operationIds.has(operation._id)
+                    ) {
+                      operationIds.add(operation._id);
+                      automaticOperations.push(operation);
+                    }
+                  });
+
+                return (
+                  <div className="mt-4">
+                    <OperationsDisplay
+                      operations={operations.filter((op) =>
+                        selectedOperations.includes(op._id)
+                      )}
+                      maintenanceRanges={maintenanceRanges.filter((range) =>
+                        selectedMaintenanceRanges.includes(range._id)
+                      )}
+                      title={t("machines.selectedOperations")}
+                      showOrder={false}
+                      showMaintenanceRanges={true}
+                    />
+                  </div>
+                );
+              })()}
           </FormGroup>
 
           <FormGroup>
@@ -690,22 +777,27 @@ export default function MachinesPage() {
                   {t("machines.addProperty")}
                 </button>
               </div>
-              {Object.keys(watch('properties') || {}).length > 0 && (
+              {Object.keys(watch("properties") || {}).length > 0 && (
                 <div className="mt-2 space-y-1">
-                  {Object.entries(watch('properties') || {}).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                      <span className="text-sm">
-                        <strong>{key}:</strong> {String(value)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeCustomProperty(key)}
-                        className="text-red-600 hover:text-red-800 text-sm"
+                  {Object.entries(watch("properties") || {}).map(
+                    ([key, value]) => (
+                      <div
+                        key={key}
+                        className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded"
                       >
-                        {t("common.remove")}
-                      </button>
-                    </div>
-                  ))}
+                        <span className="text-sm">
+                          <strong>{key}:</strong> {String(value)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeCustomProperty(key)}
+                          className="text-red-600 hover:text-red-800 text-sm"
+                        >
+                          {t("common.remove")}
+                        </button>
+                      </div>
+                    )
+                  )}
                 </div>
               )}
             </div>
@@ -730,8 +822,15 @@ export default function MachinesPage() {
             <FormButton
               type="submit"
               disabled={isSubmitting}
+              onClick={() => {
+                console.log(errors);
+              }}
             >
-              {isSubmitting ? t("common.saving") : editingMachine ? t("common.update") : t("common.create")}
+              {isSubmitting
+                ? t("common.saving")
+                : editingMachine
+                ? t("common.update")
+                : t("common.create")}
             </FormButton>
           </div>
         </Form>
@@ -739,17 +838,16 @@ export default function MachinesPage() {
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
-        isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ isOpen: false, machine: null })}
-        onConfirm={handleDelete}
-        title={t("modals.deleteMachine")}
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title={t("modals.confirmDeletion")}
         message={t("modals.deleteMachineMessage")}
         confirmText={t("common.delete")}
-        cancelText={t("common.cancel")}
         variant="danger"
-        itemDetails={deleteModal.machine ? {
-          name: deleteModal.machine.model.name,
-          description: `${deleteModal.machine.model.manufacturer} ${deleteModal.machine.model.brand} - ${deleteModal.machine.location}`,
+        itemDetails={machineToDelete ? {
+          name: machineToDelete.model.name,
+          description: `${machineToDelete.model.manufacturer} ${machineToDelete.model.brand} - ${machineToDelete.location}`,
         } : undefined}
       />
     </div>

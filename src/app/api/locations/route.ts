@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
 import { Location } from '@/models';
-import { locationSchema } from '@/lib/validations';
+import { locationCreateSchema } from '@/lib/validations';
 
 interface LocationWithChildren {
   _id: string;
@@ -98,17 +98,18 @@ export async function POST(request: NextRequest) {
       body.parentId = null;
     }
     
-    const validatedData = locationSchema.parse({
-      ...body,
+    const validatedData = locationCreateSchema.parse(body);
+    const dataWithCompany = {
+      ...validatedData,
       companyId: session.user.companyId,
-    });
+    };
 
     await connectDB();
 
     // Check if parent exists and belongs to the same company
-    if (validatedData.parentId && validatedData.parentId !== null) {
+    if (dataWithCompany.parentId && dataWithCompany.parentId !== null) {
       const parent = await Location.findOne({
-        _id: validatedData.parentId,
+        _id: dataWithCompany.parentId,
         companyId: session.user.companyId,
       });
       if (!parent) {
@@ -121,8 +122,8 @@ export async function POST(request: NextRequest) {
 
     // Check for duplicate names at the same level
     const existingLocation = await Location.findOne({
-      name: validatedData.name,
-      parentId: validatedData.parentId || { $exists: false },
+      name: dataWithCompany.name,
+      parentId: dataWithCompany.parentId || { $exists: false },
       companyId: session.user.companyId,
     });
 
@@ -133,7 +134,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const location = new Location(validatedData);
+    const location = new Location(dataWithCompany);
     await location.save();
 
     return NextResponse.json(location, { status: 201 });

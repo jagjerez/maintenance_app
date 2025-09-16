@@ -247,7 +247,7 @@ export default function MachineModelsPage() {
           reset();
         }}
         title={editingModel ? t("machineModels.editModel") : t("machineModels.newModel")}
-        size="md"
+        size="xl"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
           {/* Campo oculto para companyId */}

@@ -37,26 +37,32 @@ export interface IWorkOrderImage {
   uploadedBy?: string;
 }
 
+export interface IWorkOrderMachine {
+  machineId: string;
+  maintenanceRangeIds?: string[]; // Solo para preventivo - múltiples maintenance ranges
+  operations?: string[]; // Solo para preventivo
+  filledOperations?: IFilledOperation[]; // Solo para preventivo
+  images?: IWorkOrderImage[]; // Solo para preventivo
+  maintenanceDescription?: string; // Solo para correctivo
+}
+
 export interface IWorkOrder {
   _id: string;
   customCode?: string;
-  machines: string[]; // Array of machine IDs
+  machines: IWorkOrderMachine[]; // Array of machine objects with their specific data
   location: string; // Location ID for the work order
   workOrderLocation: string; // Location ID where the work order will be performed
   type: WorkOrderType;
   status: WorkOrderStatus;
   description: string;
   maintenanceDescription?: string; // Description for corrective maintenance
-  maintenanceDescriptionPerMachine?: Map<string, string>; // Description per machine for corrective maintenance
   scheduledDate: Date;
   completedDate?: Date;
   assignedTo?: string;
   notes?: string;
-  operations: string[]; // Array of operation IDs for this work order
-  filledOperations: IFilledOperation[]; // Operations that have been filled
-  labor: ILabor[]; // Labor hours tracking
-  materials: IMaterial[]; // Materials used
-  images: IWorkOrderImage[]; // Images uploaded
+  images: IWorkOrderImage[]; // Images uploaded at work order level
+  labor?: ILabor[]; // Labor tracking at work order level
+  materials?: IMaterial[]; // Materials used at work order level
   properties: Map<string, unknown>; // Custom properties
   companyId: string;
   createdAt: Date;
@@ -71,9 +77,64 @@ const WorkOrderSchema = new Schema({
     sparse: true, // Allow multiple null values
   },
   machines: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Machine',
-    required: true,
+    machineId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Machine',
+      required: true,
+    },
+    maintenanceRangeIds: [{
+      type: Schema.Types.ObjectId,
+      ref: 'MaintenanceRange',
+    }],
+    operations: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Operation',
+    }],
+    filledOperations: [{
+      operationId: {
+        type: Schema.Types.ObjectId,
+        ref: 'Operation',
+        required: true,
+      },
+      value: {
+        type: Schema.Types.Mixed,
+        required: true,
+      },
+      description: {
+        type: String,
+        trim: true,
+      },
+      filledAt: {
+        type: Date,
+        default: Date.now,
+      },
+      filledBy: {
+        type: String,
+        trim: true,
+      },
+    }],
+    images: [{
+      url: {
+        type: String,
+        required: true,
+      },
+      filename: {
+        type: String,
+        required: true,
+      },
+      uploadedAt: {
+        type: Date,
+        default: Date.now,
+      },
+      uploadedBy: {
+        type: String,
+        trim: true,
+      },
+    }],
+    maintenanceDescription: {
+      type: String,
+      trim: true,
+    },
   }],
   location: {
     type: Schema.Types.ObjectId,
@@ -111,11 +172,6 @@ const WorkOrderSchema = new Schema({
     type: String,
     trim: true,
   },
-  maintenanceDescriptionPerMachine: {
-    type: Map,
-    of: String,
-    default: new Map(),
-  },
   scheduledDate: {
     type: Date,
     required: [true, 'Scheduled date is required'],
@@ -131,29 +187,20 @@ const WorkOrderSchema = new Schema({
     type: String,
     trim: true,
   },
-  operations: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Operation',
-  }],
-  filledOperations: [{
-    operationId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Operation',
-      required: true,
-    },
-    value: {
-      type: Schema.Types.Mixed,
-      required: true,
-    },
-    description: {
+  images: [{
+    url: {
       type: String,
-      trim: true,
+      required: true,
     },
-    filledAt: {
+    filename: {
+      type: String,
+      required: true,
+    },
+    uploadedAt: {
       type: Date,
       default: Date.now,
     },
-    filledBy: {
+    uploadedBy: {
       type: String,
       trim: true,
     },
@@ -195,24 +242,6 @@ const WorkOrderSchema = new Schema({
     unit: {
       type: String,
       required: true,
-      trim: true,
-    },
-  }],
-  images: [{
-    url: {
-      type: String,
-      required: true,
-    },
-    filename: {
-      type: String,
-      required: true,
-    },
-    uploadedAt: {
-      type: Date,
-      default: Date.now,
-    },
-    uploadedBy: {
-      type: String,
       trim: true,
     },
   }],

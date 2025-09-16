@@ -62,6 +62,8 @@ export const machineModelSchema = z.object({
   companyId: z.string().min(1, 'Company is required'),
 });
 
+export const machineModelCreateSchema = machineModelSchema.omit({ companyId: true });
+
 export const machineModelUpdateSchema = machineModelSchema.partial();
 
 // Machine validations
@@ -70,12 +72,13 @@ export const machineSchema = z.object({
   location: z.string().min(1, 'Location is required').max(200, 'Location too long'),
   locationId: z.string().optional(),
   description: z.string().max(500, 'Description too long').optional(),
-  maintenanceRanges: z.array(z.string()).min(1, 'At least one maintenance range is required'),
+  maintenanceRanges: z.array(z.string()).optional(),
   operations: z.array(z.string()).optional(),
   properties: z.record(z.string(), z.unknown()).default({}),
   companyId: z.string().min(1, 'Company is required'),
 });
 
+export const machineCreateSchema = machineSchema.omit({ companyId: true });
 export const machineUpdateSchema = machineSchema.partial();
 
 // Operation validations
@@ -88,25 +91,41 @@ export const operationSchema = z.object({
   companyId: z.string().min(1, 'Company is required'),
 });
 
+export const operationCreateSchema = operationSchema.omit({ companyId: true });
 export const operationUpdateSchema = operationSchema.partial();
 
 // Maintenance Range validations
 export const maintenanceRangeSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
-  type: z.enum(['preventive', 'corrective'], {
-    message: 'Type must be either preventive or corrective',
-  }),
   description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
   operations: z.array(z.string()).default([]),
   companyId: z.string().min(1, 'Company is required'),
 });
 
+export const maintenanceRangeCreateSchema = maintenanceRangeSchema.omit({ companyId: true });
 export const maintenanceRangeUpdateSchema = maintenanceRangeSchema.partial();
 
 // Work Order validations
 export const workOrderSchema = z.object({
   customCode: z.string().optional(),
-  machines: z.array(z.string()).min(1, 'At least one machine is required'),
+  machines: z.array(z.object({
+    machineId: z.string().min(1, 'Machine ID is required'),
+    maintenanceRangeIds: z.array(z.string()).optional().default([]), // Solo para preventivo - múltiples maintenance ranges
+    operations: z.array(z.string()).optional().default([]), // Solo para preventivo
+    filledOperations: z.array(z.object({
+      operationId: z.string(),
+      value: z.any(),
+      description: z.string().optional(),
+      filledBy: z.string().optional(),
+    })).optional().default([]), // Solo para preventivo
+    images: z.array(z.object({
+      url: z.string().url('Invalid image URL'),
+      filename: z.string().min(1, 'Filename is required'),
+      uploadedAt: z.string(),
+      uploadedBy: z.string().optional(),
+    })).optional().default([]), // Solo para preventivo
+    maintenanceDescription: z.string().optional(), // Solo para correctivo
+  })).min(1, 'At least one machine is required'),
   location: z.string().min(1, 'Location is required'),
   workOrderLocation: z.string().min(1, 'Work order location is required'),
   type: z.enum(['preventive', 'corrective', ''], {
@@ -114,18 +133,16 @@ export const workOrderSchema = z.object({
   }),
   status: z.enum(['pending', 'in_progress', 'completed']).optional().default('pending'),
   description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
-  maintenanceDescription: z.string().optional(),
-  maintenanceDescriptionPerMachine: z.record(z.string(), z.string()).optional().default({}),
+  maintenanceDescription: z.string().optional(), // Solo para correctivo
   scheduledDate: z.string(),
   completedDate: z.string().optional(),
   assignedTo: z.string().optional(),
   notes: z.string().optional(),
-  operations: z.array(z.string()).optional().default([]),
-  filledOperations: z.array(z.object({
-    operationId: z.string(),
-    value: z.any(),
-    description: z.string().optional(),
-    filledBy: z.string().optional(),
+  images: z.array(z.object({
+    url: z.string().url('Invalid image URL'),
+    filename: z.string().min(1, 'Filename is required'),
+    uploadedAt: z.string(),
+    uploadedBy: z.string().optional(),
   })).optional().default([]),
   labor: z.array(z.object({
     operatorName: z.string().min(1, 'Operator name is required'),
@@ -139,25 +156,25 @@ export const workOrderSchema = z.object({
     quantity: z.number().min(0, 'Quantity must be positive'),
     unit: z.string().min(1, 'Unit is required'),
   })).optional().default([]),
-  images: z.array(z.object({
-    url: z.string().url('Invalid image URL'),
-    filename: z.string().min(1, 'Filename is required'),
-    uploadedAt: z.string(),
-    uploadedBy: z.string().optional(),
-  })).optional().default([]),
   properties: z.record(z.string(), z.unknown()).optional().default({}),
   companyId: z.string().min(1, 'Company is required'),
 }).refine((data) => {
-  // If type is corrective, maintenanceDescription is required
-  if (data.type === 'corrective' && (!data.maintenanceDescription || data.maintenanceDescription.trim() === '')) {
-    return false;
+  // If type is corrective, at least one machine must have maintenanceDescription
+  if (data.type === 'corrective') {
+    const hasMaintenanceDescription = data.machines.some(machine => 
+      machine.maintenanceDescription && machine.maintenanceDescription.trim() !== ''
+    );
+    if (!hasMaintenanceDescription) {
+      return false;
+    }
   }
   return true;
 }, {
-  message: 'Maintenance description is required for corrective work orders',
-  path: ['maintenanceDescription'],
+  message: 'At least one machine must have maintenance description for corrective work orders',
+  path: ['machines'],
 });
 
+export const workOrderCreateSchema = workOrderSchema.omit({ companyId: true });
 export const workOrderUpdateSchema = workOrderSchema.partial();
 
 // Labor validations
@@ -208,6 +225,7 @@ export const locationSchema = z.object({
   companyId: z.string().min(1, 'Company is required'),
 });
 
+export const locationCreateSchema = locationSchema.omit({ companyId: true });
 export const locationUpdateSchema = locationSchema.partial();
 
 // Dynamic properties validation

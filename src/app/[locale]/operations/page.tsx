@@ -5,13 +5,15 @@ import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useTranslations } from '@/hooks/useTranslations';
-import { Plus, Edit, Trash2, Wrench } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Modal from '@/components/Modal';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
 import { Form, FormGroup, FormLabel, FormInput, FormTextarea, FormButton } from '@/components/Form';
 import { Pagination } from '@/components/Pagination';
+import DataTable from '@/components/DataTable';
 import { operationSchema } from '@/lib/validations';
+import { formatDateSafe } from '@/lib/utils';
 
 interface Operation {
   _id: string;
@@ -31,10 +33,8 @@ export default function OperationsPage() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingOperation, setEditingOperation] = useState<Operation | null>(null);
-  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean; operation: Operation | null }>({
-    isOpen: false,
-    operation: null,
-  });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [operationToDelete, setOperationToDelete] = useState<Operation | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -95,10 +95,7 @@ export default function OperationsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...data,
-          companyId: session?.user?.companyId,
-        }),
+        body: JSON.stringify(data),
       });
 
       if (response.ok) {
@@ -126,17 +123,21 @@ export default function OperationsPage() {
     setShowModal(true);
   };
 
-  const handleDelete = async () => {
-    if (!deleteModal.operation) return;
+  const handleDelete = (operation: Operation) => {
+    setOperationToDelete(operation);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!operationToDelete) return;
 
     try {
-      const response = await fetch(`/api/operations/${deleteModal.operation._id}`, {
+      const response = await fetch(`/api/operations/${operationToDelete._id}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
         await fetchOperations(currentPage);
-        setDeleteModal({ isOpen: false, operation: null });
         toast.success(t("operations.operationDeleted"));
       } else {
         const errorData = await response.json();
@@ -155,12 +156,44 @@ export default function OperationsPage() {
     } catch (error) {
       console.error('Error deleting operation:', error);
       toast.error(t("operations.operationError"));
+    } finally {
+      setShowDeleteModal(false);
+      setOperationToDelete(null);
     }
   };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
+
+  const columns = [
+    {
+      key: 'name' as keyof Operation,
+      label: t("operations.operationName"),
+    },
+    {
+      key: 'description' as keyof Operation,
+      label: t("operations.description"),
+      render: (value: unknown) => (value as string) || '-',
+    },
+    {
+      key: 'type' as keyof Operation,
+      label: t("operations.type"),
+      render: (value: unknown) => {
+        const type = value as string;
+        return (
+          <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
+            {t(`operations.types.${type}`)}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'createdAt' as keyof Operation,
+      label: t("common.createdAt"),
+      render: (value: unknown) => formatDateSafe(value as string),
+    },
+  ];
 
   if (loading) {
     return (
@@ -192,90 +225,37 @@ export default function OperationsPage() {
         </p>
       </div>
 
-      {/* Header with Add Button */}
-      <div className="mb-6 flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <Wrench className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            {totalItems} {t("operations.operation")}{totalItems !== 1 ? 'es' : ''}
-          </span>
-        </div>
-        <FormButton
-          onClick={() => {
-            setEditingOperation(null);
-            reset();
-            setShowModal(true);
-          }}
-          className="flex items-center space-x-2"
-        >
-          <Plus className="h-4 w-4" />
-          <span>{t("operations.newOperation")}</span>
-        </FormButton>
-      </div>
-
-      {/* Operations List */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-        {operations.length === 0 ? (
-          <div className="text-center py-12">
-            <Wrench className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-              {t("operations.noOperations")}
-            </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {t("operations.startAddingOperation")}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('operations.title')}</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
+              {t("operations.subtitle")}
             </p>
           </div>
-        ) : (
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {operations.map((operation) => (
-              <div key={operation._id} className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        <Wrench className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate">
-                          {operation.name}
-                        </h3>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
-                          {operation.description}
-                        </p>
-                        <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                          <div className="flex items-center space-x-1">
-                            <span className="font-medium">{t("operations.type")}:</span>
-                            <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-xs">
-                              {t(`operations.types.${operation.type}`)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <FormButton
-                      type="button"
-                      variant="secondary"
-                      onClick={() => handleEdit(operation)}
-                      className="p-2"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </FormButton>
-                    <FormButton
-                      type="button"
-                      variant="danger"
-                      onClick={() => setDeleteModal({ isOpen: true, operation })}
-                      className="p-2"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </FormButton>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+          <button
+            onClick={() => {
+              setEditingOperation(null);
+              reset();
+              setShowModal(true);
+            }}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {t("operations.newOperation")}
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <DataTable
+            data={operations}
+            columns={columns}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        </div>
       </div>
 
       {/* Pagination */}
@@ -297,7 +277,7 @@ export default function OperationsPage() {
           reset();
         }}
         title={editingOperation ? t("operations.editOperation") : t("operations.newOperation")}
-        size="md"
+        size="xl"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
           {/* Campo oculto para companyId */}
@@ -370,17 +350,16 @@ export default function OperationsPage() {
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
-        isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ isOpen: false, operation: null })}
-        onConfirm={handleDelete}
-        title={t("modals.deleteOperation")}
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title={t("modals.confirmDeletion")}
         message={t("modals.deleteOperationMessage")}
         confirmText={t("common.delete")}
-        cancelText={t("common.cancel")}
         variant="danger"
-        itemDetails={deleteModal.operation ? {
-          name: deleteModal.operation.name,
-          description: deleteModal.operation.description,
+        itemDetails={operationToDelete ? {
+          name: operationToDelete.name,
+          description: operationToDelete.description,
         } : undefined}
       />
     </div>

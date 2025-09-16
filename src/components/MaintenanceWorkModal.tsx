@@ -5,21 +5,23 @@ import { useTranslations } from '@/hooks/useTranslations';
 import { Plus, Trash2, StopCircle, Wrench, Users, Package, Camera } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Modal from '@/components/Modal';
-import { FormLabel, FormInput, FormTextarea, FormSelect, FormButton } from '@/components/Form';
+import { FormLabel, FormInput, FormSelect, FormButton } from '@/components/Form';
 import ImageUpload from '@/components/ImageUpload';
 import { IFilledOperation, ILabor, IMaterial, IWorkOrderImage, UnitType } from '@/models/WorkOrder';
-import { IOperation } from '@/models/Operation';
+
+interface WorkOrderMachine {
+  machineId: string;
+  maintenanceRangeIds?: string[]; // Múltiples maintenance ranges
+  operations?: string[];
+  filledOperations?: IFilledOperation[];
+  images?: IWorkOrderImage[];
+  maintenanceDescription?: string;
+}
 
 interface WorkOrder {
   _id: string;
   customCode?: string;
-  machines: Array<{
-    _id: string;
-    model: {
-      name: string;
-      manufacturer: string;
-    };
-  }>;
+  machines: WorkOrderMachine[];
   location: {
     _id: string;
     name: string;
@@ -32,12 +34,9 @@ interface WorkOrder {
   status: 'pending' | 'in_progress' | 'completed';
   description: string;
   maintenanceDescription?: string;
-  maintenanceDescriptionPerMachine?: Record<string, string>;
-  operations: IOperation[];
-  filledOperations: IFilledOperation[];
-  labor: ILabor[];
-  materials: IMaterial[];
   images: IWorkOrderImage[];
+  labor?: ILabor[];
+  materials?: IMaterial[];
 }
 
 interface MaintenanceWorkModalProps {
@@ -66,37 +65,15 @@ export default function MaintenanceWorkModal({ isOpen, onClose, workOrder, onSav
   // Initialize data when work order changes
   useEffect(() => {
     if (workOrder) {
-      setFilledOperations(workOrder.filledOperations || []);
+      // filledOperations are now at machine level, not work order level
+      setFilledOperations([]);
       setLabor(workOrder.labor || []);
       setMaterials(workOrder.materials || []);
       setImages(workOrder.images || []);
     }
   }, [workOrder]);
 
-  const handleFillOperation = (operationId: string, value: unknown, description?: string) => {
-    const operation = workOrder?.operations.find(op => op._id === operationId);
-    if (!operation) return;
-
-    const existingIndex = filledOperations.findIndex(fo => fo.operationId === operationId);
-    const filledOperation: IFilledOperation = {
-      operationId,
-      operation,
-      value,
-      description,
-      filledAt: new Date(),
-      filledBy: 'Current User', // TODO: Get from session
-    };
-
-    if (existingIndex >= 0) {
-      const newFilledOperations = [...filledOperations];
-      newFilledOperations[existingIndex] = filledOperation;
-      setFilledOperations(newFilledOperations);
-    } else {
-      setFilledOperations([...filledOperations, filledOperation]);
-    }
-
-    toast.success(t("workOrders.operationFilled"));
-  };
+  // Operations are now managed at machine level, not work order level
 
   const handleAddLabor = () => {
     const newLabor: ILabor = {
@@ -233,15 +210,6 @@ export default function MaintenanceWorkModal({ isOpen, onClose, workOrder, onSav
     }
   };
 
-  const getOperationValue = (operation: IOperation): string | number | readonly string[] | undefined | boolean => {
-    const filled = filledOperations.find(fo => fo.operationId === operation._id);
-    return filled?.value as string | number | readonly string[] | undefined;
-  };
-
-  const getOperationDescription = (operation: IOperation) => {
-    const filled = filledOperations.find(fo => fo.operationId === operation._id);
-    return filled?.description || '';
-  };
 
   const formatDateTime = (date: Date) => {
     return new Date(date).toLocaleString('es-ES', {
@@ -275,7 +243,7 @@ export default function MaintenanceWorkModal({ isOpen, onClose, workOrder, onSav
         {/* Work Order Info */}
         <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            {workOrder.customCode || workOrder._id} - {workOrder.machines?.map(m => m.model?.name || 'Unknown Machine').join(', ') || 'No machines'}
+            {workOrder.customCode || workOrder._id} - {workOrder.machines?.length || 0} machine(s)
           </h3>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             {workOrder.workOrderLocation?.name || 'Unknown Location'} • {workOrder.type === 'preventive' ? t("workOrders.preventive") : t("workOrders.corrective")}
@@ -289,7 +257,7 @@ export default function MaintenanceWorkModal({ isOpen, onClose, workOrder, onSav
             {t("workOrders.fillOperations")}
           </h3>
           
-          {!workOrder.operations || workOrder.operations.length === 0 ? (
+          {workOrder.machines.length === 0 ? (
             <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
                 {t("workOrders.noOperationsToFill")}
@@ -297,99 +265,26 @@ export default function MaintenanceWorkModal({ isOpen, onClose, workOrder, onSav
             </div>
           ) : (
             <div className="space-y-4">
-              {workOrder.operations.map((operation) => (
-                <div key={operation._id} className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+              {workOrder.machines.map((machine) => (
+                <div key={machine.machineId} className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium text-gray-900 dark:text-white">
-                      {operation.name}
+                      Machine {machine.machineId}
                     </h4>
                     <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {t(`operations.types.${operation.type}`)}
+                      {machine.operations?.length || 0} operations
                     </span>
                   </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    {operation.description}
+                    Operations are now managed at machine level
                   </p>
                   
                   <div className="space-y-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        {t("workOrders.operationValue")}
-                      </label>
-                      {operation.type === 'boolean' ? (
-                        <div className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={getOperationValue(operation) === true}
-                            onChange={(e) => handleFillOperation(operation._id, e.target.checked, getOperationDescription(operation))}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                          <span className="text-sm text-gray-600 dark:text-gray-400">
-                            {getOperationValue(operation) ? t("common.yes") : t("common.no")}
-                          </span>
-                        </div>
-                      ) : operation.type === 'number' ? (
-                        <FormInput
-                          type="number"
-                          value={getOperationValue(operation) || ''}
-                          onChange={(e) => {
-                            const value = e.target.value ? parseFloat(e.target.value) : '';
-                            handleFillOperation(operation._id, value, getOperationDescription(operation));
-                          }}
-                          placeholder={t("placeholders.operationValue")}
-                          step="0.01"
-                        />
-                      ) : operation.type === 'date' ? (
-                        <FormInput
-                          type="date"
-                          value={getOperationValue(operation) ? new Date(getOperationValue(operation) as string).toISOString().split('T')[0] : ''}
-                          onChange={(e) => {
-                            const value = e.target.value ? new Date(e.target.value).toISOString() : '';
-                            handleFillOperation(operation._id, value, getOperationDescription(operation));
-                          }}
-                          placeholder={t("placeholders.operationValue")}
-                        />
-                      ) : operation.type === 'time' ? (
-                        <FormInput
-                          type="time"
-                          value={getOperationValue(operation) || ''}
-                          onChange={(e) => {
-                            handleFillOperation(operation._id, e.target.value, getOperationDescription(operation));
-                          }}
-                          placeholder={t("placeholders.operationValue")}
-                        />
-                      ) : operation.type === 'datetime' ? (
-                        <FormInput
-                          type="datetime-local"
-                          value={getOperationValue(operation) ? new Date(getOperationValue(operation) as string).toISOString().slice(0, 16) : ''}
-                          onChange={(e) => {
-                            const value = e.target.value ? new Date(e.target.value).toISOString() : '';
-                            handleFillOperation(operation._id, value, getOperationDescription(operation));
-                          }}
-                          placeholder={t("placeholders.operationValue")}
-                        />
-                      ) : (
-                        <FormInput
-                          type="text"
-                          value={getOperationValue(operation) || ''}
-                          onChange={(e) => {
-                            handleFillOperation(operation._id, e.target.value, getOperationDescription(operation));
-                          }}
-                          placeholder={t("placeholders.operationValue")}
-                        />
-                      )}
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        {t("workOrders.operationDescription")}
-                      </label>
-                      <FormTextarea
-                        value={getOperationDescription(operation)}
-                        onChange={(e) => handleFillOperation(operation._id, getOperationValue(operation), e.target.value)}
-                        placeholder={t("placeholders.operationDescription")}
-                        rows={2}
-                      />
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                        Operations are now managed at the machine level in the work order form.
+                        This maintenance modal will be updated to work with the new structure.
+                      </p>
                     </div>
                   </div>
                 </div>

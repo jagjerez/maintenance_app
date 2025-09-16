@@ -1,16 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/db';
 import { Machine } from '@/models';
 import { machineUpdateSchema } from '@/lib/validations';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const { id } = await params;
-    const machine = await Machine.findById(id)
+    const machine = await Machine.findOne({ 
+      _id: id, 
+      companyId: session.user.companyId 
+    })
       .populate('model')
       .populate('maintenanceRanges')
       .populate('operations');
@@ -37,6 +50,14 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const body = await request.json();
     const validatedData = machineUpdateSchema.parse(body);
@@ -49,7 +70,10 @@ export async function PUT(
     const { id } = await params;
     
     // Get current machine to check if we need to validate
-    const currentMachine = await Machine.findById(id);
+    const currentMachine = await Machine.findOne({ 
+      _id: id, 
+      companyId: session.user.companyId 
+    });
     if (!currentMachine) {
       return NextResponse.json(
         { error: 'Machine not found' },
@@ -72,25 +96,6 @@ export async function PUT(
       if (existingMachine) {
         return NextResponse.json(
           { error: 'A machine with this model and maintenance ranges already exists' },
-          { status: 400 }
-        );
-      }
-    }
-    
-    // Validate no duplicate maintenance range types (only if maintenanceRanges are being updated)
-    if (validatedData.maintenanceRanges) {
-      const { MaintenanceRange } = await import('@/models');
-      const maintenanceRanges = await MaintenanceRange.find({
-        _id: { $in: validatedData.maintenanceRanges },
-        companyId: currentMachine.companyId,
-      });
-      
-      const types = maintenanceRanges.map(range => range.type);
-      const uniqueTypes = [...new Set(types)];
-      
-      if (types.length !== uniqueTypes.length) {
-        return NextResponse.json(
-          { error: 'duplicateMaintenanceRangeType' },
           { status: 400 }
         );
       }
@@ -123,8 +128,8 @@ export async function PUT(
       }
     }
     
-    const machine = await Machine.findByIdAndUpdate(
-      id,
+    const machine = await Machine.findOneAndUpdate(
+      { _id: id, companyId: session.user.companyId },
       validatedData,
       { new: true, runValidators: true }
     )
@@ -160,9 +165,20 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.companyId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     await connectDB();
     const { id } = await params;
-    const machine = await Machine.findByIdAndDelete(id);
+    const machine = await Machine.findOneAndDelete({ 
+      _id: id, 
+      companyId: session.user.companyId 
+    });
     
     if (!machine) {
       return NextResponse.json(

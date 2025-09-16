@@ -18,6 +18,7 @@ import {
 import { toast } from "react-hot-toast";
 import { FormButton } from "@/components/Form";
 import { Pagination } from "@/components/Pagination";
+import DataTable from "@/components/DataTable";
 import MaintenanceWorkModal from "@/components/MaintenanceWorkModal";
 import WorkOrderFormModal from "@/components/WorkOrderFormModal";
 import WorkOrderDeleteModal from "@/components/WorkOrderDeleteModal";
@@ -29,6 +30,7 @@ import {
   IWorkOrderImage,
 } from "@/models/WorkOrder";
 import { IOperation } from "@/models/Operation";
+import { formatDateSafe } from "@/lib/utils";
 
 interface Location {
   _id: string;
@@ -48,31 +50,36 @@ interface Machine {
   maintenanceRanges?: Array<{
     _id: string;
     name: string;
-    type: "preventive" | "corrective";
     operations: IOperation[];
   }>;
+}
+
+interface WorkOrderMachine {
+  machineId: string;
+  maintenanceRangeIds?: string[]; // Múltiples maintenance ranges
+  operations?: string[];
+  filledOperations?: IFilledOperation[];
+  images?: IWorkOrderImage[];
+  maintenanceDescription?: string;
 }
 
 interface WorkOrder {
   _id: string;
   customCode?: string;
-  machines: Machine[];
+  machines: WorkOrderMachine[];
   location: Location;
   workOrderLocation: Location;
   type: "preventive" | "corrective";
   status: "pending" | "in_progress" | "completed";
   description: string;
   maintenanceDescription?: string;
-  maintenanceDescriptionPerMachine?: Record<string, string>;
   scheduledDate: string;
   completedDate?: string;
   assignedTo?: string;
   notes?: string;
-  operations: IOperation[];
-  filledOperations: IFilledOperation[];
-  labor: ILabor[];
-  materials: IMaterial[];
   images: IWorkOrderImage[];
+  labor?: ILabor[];
+  materials?: IMaterial[];
   properties: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -88,6 +95,11 @@ export default function WorkOrdersPage() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [, setLocations] = useState<Location[]>([]);
   const [operations, setOperations] = useState<IOperation[]>([]);
+  const [maintenanceRanges, setMaintenanceRanges] = useState<Array<{
+    _id: string;
+    name: string;
+    operations: IOperation[];
+  }>>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showMaintenanceWorkModal, setShowMaintenanceWorkModal] =
@@ -95,13 +107,8 @@ export default function WorkOrdersPage() {
   const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrder | null>(
     null
   );
-  const [deleteModal, setDeleteModal] = useState<{
-    isOpen: boolean;
-    workOrder: WorkOrder | null;
-  }>({
-    isOpen: false,
-    workOrder: null,
-  });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -179,6 +186,21 @@ export default function WorkOrdersPage() {
     }
   }, [t]);
 
+  const fetchMaintenanceRanges = useCallback(async () => {
+    try {
+      const response = await fetch("/api/maintenance-ranges");
+      if (response.ok) {
+        const data = await response.json();
+        setMaintenanceRanges(data.maintenanceRanges || data);
+      } else {
+        toast.error(t("maintenanceRanges.rangeLoadError"));
+      }
+    } catch (error) {
+      console.error("Error fetching maintenance ranges:", error);
+      toast.error(t("maintenanceRanges.rangeLoadError"));
+    }
+  }, [t]);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -187,6 +209,7 @@ export default function WorkOrdersPage() {
         fetchLocations(),
         fetchMachines(),
         fetchOperations(),
+        fetchMaintenanceRanges(),
       ]);
       setLoading(false);
     };
@@ -197,6 +220,7 @@ export default function WorkOrdersPage() {
     fetchLocations,
     fetchMachines,
     fetchOperations,
+    fetchMaintenanceRanges,
   ]);
 
   // Check if we should open the modal automatically (from dashboard)
@@ -211,7 +235,7 @@ export default function WorkOrdersPage() {
     }
   }, [searchParams]);
 
-  const onSubmit = async (data: WorkOrderInput) => {
+  const onSubmit = async (data: any) => {
     try {
       const url = editingWorkOrder
         ? `/api/work-orders/${editingWorkOrder._id}`
@@ -223,10 +247,7 @@ export default function WorkOrdersPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...data,
-          companyId: session?.user?.companyId,
-        }),
+        body: JSON.stringify(data),
       });
 
       if (response.ok) {
@@ -249,17 +270,37 @@ export default function WorkOrdersPage() {
   };
 
   const handleEdit = (workOrder: WorkOrder) => {
-    setEditingWorkOrder(workOrder);
+    // Convert WorkOrder to the format expected by the modal
+    const workOrderForModal = {
+      ...workOrder,
+      machines: workOrder.machines.map(workOrderMachine => {
+        const machine = machines.find(m => m._id === workOrderMachine.machineId);
+        return {
+          ...workOrderMachine,
+          // Add machine details for display
+          machine: machine ? {
+            _id: machine._id,
+            model: machine.model,
+            location: machine.location,
+            locationId: machine.locationId,
+          } : undefined,
+        };
+      }),
+    };
+    setEditingWorkOrder(workOrderForModal);
     setShowModal(true);
   };
 
   // Check if work order has maintenance data
   const hasMaintenanceData = (workOrder: WorkOrder) => {
     return (
-      (workOrder.filledOperations?.length || 0) > 0 ||
+      workOrder.machines.some(machine => 
+        (machine.filledOperations?.length || 0) > 0 ||
+        (machine.images?.length || 0) > 0
+      ) ||
+      (workOrder.images?.length || 0) > 0 ||
       (workOrder.labor?.length || 0) > 0 ||
-      (workOrder.materials?.length || 0) > 0 ||
-      (workOrder.images?.length || 0) > 0
+      (workOrder.materials?.length || 0) > 0
     );
   };
 
@@ -271,12 +312,17 @@ export default function WorkOrdersPage() {
     );
   };
 
-  const handleDelete = async () => {
-    if (!deleteModal.workOrder) return;
+  const handleDelete = (workOrder: WorkOrder) => {
+    setWorkOrderToDelete(workOrder);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!workOrderToDelete) return;
 
     try {
       const response = await fetch(
-        `/api/work-orders/${deleteModal.workOrder._id}`,
+        `/api/work-orders/${workOrderToDelete._id}`,
         {
           method: "DELETE",
         }
@@ -284,7 +330,6 @@ export default function WorkOrdersPage() {
 
       if (response.ok) {
         await fetchWorkOrders(currentPage);
-        setDeleteModal({ isOpen: false, workOrder: null });
         toast.success(t("workOrders.workOrderDeleted"));
       } else {
         const errorData = await response.json();
@@ -293,6 +338,9 @@ export default function WorkOrdersPage() {
     } catch (error) {
       console.error("Error deleting work order:", error);
       toast.error(t("workOrders.workOrderError"));
+    } finally {
+      setShowDeleteModal(false);
+      setWorkOrderToDelete(null);
     }
   };
 
@@ -317,21 +365,22 @@ export default function WorkOrdersPage() {
     if (!editingWorkOrder) return;
 
     try {
+      // Update the work order with maintenance data
+      const updatedWorkOrder = {
+        ...editingWorkOrder,
+        images: data.images,
+        status: data.status,
+        completedDate: data.status === "completed" ? new Date().toISOString() : undefined,
+        // Note: In the new structure, filledOperations, labor, and materials are stored per machine
+        // This would need to be handled differently based on which machine the maintenance was performed on
+      };
+
       const response = await fetch(`/api/work-orders/${editingWorkOrder._id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...editingWorkOrder,
-          filledOperations: data.filledOperations,
-          labor: data.labor,
-          materials: data.materials,
-          images: data.images,
-          status: data.status,
-          completedDate:
-            data.status === "completed" ? new Date().toISOString() : undefined,
-        }),
+        body: JSON.stringify(updatedWorkOrder),
       });
 
       if (response.ok) {
@@ -352,6 +401,83 @@ export default function WorkOrdersPage() {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
+
+  const columns = [
+    {
+      key: 'customCode' as keyof WorkOrder,
+      label: t("workOrders.code"),
+      render: (value: unknown, workOrder: WorkOrder) => {
+        return workOrder.customCode || workOrder._id;
+      },
+    },
+    {
+      key: 'machines' as keyof WorkOrder,
+      label: t("workOrders.machines"),
+      render: (value: unknown, workOrder: WorkOrder) => {
+        const workOrderMachines = workOrder.machines || [];
+        return workOrderMachines.map((workOrderMachine) => {
+          const machine = machines.find(m => m._id === workOrderMachine.machineId);
+          return machine?.model?.name || "Unknown Machine";
+        }).join(", ") || "-";
+      },
+    },
+    {
+      key: 'location' as keyof WorkOrder,
+      label: t("workOrders.location"),
+      render: (value: unknown) => {
+        const location = value as Location;
+        return location?.name || "Unknown Location";
+      },
+    },
+    {
+      key: 'type' as keyof WorkOrder,
+      label: t("workOrders.type"),
+      render: (value: unknown) => {
+        const type = value as string;
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            type === "preventive"
+              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+              : "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300"
+          }`}>
+            {type === "preventive" ? t("workOrders.preventive") : t("workOrders.corrective")}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'status' as keyof WorkOrder,
+      label: t("workOrders.status"),
+      render: (value: unknown) => {
+        const status = value as string;
+        const getStatusColor = (status: string) => {
+          switch (status) {
+            case "pending":
+              return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+            case "in_progress":
+              return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+            case "completed":
+              return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+            default:
+              return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+          }
+        };
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+            {getStatusLabel(status)}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'scheduledDate' as keyof WorkOrder,
+      label: t("workOrders.scheduledDate"),
+      render: (value: unknown) => {
+        const date = value as string;
+        return date ? formatDateSafe(date) : "-";
+      },
+    },
+  ];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -421,171 +547,36 @@ export default function WorkOrdersPage() {
         </p>
       </div>
 
-      {/* Header with Add Button */}
-      <div className="mb-6 flex justify-between items-center">
-        <div className="flex items-center space-x-2">
-          <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            {totalItems} {t("workOrders.order")}
-            {totalItems !== 1 ? "es" : ""}
-          </span>
-        </div>
-        <FormButton
-          onClick={() => {
-            setEditingWorkOrder(null);
-            setShowModal(true);
-          }}
-          className="flex items-center space-x-2"
-        >
-          <Plus className="h-4 w-4" />
-          <span>{t("workOrders.newWorkOrder")}</span>
-        </FormButton>
-      </div>
-
-      {/* Work Orders List */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
-        {workOrders.length === 0 ? (
-          <div className="text-center py-12">
-            <FileText className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-              {t("workOrders.noWorkOrders")}
-            </h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {t("workOrders.startCreatingWorkOrder")}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('workOrders.title')}</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
+              {t("workOrders.subtitle")}
             </p>
           </div>
-        ) : (
-          <div className="divide-y divide-gray-200 dark:divide-gray-700">
-            {workOrders.map((workOrder) => (
-              <div
-                key={workOrder._id}
-                className="p-6 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-shrink-0">
-                        <FileText className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <h3 className="text-lg font-medium text-gray-900 dark:text-white truncate">
-                            {workOrder.customCode || workOrder._id} -{" "}
-                            {(workOrder.machines || [])
-                              .map((m) => m.model?.name || "Unknown Machine")
-                              .join(", ")}
-                          </h3>
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
-                              workOrder.status || "pending"
-                            )}`}
-                          >
-                            {getStatusLabel(workOrder.status || "pending")}
-                          </span>
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              (workOrder.type || "preventive") === "preventive"
-                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-                                : "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300"
-                            }`}
-                          >
-                            {(workOrder.type || "preventive") === "preventive"
-                              ? t("workOrders.preventive")
-                              : t("workOrders.corrective")}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-1 text-sm text-gray-500 dark:text-gray-400 mt-1">
-                          <MapPin className="h-4 w-4" />
-                          <span>
-                            {workOrder.location?.name || "Unknown Location"}
-                          </span>
-                        </div>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
-                          {workOrder.description || "No description"}
-                        </p>
-                        <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="h-4 w-4" />
-                            <span>
-                              {workOrder.scheduledDate
-                                ? formatDate(workOrder.scheduledDate)
-                                : "No date"}
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <Settings className="h-4 w-4" />
-                            <span>
-                              {workOrder.operations?.length ||
-                                0 +
-                                  workOrder.machines
-                                    .map(
-                                      (m) => m.maintenanceRanges?.length || 0
-                                    )
-                                    .reduce((a, b) => a + b, 0) ||
-                                0}{" "}
-                              {t("workOrders.operations")}
-                            </span>
-                          </div>
-                          {workOrder.assignedTo && (
-                            <div className="flex items-center space-x-1">
-                              <User className="h-4 w-4" />
-                              <span>{workOrder.assignedTo}</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {(workOrder.status || "pending") !== "completed" && (
-                      <FormButton
-                        type="button"
-                        variant="secondary"
-                        onClick={() => handlePerformMaintenance(workOrder)}
-                        className="p-2"
-                        title={t("workOrders.performMaintenance")}
-                      >
-                        <Wrench className="h-4 w-4" />
-                      </FormButton>
-                    )}
-                    <FormButton
-                      type="button"
-                      variant="secondary"
-                      onClick={() => handleEdit(workOrder)}
-                      className="p-2"
-                      title={t("common.edit")}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </FormButton>
-                    {canDeleteWorkOrder(workOrder) ? (
-                      <FormButton
-                        type="button"
-                        variant="danger"
-                        onClick={() =>
-                          setDeleteModal({ isOpen: true, workOrder })
-                        }
-                        className="p-2"
-                        title={t("common.delete")}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </FormButton>
-                    ) : (
-                      <FormButton
-                        type="button"
-                        variant="danger"
-                        disabled
-                        className="p-2 opacity-50 cursor-not-allowed"
-                        title={t("workOrders.workOrderCannotBeDeleted")}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </FormButton>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+          <button
+            onClick={() => {
+              setEditingWorkOrder(null);
+              setShowModal(true);
+            }}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {t("workOrders.newWorkOrder")}
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <DataTable
+            data={workOrders}
+            columns={columns}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        </div>
       </div>
 
       {/* Pagination */}
@@ -606,17 +597,17 @@ export default function WorkOrdersPage() {
           setEditingWorkOrder(null);
         }}
         onSubmit={onSubmit}
-        editingWorkOrder={editingWorkOrder as WorkOrder | null}
+        editingWorkOrder={editingWorkOrder}
         machines={machines}
         operations={operations}
-        companyId={session?.user?.companyId}
+        maintenanceRanges={maintenanceRanges}
       />
       {/* Delete Confirmation Modal */}
       <WorkOrderDeleteModal
-        isOpen={deleteModal.isOpen}
-        onClose={() => setDeleteModal({ isOpen: false, workOrder: null })}
-        onConfirm={handleDelete}
-        workOrder={deleteModal.workOrder}
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        workOrder={workOrderToDelete}
       />
 
       {/* Maintenance Work Modal */}

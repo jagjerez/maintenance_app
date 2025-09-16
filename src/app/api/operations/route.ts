@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/db';
 import { Operation } from '@/models';
-import { operationSchema } from '@/lib/validations';
+import { operationCreateSchema } from '@/lib/validations';
 import { authOptions } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -66,12 +66,13 @@ export async function POST(request: NextRequest) {
 
     await connectDB();
     const body = await request.json();
-    const validatedData = operationSchema.parse({
-      ...body,
+    const validatedData = operationCreateSchema.parse(body);
+    const dataWithCompany = {
+      ...validatedData,
       companyId: session.user.companyId,
-    });
+    };
     
-    const operation = new Operation(validatedData);
+    const operation = new Operation(dataWithCompany);
     await operation.save();
     
     return NextResponse.json(operation, { status: 201 });
