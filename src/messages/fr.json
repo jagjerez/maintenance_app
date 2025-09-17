@@ -369,6 +369,8 @@
     "laborTracking": "Suivi de la Main-d'œuvre",
     "materialsUsed": "Matériaux Utilisés",
     "workOrderImages": "Images de l'Ordre de Travail",
+    "machineImages": "Images de la Machine",
+    "noMachineImages": "Aucune image téléchargée pour cette machine",
     "addLaborEntry": "Ajouter une Entrée de Main-d'œuvre",
     "addMaterialEntry": "Ajouter une Entrée de Matériau",
     "addImage": "Ajouter une Image",

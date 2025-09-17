@@ -102,7 +102,7 @@ export async function PUT(
       );
     }
     
-    // Check if trying to change machines when there's maintenance data
+    // Check if trying to change the list of machines when there's maintenance data
     if (validatedData.machines && validatedData.machines.length > 0) {
       const hasMaintenanceData = 
         (currentWorkOrder.filledOperations && currentWorkOrder.filledOperations.length > 0) ||
@@ -111,10 +111,19 @@ export async function PUT(
         (currentWorkOrder.images && currentWorkOrder.images.length > 0);
       
       if (hasMaintenanceData) {
-        return NextResponse.json(
-          { error: 'Cannot change machines when maintenance has been performed' },
-          { status: 400 }
-        );
+        // Check if the machine IDs are being changed (not just maintenance data)
+        const currentMachineIds = currentWorkOrder.machines.map((m: { machineId: string }) => m.machineId.toString()).sort();
+        const newMachineIds = validatedData.machines.map((m: { machineId: string }) => m.machineId.toString()).sort();
+        
+        // Only block if the machine IDs are different (meaning machines are being added/removed)
+        const machineIdsChanged = JSON.stringify(currentMachineIds) !== JSON.stringify(newMachineIds);
+        
+        if (machineIdsChanged) {
+          return NextResponse.json(
+            { error: 'Cannot change machines when maintenance has been performed' },
+            { status: 400 }
+          );
+        }
       }
     }
     
@@ -138,6 +147,75 @@ export async function PUT(
         }))
       }),
     };
+
+    // Handle machine-specific maintenance data updates
+    if (validatedData.machines && validatedData.machines.length > 0) {
+      // If machines are being updated, we need to update them individually
+      // to preserve existing data and only update maintenance-specific fields
+      const machineUpdates = validatedData.machines.map((machineUpdate: { machineId: string; filledOperations?: unknown[]; images?: unknown[] }) => {
+        const machineId = machineUpdate.machineId;
+        const updateFields: Record<string, unknown> = {};
+        
+        // Only update fields that are present in the update
+        if (machineUpdate.filledOperations) {
+          updateFields.filledOperations = machineUpdate.filledOperations.map((op: unknown) => {
+            const opData = op as Record<string, unknown>;
+            const filledAtValue = opData.filledAt;
+            let filledAt: Date;
+            
+            if (filledAtValue instanceof Date) {
+              filledAt = filledAtValue;
+            } else if (typeof filledAtValue === 'string') {
+              filledAt = new Date(filledAtValue);
+            } else {
+              filledAt = new Date(); // fallback to current date
+            }
+            
+            return {
+              ...opData,
+              filledAt,
+            };
+          });
+        }
+        
+        if (machineUpdate.images) {
+          updateFields.images = machineUpdate.images.map((img: unknown) => {
+            const imgData = img as Record<string, unknown>;
+            const uploadedAtValue = imgData.uploadedAt;
+            let uploadedAt: Date;
+            
+            if (uploadedAtValue instanceof Date) {
+              uploadedAt = uploadedAtValue;
+            } else if (typeof uploadedAtValue === 'string') {
+              uploadedAt = new Date(uploadedAtValue);
+            } else {
+              uploadedAt = new Date(); // fallback to current date
+            }
+            
+            return {
+              ...imgData,
+              uploadedAt,
+            };
+          });
+        }
+        
+        return {
+          updateOne: {
+            filter: { _id: id, 'machines.machineId': machineId },
+            update: { $set: Object.keys(updateFields).reduce((acc: Record<string, unknown>, key) => {
+              acc[`machines.$.${key}`] = updateFields[key];
+              return acc;
+            }, {}) }
+          }
+        };
+      });
+
+      // Execute the bulk update for machines
+      await WorkOrder.bulkWrite(machineUpdates);
+      
+      // Remove machines from the main update since we handled them separately
+      delete updateData.machines;
+    }
     
     const workOrder = await WorkOrder.findOneAndUpdate(
       { _id: id, companyId: session.user.companyId },

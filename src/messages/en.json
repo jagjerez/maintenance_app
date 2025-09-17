@@ -366,6 +366,8 @@
     "performMaintenanceWork": "Perform Maintenance Work",
     "fillOperations": "Fill Operations",
     "workOrderImages": "Work Order Images",
+    "machineImages": "Machine Images",
+    "noMachineImages": "No images uploaded for this machine",
     "addLaborEntry": "Add Labor Entry",
     "addMaterialEntry": "Add Material Entry",
     "clickToUpload": "Click to upload",

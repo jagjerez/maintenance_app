@@ -400,6 +400,7 @@ export default function WorkOrdersPage() {
   };
 
   const handleMaintenanceSave = async (data: {
+    machines?: any[];
     filledOperations: IFilledOperation[];
     labor: ILabor[];
     materials: IMaterial[];
@@ -419,6 +420,8 @@ export default function WorkOrdersPage() {
           data.status === "completed" ? new Date().toISOString() : undefined,
         labor: data.labor,
         materials: data.materials,
+        // Update machines with their specific data if provided
+        ...(data.machines && { machines: data.machines }),
         // Note: filledOperations are now stored per machine in the new structure
         // This would need to be handled differently based on which machine the maintenance was performed on
       };

@@ -39,12 +39,18 @@ interface WorkOrderMachineForModal {
   filledOperations?: IFilledOperation[];
   images?: IWorkOrderImage[];
   maintenanceDescription?: string;
-  _id: string;
+  _id?: string; // Make optional for updates
 }
 
 // Extended interface for filled operations with machine context
-interface IFilledOperationWithMachine extends IFilledOperation {
+interface IFilledOperationWithMachine extends Omit<IFilledOperation, 'filledAt'> {
   machineId: string;
+  filledAt: string; // Use string for ISO date format
+}
+
+// Extended interface for work order images with machine context
+interface IWorkOrderImageWithMachine extends IWorkOrderImage {
+  machineId?: string;
 }
 
 interface WorkOrderForModal {
@@ -69,6 +75,7 @@ interface MaintenanceWorkModalProps {
   onClose: () => void;
   workOrder: WorkOrderForModal | null;
   onSave: (data: {
+    machines?: WorkOrderMachineForModal[];
     filledOperations: IFilledOperation[];
     labor: ILabor[];
     materials: IMaterial[];
@@ -106,7 +113,7 @@ export default function MaintenanceWorkModalUpdated({
   >([]);
   const [labor, setLabor] = useState<ILabor[]>([]);
   const [materials, setMaterials] = useState<IMaterial[]>([]);
-  const [images, setImages] = useState<IWorkOrderImage[]>([]);
+  const [images, setImages] = useState<IWorkOrderImageWithMachine[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Initialize data when work order changes
@@ -114,20 +121,25 @@ export default function MaintenanceWorkModalUpdated({
     if (workOrder) {
       // Collect all filled operations from all machines with machine context
       const allFilledOperations: IFilledOperationWithMachine[] = [];
-      const allImages: IWorkOrderImage[] = [];
+      const allImages: IWorkOrderImageWithMachine[] = [];
 
       workOrder.machines.forEach((machine) => {
         if (machine.filledOperations) {
           const operationsWithMachine = machine.filledOperations.map((op) => ({
             ...op,
             machineId: machine.machineId,
+            filledAt: typeof op.filledAt === 'string' ? op.filledAt : new Date(op.filledAt).toISOString(),
           }));
           allFilledOperations.push(...operationsWithMachine);
         }
 
-        // Collect images from each machine
+        // Collect images from each machine with machine context
         if (machine.images) {
-          allImages.push(...machine.images);
+          const imagesWithMachine = machine.images.map((img) => ({
+            ...img,
+            machineId: machine.machineId,
+          }));
+          allImages.push(...imagesWithMachine);
         }
       });
 
@@ -135,7 +147,8 @@ export default function MaintenanceWorkModalUpdated({
       setLabor(workOrder.labor || []);
       setMaterials(workOrder.materials || []);
       // Use images from work order level first, then add machine images
-      const combinedImages = [...(workOrder.images || []), ...allImages];
+      const workOrderImages = (workOrder.images || []).map(img => ({ ...img, machineId: undefined }));
+      const combinedImages = [...workOrderImages, ...allImages];
       console.log("Initializing images:", combinedImages);
       setImages(combinedImages);
     }
@@ -211,12 +224,13 @@ export default function MaintenanceWorkModalUpdated({
     filename: string;
     uploadedAt: Date;
     uploadedBy?: string;
-  }) => {
-    const newImage: IWorkOrderImage = {
+  }, machineId?: string) => {
+    const newImage: IWorkOrderImageWithMachine = {
       url: image.url,
       filename: image.filename,
       uploadedAt: image.uploadedAt.toISOString(),
       uploadedBy: image.uploadedBy,
+      machineId: machineId,
     };
     setImages([...images, newImage]);
   };
@@ -243,7 +257,7 @@ export default function MaintenanceWorkModalUpdated({
       value,
       description,
       filledBy: "current-user", // This should come from auth context
-      filledAt: new Date(),
+      filledAt: new Date().toISOString(),
       operation: operation || ({} as IOperation),
     };
 
@@ -271,22 +285,52 @@ export default function MaintenanceWorkModalUpdated({
       const newStatus =
         workOrder.status === "pending" ? "in_progress" : workOrder.status;
 
-      // Convert filled operations back to the format expected by the API
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const apiFilledOperations: IFilledOperation[] = filledOperations.map(
-        ({ machineId: _machineId, ...op }) => ({
-          ...op,
-          operation:
-            operations.find((o) => o._id === op.operationId) ||
-            ({} as IOperation),
-        })
-      );
+      // Group filled operations by machine
+      const filledOperationsByMachine: { [machineId: string]: IFilledOperation[] } = {};
+      filledOperations.forEach((op) => {
+        if (!filledOperationsByMachine[op.machineId]) {
+          filledOperationsByMachine[op.machineId] = [];
+        }
+        filledOperationsByMachine[op.machineId].push({
+          operationId: op.operationId,
+          value: op.value,
+          description: op.description,
+          filledAt: new Date(op.filledAt), // Convert string back to Date for API
+          filledBy: op.filledBy,
+          operation: operations.find((o) => o._id === op.operationId) || ({} as IOperation),
+        });
+      });
+
+      // Group images by machine (work order level images will be kept at work order level)
+      const workOrderLevelImages = images.filter(img => !img.machineId);
+      const machineImages: { [machineId: string]: IWorkOrderImage[] } = {};
+      images.forEach((img) => {
+        if (img.machineId) {
+          if (!machineImages[img.machineId]) {
+            machineImages[img.machineId] = [];
+          }
+          machineImages[img.machineId].push({
+            url: img.url,
+            filename: img.filename,
+            uploadedAt: img.uploadedAt,
+            uploadedBy: img.uploadedBy,
+          });
+        }
+      });
+
+      // Update machines with their specific maintenance data only
+      const updatedMachines = workOrder.machines.map((machine) => ({
+        machineId: machine.machineId, // Only send the ID to identify which machine
+        filledOperations: filledOperationsByMachine[machine.machineId] || [],
+        images: machineImages[machine.machineId] || [],
+      }));
 
       await onSave({
-        filledOperations: apiFilledOperations,
+        machines: updatedMachines,
+        filledOperations: [], // Keep empty as we're now using machine-level filledOperations
         labor: updatedLabor as ILabor[],
         materials,
-        images,
+        images: workOrderLevelImages,
         status: newStatus as "pending" | "in_progress" | "completed",
       });
 
@@ -310,22 +354,52 @@ export default function MaintenanceWorkModalUpdated({
         l.isActive ? { ...l, endTime: new Date(), isActive: false } : l
       );
 
-      // Convert filled operations back to the format expected by the API
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const apiFilledOperations: IFilledOperation[] = filledOperations.map(
-        ({ machineId: _machineId, ...op }) => ({
-          ...op,
-          operation:
-            operations.find((o) => o._id === op.operationId) ||
-            ({} as IOperation),
-        })
-      );
+      // Group filled operations by machine
+      const filledOperationsByMachine: { [machineId: string]: IFilledOperation[] } = {};
+      filledOperations.forEach((op) => {
+        if (!filledOperationsByMachine[op.machineId]) {
+          filledOperationsByMachine[op.machineId] = [];
+        }
+        filledOperationsByMachine[op.machineId].push({
+          operationId: op.operationId,
+          value: op.value,
+          description: op.description,
+          filledAt: new Date(op.filledAt), // Convert string back to Date for API
+          filledBy: op.filledBy,
+          operation: operations.find((o) => o._id === op.operationId) || ({} as IOperation),
+        });
+      });
+
+      // Group images by machine (work order level images will be kept at work order level)
+      const workOrderLevelImages = images.filter(img => !img.machineId);
+      const machineImages: { [machineId: string]: IWorkOrderImage[] } = {};
+      images.forEach((img) => {
+        if (img.machineId) {
+          if (!machineImages[img.machineId]) {
+            machineImages[img.machineId] = [];
+          }
+          machineImages[img.machineId].push({
+            url: img.url,
+            filename: img.filename,
+            uploadedAt: img.uploadedAt,
+            uploadedBy: img.uploadedBy,
+          });
+        }
+      });
+
+      // Update machines with their specific maintenance data only
+      const updatedMachines = workOrder.machines.map((machine) => ({
+        machineId: machine.machineId, // Only send the ID to identify which machine
+        filledOperations: filledOperationsByMachine[machine.machineId] || [],
+        images: machineImages[machine.machineId] || [],
+      }));
 
       await onSave({
-        filledOperations: apiFilledOperations,
+        machines: updatedMachines,
+        filledOperations: [], // Keep empty as we're now using machine-level filledOperations
         labor: updatedLabor as ILabor[],
         materials,
-        images,
+        images: workOrderLevelImages,
         status: "completed",
       });
 
@@ -560,6 +634,70 @@ export default function MaintenanceWorkModalUpdated({
                             </div>
                           );
                         })}
+                        
+                        {/* Machine-specific Images Section */}
+                        <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                          <div className="flex items-center justify-between mb-3">
+                            <h6 className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
+                              <Camera className="h-4 w-4 mr-2" />
+                              {t("workOrders.machineImages")} - Machine {machine.machineId}
+                            </h6>
+                            <div className="w-32">
+                              <ImageUpload
+                                onImageUpload={(image) => handleImageUpload(image, machine.machineId)}
+                                disabled={workOrder.status === "completed"}
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* Machine Images */}
+                          {(() => {
+                            const machineImages = images.filter(img => img.machineId === machine.machineId);
+                            return machineImages.length === 0 ? (
+                              <div className="p-3 bg-gray-100 dark:bg-gray-600 rounded-lg">
+                                <p className="text-xs text-gray-600 dark:text-gray-400">
+                                  {t("workOrders.noMachineImages")}
+                                </p>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                                {machineImages.map((image, imgIndex) => {
+                                  const globalIndex = images.findIndex(img => 
+                                    img.url === image.url && img.machineId === machine.machineId
+                                  );
+                                  return (
+                                    <div key={imgIndex} className="relative group bg-white dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                                      <img
+                                        src={image.url}
+                                        alt={image.filename}
+                                        className="w-full h-24 object-cover"
+                                        onError={(e) => {
+                                          console.error("Image load error:", e);
+                                        }}
+                                      />
+                                      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <FormButton
+                                          type="button"
+                                          variant="danger"
+                                          onClick={() => handleRemoveImage(globalIndex)}
+                                          className="p-1"
+                                          disabled={workOrder.status === "completed"}
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </FormButton>
+                                      </div>
+                                      <div className="p-1">
+                                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                                          {image.filename}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            );
+                          })()}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -857,60 +995,66 @@ export default function MaintenanceWorkModalUpdated({
             />
           </div>
 
-          {/* Uploaded Images */}
-          {images.length === 0 ? (
-            <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {t("workOrders.noImagesUploaded")}
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Mostrando {images.length} imagen(es)
+          {/* Uploaded Images - Work Order Level Only */}
+          {(() => {
+            const workOrderImages = images.filter(img => !img.machineId);
+            return workOrderImages.length === 0 ? (
+              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {t("workOrders.noImagesUploaded")}
+                </p>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {images.map((image, index) => {
-                  console.log(`Rendering image ${index}:`, image);
-                  return (
-                   <div key={index} className="relative group bg-white dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
-                     <img
-                       src={image.url}
-                       alt={image.filename}
-                       className="w-full h-48 object-cover"
-                       onError={(e) => {
-                         console.error("Image load error:", e);
-                         console.error("Failed URL:", image.url);
-                       }}
-                       onLoad={() => {
-                         console.log("Image loaded successfully:", image.url);
-                       }}
-                     />
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <FormButton
-                        type="button"
-                        variant="danger"
-                        onClick={() => handleRemoveImage(index)}
-                        className="p-2"
-                        disabled={workOrder.status === "completed"}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </FormButton>
+            ) : (
+              <div className="space-y-4">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Mostrando {workOrderImages.length} imagen(es) a nivel de orden de trabajo
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {workOrderImages.map((image, index) => {
+                    const globalIndex = images.findIndex(img => 
+                      img.url === image.url && !img.machineId
+                    );
+                    console.log(`Rendering work order image ${index}:`, image);
+                    return (
+                     <div key={index} className="relative group bg-white dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600">
+                       <img
+                         src={image.url}
+                         alt={image.filename}
+                         className="w-full h-48 object-cover"
+                         onError={(e) => {
+                           console.error("Image load error:", e);
+                           console.error("Failed URL:", image.url);
+                         }}
+                         onLoad={() => {
+                           console.log("Image loaded successfully:", image.url);
+                         }}
+                       />
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <FormButton
+                          type="button"
+                          variant="danger"
+                          onClick={() => handleRemoveImage(globalIndex)}
+                          className="p-2"
+                          disabled={workOrder.status === "completed"}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </FormButton>
+                      </div>
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                          {image.filename}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                          {formatDateTime(image.uploadedAt)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="mt-2">
-                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                        {image.filename}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-500">
-                        {formatDateTime(image.uploadedAt)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Action Buttons */}
