@@ -23,7 +23,6 @@ import { IOperation } from "@/models/Operation";
 
 type WorkOrderFormData = {
   customCode?: string;
-  location: string;
   workOrderLocation: string;
   type: "preventive" | "corrective" | "";
   status?: "pending" | "in_progress" | "completed";
@@ -113,11 +112,68 @@ interface WorkOrderMachine {
   maintenanceDescription?: string;
 }
 
+interface WorkOrderMachineFromBackend {
+  machineId: string | {
+    _id: string;
+    model: {
+      name: string;
+      manufacturer: string;
+    };
+    location: string;
+    locationId: string;
+    description?: string;
+    maintenanceRanges?: string[];
+    operations?: string[];
+    properties: Record<string, unknown>;
+    companyId: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  maintenanceRangeIds?: (string | {
+    _id: string;
+    name: string;
+    description: string;
+    operations: Array<{
+      _id: string;
+      name: string;
+      description: string;
+      type: string;
+      companyId: string;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+    companyId: string;
+    createdAt: string;
+    updatedAt: string;
+  })[]; // Múltiples maintenance ranges
+  operations?: (string | {
+    _id: string;
+    name: string;
+    description: string;
+    type: string;
+    companyId: string;
+    createdAt: string;
+    updatedAt: string;
+  })[];
+  filledOperations?: Array<{
+    operationId: string;
+    value: unknown;
+    description?: string;
+    filledBy?: string;
+  }>;
+  images?: Array<{
+    url: string;
+    filename: string;
+    uploadedAt: string;
+    uploadedBy?: string;
+  }>;
+  maintenanceDescription?: string;
+}
+
 interface WorkOrderForModal {
   _id: string;
   customCode?: string;
-  machines: WorkOrderMachine[];
-  location: Location;
+  machines: WorkOrderMachineFromBackend[];
   workOrderLocation: Location;
   type: "preventive" | "corrective";
   status: "pending" | "in_progress" | "completed";
@@ -165,11 +221,6 @@ interface WorkOrderFormModalProps {
   editingWorkOrder: WorkOrderForModal | null;
   machines: Machine[];
   operations: IOperation[];
-  maintenanceRanges: Array<{
-    _id: string;
-    name: string;
-    operations: IOperation[];
-  }>;
   isSubmitting?: boolean;
 }
 
@@ -224,7 +275,6 @@ export default function WorkOrderFormModal({
       setIsResettingType(false);
       // Clear all form values
       setValue("machines", []);
-      setValue("location", "");
       setValue("workOrderLocation", "");
       setValue("type", "");
       setValue("customCode", "");
@@ -254,7 +304,21 @@ export default function WorkOrderFormModal({
       setSelectedWorkOrderLocation(
         editingWorkOrder.workOrderLocation?._id || ""
       );
-      setWorkOrderMachines(editingWorkOrder.machines || []);
+      // Map machines data to the correct format
+      const mappedMachines = (editingWorkOrder.machines || []).map((m) => ({
+        machineId: typeof m.machineId === 'string' ? m.machineId : m.machineId._id,
+        maintenanceRangeIds: Array.isArray(m.maintenanceRangeIds) 
+          ? m.maintenanceRangeIds.map(range => typeof range === 'string' ? range : range._id)
+          : [],
+        operations: Array.isArray(m.operations) 
+          ? m.operations.map(op => typeof op === 'string' ? op : op._id)
+          : [],
+        filledOperations: m.filledOperations || [],
+        images: m.images || [],
+        maintenanceDescription: m.maintenanceDescription,
+      }));
+      console.log(mappedMachines);
+      setWorkOrderMachines(mappedMachines);
       setCustomProperties(editingWorkOrder.properties || {});
 
       // Set available machines for the work order location
@@ -272,7 +336,12 @@ export default function WorkOrderFormModal({
       // Always include machines that are already assigned to this work order
       const assignedMachines = machines.filter((machine) =>
         editingWorkOrder.machines.some(
-          (woMachine) => woMachine.machineId === machine._id
+          (woMachine) => {
+            const machineId = typeof woMachine.machineId === 'string' 
+              ? woMachine.machineId 
+              : woMachine.machineId._id;
+            return machineId === machine._id;
+          }
         )
       );
 
@@ -296,9 +365,8 @@ export default function WorkOrderFormModal({
       } else {
         setSelectedLocationDisplay(null);
       }
-
       // Reset form with work order data
-      reset({
+      const formData = {
         customCode: editingWorkOrder.customCode || "",
         type: editingWorkOrder.type,
         status: editingWorkOrder.status,
@@ -312,17 +380,22 @@ export default function WorkOrderFormModal({
           : "",
         assignedTo: editingWorkOrder.assignedTo || "",
         notes: editingWorkOrder.notes || "",
-        location: editingWorkOrder.location?._id || "",
         workOrderLocation: editingWorkOrder.workOrderLocation?._id || "",
         machines: (editingWorkOrder.machines || []).map((m) => ({
-          machineId: m.machineId,
-          maintenanceRangeIds: m.maintenanceRangeIds || [],
-          operations: m.operations || [],
+          machineId: typeof m.machineId === 'string' ? m.machineId : m.machineId._id,
+          maintenanceRangeIds: Array.isArray(m.maintenanceRangeIds) 
+            ? m.maintenanceRangeIds.map(range => typeof range === 'string' ? range : range._id)
+            : [],
+          operations: Array.isArray(m.operations) 
+            ? m.operations.map(op => typeof op === 'string' ? op : op._id)
+            : [],
           filledOperations: m.filledOperations || [],
           images: m.images || [],
           maintenanceDescription: m.maintenanceDescription,
         })),
-      });
+      };
+      
+      reset(formData);
     } else {
       // Reset form for new work order
       resetForm(true);
@@ -337,39 +410,43 @@ export default function WorkOrderFormModal({
     // Don't interfere when resetting type
     if (isResettingType) return;
 
+    if (editingWorkOrder) return;
+
     if (selectedWorkOrderLocation) {
       const locationMachines = machines.filter(
         (machine) => machine.locationId === selectedWorkOrderLocation
       );
       setAvailableMachines(locationMachines);
-      // Update the location field for validation
-      setValue("location", selectedWorkOrderLocation);
+      // Update the workOrderLocation field for validation
       setValue("workOrderLocation", selectedWorkOrderLocation);
       // Clear selected machines when location changes
+      console.log("paso por aqui");
       setWorkOrderMachines([]);
       setValue("machines", []);
     } else {
+      console.log("paso por aqui 2");
       setAvailableMachines([]);
       setWorkOrderMachines([]);
       setValue("machines", []);
-      setValue("location", "");
       setValue("workOrderLocation", "");
     }
   }, [selectedWorkOrderLocation, machines, setValue, isResettingType]);
 
   // Sync workOrderMachines with form field whenever it changes
   useEffect(() => {
-    setValue(
-      "machines",
-      workOrderMachines.map((m) => ({
-        machineId: m.machineId,
-        maintenanceRangeIds: m.maintenanceRangeIds || [],
-        operations: m.operations || [],
-        filledOperations: m.filledOperations || [],
-        images: m.images || [],
-        maintenanceDescription: m.maintenanceDescription,
-      }))
-    );
+    if (workOrderMachines.length > 0) {
+      setValue(
+        "machines",
+        workOrderMachines.map((m) => ({
+          machineId: m.machineId,
+          maintenanceRangeIds: m.maintenanceRangeIds || [],
+          operations: m.operations || [],
+          filledOperations: m.filledOperations || [],
+          images: m.images || [],
+          maintenanceDescription: m.maintenanceDescription,
+        }))
+      );
+    }
   }, [workOrderMachines, setValue]);
 
   // Update workOrderType when form type changes
@@ -379,26 +456,27 @@ export default function WorkOrderFormModal({
     }
   }, [watchedType, workOrderType]);
 
-  // Reset operations and machines when type changes
+  // Reset operations and machines when type changes (only in create mode)
   useEffect(() => {
-    if (workOrderType) {
+    if (workOrderType && !editingWorkOrder) {
       setIsResettingType(true);
       setWorkOrderMachines([]);
       setSelectedWorkOrderLocation("");
       // Clear form values
       setValue("machines", []);
-      setValue("location", "");
       setValue("workOrderLocation", "");
       // Reset the flag after a short delay
       setTimeout(() => setIsResettingType(false), 100);
     }
-  }, [workOrderType, setValue]);
+  }, [workOrderType, editingWorkOrder, setValue]);
 
+  // Reset form after successful submission
   useEffect(() => {
-    if (isSubmitting) {
+    if (isSubmitting === false && editingWorkOrder === null) {
+      // Only reset if we're not editing and submission is complete
       resetForm(true);
     }
-  }, [isSubmitting, resetForm]);
+  }, [isSubmitting, editingWorkOrder, resetForm]);
 
   // Use watchedType for form control instead of workOrderType
   // In edit mode, don't disable the form
@@ -538,7 +616,6 @@ export default function WorkOrderFormModal({
     // The data.machines should already be properly formatted from the useEffect
     await onSubmit({
       ...data,
-      location: selectedWorkOrderLocation,
       workOrderLocation: selectedWorkOrderLocation,
       properties: customProperties,
     });
@@ -562,8 +639,8 @@ export default function WorkOrderFormModal({
       size="xl"
     >
       <Form onSubmit={handleSubmit(handleFormSubmit)}>
-        {/* Campo oculto para location */}
-        <input type="hidden" {...register("location")} />
+        {/* Campo oculto para workOrderLocation */}
+        <input type="hidden" {...register("workOrderLocation")} />
 
         {/* Campo oculto para machines */}
         <input type="hidden" {...register("machines")} />
@@ -620,7 +697,6 @@ export default function WorkOrderFormModal({
                   type="text"
                   value={
                     editingWorkOrder.workOrderLocation?.name ||
-                    editingWorkOrder.location?.name ||
                     "Unknown Location"
                   }
                   disabled
@@ -640,11 +716,6 @@ export default function WorkOrderFormModal({
               type="hidden"
               {...register("type")}
               value={editingWorkOrder.type}
-            />
-            <input
-              type="hidden"
-              {...register("location")}
-              value={editingWorkOrder.location?._id || ""}
             />
             <input
               type="hidden"
@@ -732,7 +803,6 @@ export default function WorkOrderFormModal({
                       });
                       setSelectedWorkOrderLocation(location._id);
                       setValue("workOrderLocation", location._id);
-                      setValue("location", location._id);
                       setShowLocationSelector(false);
                     }}
                     onLocationEdit={() => {}}
@@ -1370,9 +1440,6 @@ export default function WorkOrderFormModal({
           <FormButton
             type="submit"
             disabled={isSubmitting || isFormDisabled || isReadOnly}
-            onClick={() => {
-              console.log(errors);
-            }}
           >
             {isSubmitting
               ? t("common.saving")

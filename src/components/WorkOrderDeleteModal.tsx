@@ -24,7 +24,6 @@ interface WorkOrder {
   _id: string;
   customCode?: string;
   machines: WorkOrderMachine[];
-  location: Location;
   workOrderLocation: Location;
   type: 'preventive' | 'corrective';
   status: 'pending' | 'in_progress' | 'completed';

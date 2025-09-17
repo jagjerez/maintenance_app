@@ -50,7 +50,6 @@ export interface IWorkOrder {
   _id: string;
   customCode?: string;
   machines: IWorkOrderMachine[]; // Array of machine objects with their specific data
-  location: string; // Location ID for the work order
   workOrderLocation: string; // Location ID where the work order will be performed
   type: WorkOrderType;
   status: WorkOrderStatus;
@@ -136,11 +135,6 @@ const WorkOrderSchema = new Schema({
       trim: true,
     },
   }],
-  location: {
-    type: Schema.Types.ObjectId,
-    ref: 'Location',
-    required: [true, 'Location is required'],
-  },
   workOrderLocation: {
     type: Schema.Types.ObjectId,
     ref: 'Location',
@@ -261,7 +255,7 @@ const WorkOrderSchema = new Schema({
 
 // Index for better query performance
 WorkOrderSchema.index({ machines: 1 });
-WorkOrderSchema.index({ location: 1 });
+WorkOrderSchema.index({ workOrderLocation: 1 });
 WorkOrderSchema.index({ status: 1 });
 WorkOrderSchema.index({ scheduledDate: 1 });
 WorkOrderSchema.index({ type: 1 });

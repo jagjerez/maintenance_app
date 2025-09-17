@@ -121,7 +121,6 @@ export const workOrderSchema = z.object({
     })).optional().default([]), // Solo para preventivo
     maintenanceDescription: z.string().optional(), // Solo para correctivo
   })).min(1, 'At least one machine is required'),
-  location: z.string().min(1, 'Location is required'),
   workOrderLocation: z.string().min(1, 'Work order location is required'),
   type: z.enum(['preventive', 'corrective', ''], {
     message: 'Type must be preventive or corrective',
@@ -140,7 +139,7 @@ export const workOrderSchema = z.object({
     uploadedBy: z.string().optional(),
   })).optional().default([]),
   labor: z.array(z.object({
-    operatorName: z.string().min(1, 'Operator name is required'),
+    operatorName: z.string().optional().default(''),
     startTime: z.string(),
     endTime: z.string().optional(),
     isActive: z.boolean().default(true),
@@ -173,7 +172,7 @@ export const workOrderUpdateSchema = workOrderSchema.partial();
 
 // Labor validations
 export const laborSchema = z.object({
-  operatorName: z.string().min(1, 'Operator name is required'),
+  operatorName: z.string().optional().default(''),
   startTime: z.string(),
   endTime: z.string().optional(),
   isActive: z.boolean().default(true),

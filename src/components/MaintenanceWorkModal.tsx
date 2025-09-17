@@ -22,10 +22,6 @@ interface WorkOrder {
   _id: string;
   customCode?: string;
   machines: WorkOrderMachine[];
-  location: {
-    _id: string;
-    name: string;
-  };
   workOrderLocation: {
     _id: string;
     name: string;

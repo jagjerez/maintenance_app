@@ -410,7 +410,9 @@
     "noOperationsFromMachine": "No operations from machine or maintenance range",
     "selectMachineToAdd": "Select machine to add",
     "noMachinesSelected": "No machines selected",
-    "selectAtLeastOneMachine": "Please select at least one machine"
+    "selectAtLeastOneMachine": "Please select at least one machine",
+    "markComplete": "Mark Complete",
+    "performMaintenance": "Perform Maintenance"
   },
   "locations": {
     "title": "Locations",

@@ -16,6 +16,7 @@ interface DataTableProps<T> {
   columns: Column<T>[];
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
+  onMaintenance?: (item: T) => void;
   className?: string;
 }
 
@@ -24,6 +25,7 @@ export default function DataTable<T extends { _id: string }>({
   columns,
   onEdit,
   onDelete,
+  onMaintenance,
   className
 }: DataTableProps<T>) {
   const { t } = useTranslations();
@@ -51,7 +53,7 @@ export default function DataTable<T extends { _id: string }>({
                 {column.label}
               </th>
             ))}
-            {(onEdit || onDelete) && (
+            {(onEdit || onDelete || onMaintenance) && (
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 {t("common.actions")}
               </th>
@@ -74,7 +76,7 @@ export default function DataTable<T extends { _id: string }>({
                     : String(item[column.key] || '')}
                 </td>
               ))}
-              {(onEdit || onDelete) && (
+              {(onEdit || onDelete || onMaintenance) && (
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex space-x-2">
                     {onEdit && (
@@ -83,6 +85,14 @@ export default function DataTable<T extends { _id: string }>({
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
                       >
                         {t("common.edit")}
+                      </button>
+                    )}
+                    {onMaintenance && (
+                      <button
+                        onClick={() => onMaintenance(item)}
+                        className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
+                      >
+                        {t("workOrders.performMaintenance")}
                       </button>
                     )}
                     {onDelete && (

@@ -420,7 +420,9 @@
     "operationsFilled": "Operaciones Rellenadas",
     "laborRecorded": "Mano de Obra Registrada",
     "materialsUsed": "Materiales Utilizados",
-    "imagesUploaded": "Imágenes Subidas"
+    "imagesUploaded": "Imágenes Subidas",
+    "markComplete": "Marcar Completado",
+    "performMaintenance": "Realizar Mantenimiento"
   },
   "locations": {
     "title": "Ubicaciones",

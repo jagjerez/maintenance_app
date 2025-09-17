@@ -25,7 +25,7 @@ export async function GET(
       companyId: session.user.companyId
     })
       .populate({
-        path: 'machines.machineId',
+        path: 'machines.machine',
         model: 'Machine',
         populate: {
           path: 'model',
@@ -44,7 +44,6 @@ export async function GET(
         path: 'machines.operations',
         model: 'Operation'
       })
-      .populate('location')
       .populate('workOrderLocation');
     
     if (!workOrder) {
@@ -165,7 +164,6 @@ export async function PUT(
         path: 'machines.operations',
         model: 'Operation'
       })
-      .populate('location')
       .populate('workOrderLocation');
     
     if (!workOrder) {

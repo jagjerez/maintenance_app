@@ -7,7 +7,7 @@ import { Plus, FileText } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { Pagination } from "@/components/Pagination";
 import DataTable from "@/components/DataTable";
-import MaintenanceWorkModal from "@/components/MaintenanceWorkModal";
+import MaintenanceWorkModalUpdated from "@/components/MaintenanceWorkModalUpdated";
 import WorkOrderFormModal from "@/components/WorkOrderFormModal";
 import WorkOrderDeleteModal from "@/components/WorkOrderDeleteModal";
 import {
@@ -41,20 +41,58 @@ interface Machine {
   }>;
 }
 
-interface WorkOrderMachine {
-  machineId: string;
-  maintenanceRangeIds?: string[]; // Múltiples maintenance ranges
+// Interfaces for backend data structure
+interface PopulatedMachine {
+  _id: string;
+  model: {
+    name: string;
+    manufacturer: string;
+  };
+  location: string;
+  locationId: string;
+  description?: string;
+  maintenanceRanges?: string[];
   operations?: string[];
+  properties: Record<string, unknown>;
+  companyId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface PopulatedOperation {
+  _id: string;
+  name: string;
+  description: string;
+  type: string;
+  companyId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface PopulatedMaintenanceRange {
+  _id: string;
+  name: string;
+  description: string;
+  operations: PopulatedOperation[];
+  companyId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface WorkOrderMachine {
+  machineId: string | PopulatedMachine;
+  maintenanceRangeIds?: (string | PopulatedMaintenanceRange)[];
+  operations?: (string | PopulatedOperation)[];
   filledOperations?: IFilledOperation[];
   images?: IWorkOrderImage[];
   maintenanceDescription?: string;
+  _id: string;
 }
 
 interface WorkOrder {
   _id: string;
   customCode?: string;
   machines: WorkOrderMachine[];
-  location: Location;
   workOrderLocation: Location;
   type: "preventive" | "corrective";
   status: "pending" | "in_progress" | "completed";
@@ -72,6 +110,51 @@ interface WorkOrder {
   updatedAt: string;
 }
 
+// Interface for modals that expect the old structure with location
+interface WorkOrderMachineForModal {
+  machineId: string;
+  maintenanceRangeIds?: string[];
+  operations?: string[];
+  filledOperations?: IFilledOperation[];
+  images?: IWorkOrderImage[];
+  maintenanceDescription?: string;
+  _id: string;
+}
+
+interface WorkOrderForModal {
+  _id: string;
+  customCode?: string;
+  machines: WorkOrderMachineForModal[];
+  workOrderLocation: Location;
+  type: "preventive" | "corrective";
+  status: "pending" | "in_progress" | "completed";
+  description: string;
+  maintenanceDescription?: string;
+  scheduledDate: string;
+  completedDate?: string;
+  assignedTo?: string;
+  notes?: string;
+  images: IWorkOrderImage[];
+  labor?: ILabor[];
+  materials?: IMaterial[];
+  properties: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Helper functions to extract IDs from populated objects
+const extractMachineId = (machineId: string | PopulatedMachine): string => {
+  return typeof machineId === 'string' ? machineId : machineId._id;
+};
+
+const extractMaintenanceRangeIds = (ranges: (string | PopulatedMaintenanceRange)[]): string[] => {
+  return ranges.map(range => typeof range === 'string' ? range : range._id);
+};
+
+const extractOperationIds = (operations: (string | PopulatedOperation)[]): string[] => {
+  return operations.map(op => typeof op === 'string' ? op : op._id);
+};
+
 const ITEMS_PER_PAGE = 10;
 
 export default function WorkOrdersPage() {
@@ -81,22 +164,16 @@ export default function WorkOrdersPage() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [, setLocations] = useState<Location[]>([]);
   const [operations, setOperations] = useState<IOperation[]>([]);
-  const [maintenanceRanges, setMaintenanceRanges] = useState<
-    Array<{
-      _id: string;
-      name: string;
-      operations: IOperation[];
-    }>
-  >([]);
+
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showMaintenanceWorkModal, setShowMaintenanceWorkModal] =
     useState(false);
-  const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrder | null>(
+  const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrderForModal | null>(
     null
   );
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | null>(
+  const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrderForModal | null>(
     null
   );
   const [currentPage, setCurrentPage] = useState(1);
@@ -174,22 +251,7 @@ export default function WorkOrdersPage() {
       console.error("Error fetching operations:", error);
       toast.error(t("operations.operationLoadError"));
     }
-  }, [t]);
-
-  const fetchMaintenanceRanges = useCallback(async () => {
-    try {
-      const response = await fetch("/api/maintenance-ranges");
-      if (response.ok) {
-        const data = await response.json();
-        setMaintenanceRanges(data.maintenanceRanges || data);
-      } else {
-        toast.error(t("maintenanceRanges.rangeLoadError"));
-      }
-    } catch (error) {
-      console.error("Error fetching maintenance ranges:", error);
-      toast.error(t("maintenanceRanges.rangeLoadError"));
-    }
-  }, [t]);
+  }, [t])
 
   useEffect(() => {
     const loadData = async () => {
@@ -199,7 +261,6 @@ export default function WorkOrdersPage() {
         fetchLocations(),
         fetchMachines(),
         fetchOperations(),
-        fetchMaintenanceRanges(),
       ]);
       setLoading(false);
     };
@@ -209,8 +270,7 @@ export default function WorkOrdersPage() {
     fetchWorkOrders,
     fetchLocations,
     fetchMachines,
-    fetchOperations,
-    fetchMaintenanceRanges,
+    fetchOperations
   ]);
 
   // Check if we should open the modal automatically (from dashboard)
@@ -258,60 +318,57 @@ export default function WorkOrdersPage() {
       console.error("Error saving work order:", error);
       toast.error(t("workOrders.workOrderError"));
     }
+    finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEdit = (workOrder: WorkOrder) => {
     // Convert WorkOrder to the format expected by the modal
-    const workOrderForModal = {
+    const workOrderForModal: WorkOrderForModal = {
       ...workOrder,
       machines: Array.isArray(workOrder.machines)
-        ? workOrder.machines.map((workOrderMachine) => {
-            const machine = machines.find(
-              (m) => m._id === workOrderMachine.machineId
-            );
-            return {
-              ...workOrderMachine,
-              // Add machine details for display
-              machine: machine
-                ? {
-                    _id: machine._id,
-                    model: machine.model,
-                    location: machine.location,
-                    locationId: machine.locationId,
-                  }
-                : undefined,
-            };
-          })
+        ? workOrder.machines.map((workOrderMachine) => ({
+            machineId: extractMachineId(workOrderMachine.machineId),
+            maintenanceRangeIds: workOrderMachine.maintenanceRangeIds 
+              ? extractMaintenanceRangeIds(workOrderMachine.maintenanceRangeIds)
+              : [],
+            operations: workOrderMachine.operations 
+              ? extractOperationIds(workOrderMachine.operations)
+              : [],
+            filledOperations: workOrderMachine.filledOperations || [],
+            images: workOrderMachine.images || [],
+            maintenanceDescription: workOrderMachine.maintenanceDescription,
+            _id: workOrderMachine._id,
+          }))
         : [],
     };
     setEditingWorkOrder(workOrderForModal);
     setShowModal(true);
   };
 
-  // Check if work order has maintenance data
-  const hasMaintenanceData = (workOrder: WorkOrder) => {
-    return (
-      workOrder.machines.some(
-        (machine) =>
-          (machine.filledOperations?.length || 0) > 0 ||
-          (machine.images?.length || 0) > 0
-      ) ||
-      (workOrder.images?.length || 0) > 0 ||
-      (workOrder.labor?.length || 0) > 0 ||
-      (workOrder.materials?.length || 0) > 0
-    );
-  };
 
-  // Check if work order can be deleted
-  const canDeleteWorkOrder = (workOrder: WorkOrder) => {
-    return (
-      (workOrder.status || "pending") === "pending" &&
-      !hasMaintenanceData(workOrder)
-    );
-  };
 
   const handleDelete = (workOrder: WorkOrder) => {
-    setWorkOrderToDelete(workOrder);
+    const workOrderForModal: WorkOrderForModal = {
+      ...workOrder,
+      machines: Array.isArray(workOrder.machines)
+        ? workOrder.machines.map((workOrderMachine) => ({
+            machineId: extractMachineId(workOrderMachine.machineId),
+            maintenanceRangeIds: workOrderMachine.maintenanceRangeIds 
+              ? extractMaintenanceRangeIds(workOrderMachine.maintenanceRangeIds)
+              : [],
+            operations: workOrderMachine.operations 
+              ? extractOperationIds(workOrderMachine.operations)
+              : [],
+            filledOperations: workOrderMachine.filledOperations || [],
+            images: workOrderMachine.images || [],
+            maintenanceDescription: workOrderMachine.maintenanceDescription,
+            _id: workOrderMachine._id,
+          }))
+        : [],
+    };
+    setWorkOrderToDelete(workOrderForModal);
     setShowDeleteModal(true);
   };
 
@@ -355,11 +412,14 @@ export default function WorkOrdersPage() {
       // Update the work order with maintenance data
       const updatedWorkOrder = {
         ...editingWorkOrder,
+        workOrderLocation: editingWorkOrder.workOrderLocation._id, // Send only the ID, not the object
         images: data.images,
         status: data.status,
         completedDate:
           data.status === "completed" ? new Date().toISOString() : undefined,
-        // Note: In the new structure, filledOperations, labor, and materials are stored per machine
+        labor: data.labor,
+        materials: data.materials,
+        // Note: filledOperations are now stored per machine in the new structure
         // This would need to be handled differently based on which machine the maintenance was performed on
       };
 
@@ -406,17 +466,23 @@ export default function WorkOrdersPage() {
         return (
           workOrderMachines
             .map((workOrderMachine) => {
-              const machine = machines.find(
-                (m) => m._id === workOrderMachine.machineId
-              );
-              return machine?.model?.name || "Unknown Machine";
+              // Handle both string and populated object cases
+              if (typeof workOrderMachine.machineId === 'string') {
+                const machine = machines.find(
+                  (m) => m._id === workOrderMachine.machineId
+                );
+                return machine?.model?.name || "Unknown Machine";
+              } else {
+                // machineId is populated object
+                return workOrderMachine.machineId.model?.name || "Unknown Machine";
+              }
             })
             .join(", ") || "-"
         );
       },
     },
     {
-      key: "location" as keyof WorkOrder,
+      key: "workOrderLocation" as keyof WorkOrder,
       label: t("workOrders.location"),
       render: (value: unknown) => {
         const location = value as Location;
@@ -586,12 +652,35 @@ export default function WorkOrdersPage() {
 
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <DataTable
-            data={workOrders}
-            columns={columns}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-          />
+            <DataTable
+              data={workOrders}
+              columns={columns}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onMaintenance={(workOrder: WorkOrder) => {
+                const workOrderForModal: WorkOrderForModal = {
+                  ...workOrder,
+                  workOrderLocation: workOrder.workOrderLocation, // Keep the object for display purposes
+                  machines: Array.isArray(workOrder.machines)
+                    ? workOrder.machines.map((workOrderMachine: WorkOrderMachine) => ({
+                        machineId: extractMachineId(workOrderMachine.machineId),
+                        maintenanceRangeIds: workOrderMachine.maintenanceRangeIds 
+                          ? extractMaintenanceRangeIds(workOrderMachine.maintenanceRangeIds)
+                          : [],
+                        operations: workOrderMachine.operations 
+                          ? extractOperationIds(workOrderMachine.operations)
+                          : [],
+                        filledOperations: workOrderMachine.filledOperations || [],
+                        images: workOrderMachine.images || [],
+                        maintenanceDescription: workOrderMachine.maintenanceDescription,
+                        _id: workOrderMachine._id,
+                      }))
+                    : [],
+                };
+                setEditingWorkOrder(workOrderForModal);
+                setShowMaintenanceWorkModal(true);
+              }}
+            />
         </div>
       </div>
 
@@ -616,7 +705,6 @@ export default function WorkOrdersPage() {
         editingWorkOrder={editingWorkOrder}
         machines={machines}
         operations={operations}
-        maintenanceRanges={maintenanceRanges}
         isSubmitting={isSubmitting}
       />
       {/* Delete Confirmation Modal */}
@@ -629,7 +717,7 @@ export default function WorkOrdersPage() {
 
       {/* Maintenance Work Modal */}
       {editingWorkOrder && (
-        <MaintenanceWorkModal
+        <MaintenanceWorkModalUpdated
           isOpen={showMaintenanceWorkModal}
           onClose={() => {
             setShowMaintenanceWorkModal(false);
@@ -637,6 +725,7 @@ export default function WorkOrdersPage() {
           }}
           workOrder={editingWorkOrder}
           onSave={handleMaintenanceSave}
+          operations={operations}
         />
       )}
     </div>

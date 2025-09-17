@@ -420,7 +420,9 @@
     "operationsFilled": "Opérations Remplies",
     "laborRecorded": "Main-d'œuvre Enregistrée",
     "materialsUsed": "Matériaux Utilisés",
-    "imagesUploaded": "Images Téléchargées"
+    "imagesUploaded": "Images Téléchargées",
+    "markComplete": "Marquer Terminé",
+    "performMaintenance": "Effectuer la Maintenance"
   },
   "locations": {
     "title": "Locations",

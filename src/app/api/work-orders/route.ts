@@ -49,7 +49,6 @@ export async function GET(request: NextRequest) {
         path: 'machines.operations',
         model: 'Operation'
       })
-      .populate('location')
       .populate('workOrderLocation')
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -134,7 +133,6 @@ export async function POST(request: NextRequest) {
         path: 'machines.operations',
         model: 'Operation'
       })
-      .populate('location')
       .populate('workOrderLocation');
     
     return NextResponse.json(populatedWorkOrder, { status: 201 });
