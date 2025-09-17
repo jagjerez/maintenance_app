@@ -252,7 +252,7 @@ export default function MaintenanceModal({ isOpen, onClose, workOrder, onSave }:
           <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
             {t('workOrders.workOrderInfo')}
           </h3>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
             <div>
               <span className="font-medium text-gray-700 dark:text-gray-300">{t('workOrders.workOrderId')}:</span>
               <span className="ml-2 text-gray-900 dark:text-white">{workOrder.customCode || workOrder._id}</span>
@@ -553,7 +553,7 @@ export default function MaintenanceModal({ isOpen, onClose, workOrder, onSave }:
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
                 <h4 className="font-medium text-gray-900 dark:text-white mb-3">{t('workOrders.addMaterial')}</h4>
                 <Form onSubmit={materialForm.handleSubmit(handleAddMaterial)}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormGroup>
                       <FormLabel required>{t('workOrders.materialDescription')}</FormLabel>
                       <FormInput
@@ -641,7 +641,7 @@ export default function MaintenanceModal({ isOpen, onClose, workOrder, onSave }:
                 {t('workOrders.noImagesData')}
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {images.map((image, index) => (
                   <div key={index} className="relative group">
                     <Image 

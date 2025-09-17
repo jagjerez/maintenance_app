@@ -446,62 +446,62 @@ export default function MachinesPage() {
           })
           .join(", ");
       },
+      hideOnMobile: true,
     },
     {
       key: "createdAt" as keyof Machine,
       label: t("common.createdAt"),
       render: (value: Machine[keyof Machine]) =>
         formatDateSafe(value as string),
+      hideOnMobile: true,
     },
   ];
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div>
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-2 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-96 animate-pulse"></div>
+              <div className="h-6 sm:h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 sm:w-64 mb-2 animate-pulse"></div>
+              <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 sm:w-96 animate-pulse"></div>
             </div>
-            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+            <div className="h-10 sm:h-11 bg-gray-200 dark:bg-gray-700 rounded w-full sm:w-32 animate-pulse"></div>
           </div>
         </div>
 
         {/* Item Count Indicator Skeleton */}
-        <div className="mb-6 flex justify-between items-center">
+        <div className="mb-4 sm:mb-6 flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+            <div className="h-4 w-4 sm:h-5 sm:w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 sm:w-24 animate-pulse"></div>
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
+          <div className="px-3 py-4 sm:px-4 sm:py-5 lg:p-6">
             <div className="animate-pulse">
-              {/* Table Header */}
-              <div className="grid grid-cols-6 gap-4 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              {/* Mobile view skeleton */}
+              <div className="block space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3 sm:p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
+                        <div className="flex flex-col items-end space-y-1 ml-2">
+                          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
+                          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-20"></div>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/4"></div>
+                        <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-full"></div>
+                      </div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              {/* Table Rows */}
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="grid grid-cols-6 gap-4 py-3 border-b border-gray-100 dark:border-gray-700"
-                >
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                </div>
-              ))}
             </div>
           </div>
         </div>
@@ -510,14 +510,14 @@ export default function MachinesPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div>
       <div className="mb-8">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
               {t("machines.title")}
             </h1>
-            <p className="mt-2 text-gray-600 dark:text-gray-400">
+            <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400">
               {t("machines.subtitle")}
             </p>
           </div>
@@ -531,10 +531,10 @@ export default function MachinesPage() {
               reset();
               setShowModal(true);
             }}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center justify-center px-4 py-3 sm:px-4 sm:py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 min-h-[44px] touch-manipulation w-full sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
-            {t("machines.newMachine")}
+            <span className="truncate">{t("machines.newMachine")}</span>
           </button>
         </div>
       </div>
@@ -808,7 +808,7 @@ export default function MachinesPage() {
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 {t("machines.customPropertiesDescription")}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <FormInput
                   placeholder={t("placeholders.propertyKey")}
                   value={newPropertyKey}

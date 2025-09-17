@@ -111,7 +111,7 @@ export default function MultiSelect({
       {/* Dropdown trigger */}
       <div
         className={`
-          relative w-full min-h-[42px] px-3 py-2 border rounded-md cursor-pointer
+          relative w-full min-h-[44px] px-3 py-3 sm:py-2 border rounded-md cursor-pointer touch-manipulation
           ${error 
             ? 'border-red-300 dark:border-red-600 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500' 
             : 'border-gray-300 dark:border-gray-600 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500'
@@ -121,7 +121,7 @@ export default function MultiSelect({
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         <div className="flex items-center justify-between">
-          <span className={`${selectedOptions.length === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+          <span className={`text-base sm:text-sm ${selectedOptions.length === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>
             {selectedOptions.length === 0 ? placeholder : `${selectedOptions.length} selected`}
           </span>
           <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -139,7 +139,7 @@ export default function MultiSelect({
               placeholder="Search operations..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              className="w-full px-3 py-3 sm:py-2 text-base sm:text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-h-[44px] touch-manipulation"
             />
           </div>
 
@@ -156,7 +156,7 @@ export default function MultiSelect({
                   <div
                     key={option.value}
                     className={`
-                      px-3 py-2 cursor-pointer text-sm flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700
+                      px-3 py-3 sm:py-2 cursor-pointer text-base sm:text-sm flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 min-h-[44px] touch-manipulation
                       ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
                     `}
                     onClick={() => handleOptionClick(option.value)}

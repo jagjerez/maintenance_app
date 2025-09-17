@@ -39,7 +39,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
     return (
       <button
         onClick={cycleTheme}
-        className="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        className="p-2 rounded-md text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-h-[44px] min-w-[44px] touch-manipulation flex items-center justify-center"
         title={`Tema actual: ${themes.find(t => t.value === theme)?.label}`}
       >
         <CurrentIcon className="h-5 w-5" />
@@ -53,7 +53,7 @@ export function ThemeToggle({ compact = false }: { compact?: boolean }) {
         <button
           key={value}
           onClick={() => setTheme(value)}
-          className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+          className={`flex items-center space-x-1 px-2 sm:px-3 py-2 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-colors min-h-[44px] touch-manipulation ${
             theme === value
               ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm'
               : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'

@@ -60,28 +60,28 @@ export default function Modal({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
+      <div className="flex min-h-screen items-start sm:items-center justify-center p-2 sm:p-4">
         <div
           className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
           onClick={onClose}
         />
         <div
           className={cn(
-            'relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full',
+            'relative bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full mx-2 sm:mx-0 mt-4 sm:mt-0',
             sizeClasses[size],
             className
           )}
         >
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{title}</h3>
+          <div className="flex items-center justify-between p-3 sm:p-4 lg:p-6 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white pr-2">{title}</h3>
             <button
               onClick={onClose}
-              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1"
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1 flex-shrink-0 min-h-[44px] min-w-[44px] touch-manipulation flex items-center justify-center"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
-          <div className="p-6">
+          <div className="p-3 sm:p-4 lg:p-6 max-h-[calc(100vh-6rem)] sm:max-h-[calc(100vh-8rem)] overflow-y-auto">
             {children}
           </div>
         </div>

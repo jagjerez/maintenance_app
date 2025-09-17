@@ -1,14 +1,16 @@
-'use client';
+"use client";
 
-import { ReactNode } from 'react';
-import { cn } from '@/lib/utils';
-import { useTranslations } from '@/hooks/useTranslations';
+import { ReactNode } from "react";
+import { cn } from "@/lib/utils";
+import { useTranslations } from "@/hooks/useTranslations";
+import { Edit, Trash2, Wrench } from "lucide-react";
 
 interface Column<T> {
   key: keyof T;
   label: string;
   render?: (value: T[keyof T], item: T) => ReactNode;
   className?: string;
+  hideOnMobile?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -26,90 +28,87 @@ export default function DataTable<T extends { _id: string }>({
   onEdit,
   onDelete,
   onMaintenance,
-  className
+  className,
 }: DataTableProps<T>) {
   const { t } = useTranslations();
+
   if (data.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500 dark:text-gray-400">{t("common.noDataAvailable")}</p>
+        <p className="text-gray-500 dark:text-gray-400">
+          {t("common.noDataAvailable")}
+        </p>
       </div>
     );
   }
 
-  return (
-    <div className={cn('overflow-x-auto', className)}>
-      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        <thead className="bg-gray-50 dark:bg-gray-700">
-          <tr>
-            {columns.map((column, index) => (
-              <th
-                key={index}
-                className={cn(
-                  'px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider',
-                  column.className
-                )}
-              >
+  // Mobile view - Card layout
+  const MobileCard = ({ item }: { item: T }) => (
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 mb-4 shadow-sm">
+      <div className="space-y-3 items-center">
+        {columns.map((column, colIndex) => {
+          if (column.hideOnMobile) return null;
+          return (
+            <div key={colIndex} className="flex flex-row items-center">
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 {column.label}
-              </th>
-            ))}
-            {(onEdit || onDelete || onMaintenance) && (
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                {t("common.actions")}
-              </th>
-            )}
-          </tr>
-        </thead>
-        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-          {data.map((item) => (
-            <tr key={item._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-              {columns.map((column, colIndex) => (
-                <td
-                  key={colIndex}
-                  className={cn(
-                    'px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100',
-                    column.className
-                  )}
+              </span>
+              <span className="text-sm text-gray-900 dark:text-gray-100 ml-2">
+                {column.render
+                  ? column.render(item[column.key], item)
+                  : String(item[column.key] || "")}
+              </span>
+            </div>
+          );
+        })}
+
+        {(onEdit || onDelete || onMaintenance) && (
+          <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+              {onEdit && (
+                <button
+                  onClick={() => onEdit(item)}
+                  className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors min-h-[44px] touch-manipulation flex-1 sm:flex-none"
                 >
-                  {column.render
-                    ? column.render(item[column.key], item)
-                    : String(item[column.key] || '')}
-                </td>
-              ))}
-              {(onEdit || onDelete || onMaintenance) && (
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                  <div className="flex space-x-2">
-                    {onEdit && (
-                      <button
-                        onClick={() => onEdit(item)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                      >
-                        {t("common.edit")}
-                      </button>
-                    )}
-                    {onMaintenance && (
-                      <button
-                        onClick={() => onMaintenance(item)}
-                        className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300"
-                      >
-                        {t("workOrders.performMaintenance")}
-                      </button>
-                    )}
-                    {onDelete && (
-                      <button
-                        onClick={() => onDelete(item)}
-                        className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                      >
-                        {t("common.delete")}
-                      </button>
-                    )}
-                  </div>
-                </td>
+                  <Edit className="h-4 w-4 mr-1" />
+                  <span className="truncate">{t("common.edit")}</span>
+                </button>
               )}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+              {onMaintenance && (
+                <button
+                  onClick={() => onMaintenance(item)}
+                  className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-md hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors min-h-[44px] touch-manipulation flex-1 sm:flex-none"
+                >
+                  <Wrench className="h-4 w-4 mr-1" />
+                  <span className="truncate">
+                    {t("workOrders.performMaintenance")}
+                  </span>
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  onClick={() => onDelete(item)}
+                  className="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded-md hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors min-h-[44px] touch-manipulation flex-1 sm:flex-none"
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  <span className="truncate">{t("common.delete")}</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className={cn("", className)}>
+      {/* Mobile view - Cards */}
+      <div className="block">
+        {data.map((item) => (
+          <MobileCard key={item._id} item={item} />
+        ))}
+      </div>
     </div>
   );
 }

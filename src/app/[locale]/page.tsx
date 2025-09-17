@@ -157,19 +157,39 @@ export default function Dashboard() {
 
   if (status === "loading" || loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="h-6 sm:h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 sm:w-1/4 mb-4 sm:mb-6"></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-6 sm:mb-8">
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
-                className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow"
+                className="bg-white dark:bg-gray-800 p-3 sm:p-4 lg:p-6 rounded-lg shadow"
               >
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
-                <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+                <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-2"></div>
+                <div className="h-6 sm:h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
               </div>
             ))}
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8">
+            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 lg:p-6 rounded-lg shadow">
+              <div className="h-4 sm:h-5 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-3 sm:mb-4"></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                <div className="h-10 sm:h-11 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-10 sm:h-11 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 p-3 sm:p-4 lg:p-6 rounded-lg shadow">
+              <div className="h-4 sm:h-5 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-3 sm:mb-4"></div>
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -181,25 +201,25 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
           {t("navigation.dashboard")}
         </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
+        <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400">
           {t("dashboard.subtitle")}
         </p>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-          <div className="p-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="p-4">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="ml-4 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     {t("workOrders.title")}
@@ -213,13 +233,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-          <div className="p-5">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="p-4">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <Clock className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="ml-4 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     {t("workOrders.pending")}
@@ -233,13 +253,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-          <div className="p-5">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="p-4">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <AlertCircle className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="ml-4 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     {t("workOrders.inProgress")}
@@ -253,13 +273,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-          <div className="p-5">
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="p-4">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="ml-4 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
                     {t("workOrders.completed")}
@@ -275,33 +295,33 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Actions and System Summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
+          <div className="p-4">
             <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
               {t("dashboard.fastActions")}
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Link
                 href="/work-orders?new=true"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 min-h-[44px] touch-manipulation"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                {t("workOrders.addWorkOrder")}
+                <span className="truncate">{t("workOrders.addWorkOrder")}</span>
               </Link>
               <Link
                 href="/machines?new=true"
-                className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 min-h-[44px] touch-manipulation"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                {t("machines.addMachine")}
+                <span className="truncate">{t("machines.addMachine")}</span>
               </Link>
             </div>
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
+          <div className="p-4">
             <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white mb-4">
               {t("dashboard.systemSummary")}
             </h3>
@@ -344,45 +364,47 @@ export default function Dashboard() {
       </div>
 
       {/* Location Tree */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-8">
-        <div className="px-4 py-5 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-6">
+        <div className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
             <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
               <MapPin className="h-5 w-5 inline mr-2" />
               {t("locations.title")}
             </h3>
             <Link
               href="/locations"
-              className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
+              className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 self-start sm:self-auto"
             >
               {t("common.viewAll")}
             </Link>
           </div>
-          <LocationTreeView
-            onLocationClick={(location) => {
-            }}
-            onMachineClick={(machine) => {
-              // Navigate to machines page with edit parameter
-              router.push(`/machines?edit=${machine._id}`);
-            }}
-            showActions={false}
-            showMachines={true}
-            className="max-h-96"
-            refreshTrigger={0}
-          />
+          <div className="border border-gray-200 dark:border-gray-700 rounded-md p-2 h-auto max-h-64 sm:max-h-80 overflow-y-auto">
+            <LocationTreeView
+              onLocationClick={() => {
+              }}
+              onMachineClick={(machine) => {
+                // Navigate to machines page with edit parameter
+                router.push(`/machines?edit=${machine._id}`);
+              }}
+              showActions={false}
+              showMachines={true}
+              className="max-h-64 sm:max-h-80 lg:max-h-96"
+              refreshTrigger={0}
+            />
+          </div>
         </div>
       </div>
 
       {/* Recent Work Orders */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
             <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
               {t("dashboard.recentWorkOrders")}
             </h3>
             <Link
               href="/work-orders"
-              className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300"
+              className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 self-start sm:self-auto"
             >
               {t("workOrders.viewAll")}
             </Link>
@@ -400,70 +422,28 @@ export default function Dashboard() {
               <div className="mt-6">
                 <Link
                   href="/work-orders?new=true"
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 min-h-[44px] touch-manipulation"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  {t("workOrders.addWorkOrder")}
+                  <span className="truncate">{t("workOrders.addWorkOrder")}</span>
                 </Link>
               </div>
             </div>
           ) : (
-            <div className="overflow-hidden">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      {t("workOrders.description")}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      {t("workOrders.machine")}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      Tipo
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      {t("workOrders.status")}
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                      {t("workOrders.scheduledDate")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {workOrders.map((workOrder) => (
-                    <tr
-                      key={workOrder._id}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+            <div className="space-y-3">
+              {workOrders.map((workOrder) => (
+                <div
+                  key={workOrder._id}
+                  className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-start justify-between">
+                      <h4 className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">
                         {workOrder.description}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        <div className="space-y-1">
-                          {workOrder.machines?.map((machine, index) => (
-                            <div 
-                              key={machine._id}
-                              className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                              onClick={() => router.push(`/machines?edit=${machine._id}`)}
-                              title={t('machines.clickToEdit')}
-                            >
-                              <div className="font-medium">
-                                {machine.model?.name || 'Unknown Model'}
-                              </div>
-                              <div className="text-gray-500 dark:text-gray-400">
-                                {machine.location}
-                              </div>
-                            </div>
-                          )) || (
-                            <div className="text-gray-500 dark:text-gray-400">
-                              No machines assigned
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </h4>
+                      <div className="flex flex-col items-end space-y-1 ml-2">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTypeColor(
                             workOrder.type
                           )}`}
                         >
@@ -471,10 +451,8 @@ export default function Dashboard() {
                             ? t("dashboard.preventive")
                             : t("dashboard.corrective")}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(
                             workOrder.status
                           )}`}
                         >
@@ -487,14 +465,40 @@ export default function Dashboard() {
                               : t("workOrders.completed")}
                           </span>
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        {formatDate(workOrder.scheduledDate)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        <strong>Máquinas:</strong>
+                      </div>
+                      {workOrder.machines?.map((machine) => (
+                        <div 
+                          key={machine._id}
+                          className="cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition-colors p-2 bg-white dark:bg-gray-800 rounded border"
+                          onClick={() => router.push(`/machines?edit=${machine._id}`)}
+                          title={t('machines.clickToEdit')}
+                        >
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {machine.model?.name || 'Unknown Model'}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                            {machine.location}
+                          </div>
+                        </div>
+                      )) || (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 p-2 bg-white dark:bg-gray-800 rounded border">
+                          No machines assigned
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <strong>Fecha programada:</strong> {formatDate(workOrder.scheduledDate)}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

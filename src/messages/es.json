@@ -452,7 +452,9 @@
     "moveMachinesFirst": "Por favor mueve o elimina las máquinas primero",
     "deleteChildrenFirst": "Por favor elimina las ubicaciones hijas primero",
     "deleteError": "Error al eliminar la ubicación",
-    "deleteSuccess": "Ubicación eliminada correctamente"
+    "deleteSuccess": "Ubicación eliminada correctamente",
+    "treeView": "Vista de Árbol",
+    "listView": "Vista de Lista"
   },
   "settings": {
     "title": "Configuración",

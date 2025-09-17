@@ -268,47 +268,49 @@ export default function LocationsPage() {
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div>
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-2 animate-pulse"></div>
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-96 animate-pulse"></div>
+              <div className="h-6 sm:h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 sm:w-64 mb-2 animate-pulse"></div>
+              <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 sm:w-96 animate-pulse"></div>
             </div>
-            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+            <div className="h-10 sm:h-11 bg-gray-200 dark:bg-gray-700 rounded w-full sm:w-32 animate-pulse"></div>
           </div>
         </div>
 
         {/* Item Count Indicator Skeleton */}
-        <div className="mb-6 flex justify-between items-center">
+        <div className="mb-4 sm:mb-6 flex justify-between items-center">
           <div className="flex items-center space-x-2">
-            <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+            <div className="h-4 w-4 sm:h-5 sm:w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 sm:w-24 animate-pulse"></div>
           </div>
         </div>
 
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
+          <div className="px-3 py-4 sm:px-4 sm:py-5 lg:p-6">
             <div className="animate-pulse">
-              {/* Table Header */}
-              <div className="grid grid-cols-4 gap-4 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              {/* Mobile view skeleton */}
+              <div className="block space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3 sm:p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
+                        <div className="flex flex-col items-end space-y-1 ml-2">
+                          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
+                          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-20"></div>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/4"></div>
+                        <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-full"></div>
+                      </div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              {/* Table Rows */}
-              {[...Array(5)].map((_, i) => (
-                <div
-                  key={i}
-                  className="grid grid-cols-4 gap-4 py-3 border-b border-gray-100 dark:border-gray-700"
-                >
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                </div>
-              ))}
             </div>
           </div>
         </div>
@@ -317,18 +319,18 @@ export default function LocationsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+    <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+      <div className="mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
           {t("locations.title")}
         </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
+        <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400">
           {t("locations.subtitle")}
         </p>
       </div>
 
       {/* Header with Add Button and View Toggle */}
-      <div className="mb-6 flex justify-between items-center">
+      <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div className="flex items-center space-x-2">
           <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -336,57 +338,63 @@ export default function LocationsPage() {
             {totalItems !== 1 ? "s" : ""}
           </span>
         </div>
-        <div className="flex items-center space-x-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
           {/* View Mode Toggle */}
           <div className="flex rounded-md shadow-sm">
             <button
               onClick={() => setViewMode("tree")}
-              className={`px-3 py-2 text-sm font-medium rounded-l-md border ${
+              className={`flex-1 sm:flex-none px-3 py-2 text-sm font-medium rounded-l-md border min-h-[44px] touch-manipulation ${
                 viewMode === "tree"
                   ? "bg-blue-600 text-white border-blue-600"
                   : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
               }`}
             >
-              <Folder className="h-4 w-4" />
+              <Folder className="h-4 w-4 mx-auto sm:mx-0" />
+              <span className="ml-2 hidden sm:inline">{t("locations.treeView")}</span>
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${
+              className={`flex-1 sm:flex-none px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b min-h-[44px] touch-manipulation ${
                 viewMode === "list"
                   ? "bg-blue-600 text-white border-blue-600"
                   : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
               }`}
             >
-              <MapPin className="h-4 w-4" />
+              <MapPin className="h-4 w-4 mx-auto sm:mx-0" />
+              <span className="ml-2 hidden sm:inline">{t("locations.listView")}</span>
             </button>
           </div>
 
           <FormButton
             onClick={() => handleLocationAdd()}
-            className="flex items-center space-x-2"
+            className="flex items-center justify-center space-x-2 w-full sm:w-auto min-h-[44px] touch-manipulation"
           >
             <Plus className="h-4 w-4" />
-            <span>{t("locations.newLocation")}</span>
+            <span className="truncate">{t("locations.newLocation")}</span>
           </FormButton>
         </div>
       </div>
 
       {/* Content */}
       {viewMode === "tree" ? (
-        <LocationTreeView
-          onLocationClick={() => {}}
-          onLocationEdit={(location) => handleLocationEdit(location)}
-          onLocationDelete={(location) => handleLocationDelete(location)}
-          onLocationAdd={(parentLocation) => handleLocationAdd(parentLocation)}
-          onMachineClick={(machine) => handleMachineClick(machine)}
-          showActions={true}
-          showMachines={true}
-          refreshTrigger={refreshTrigger}
-          className="bg-white dark:bg-gray-800 shadow rounded-lg p-6"
-        />
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="p-4">
+            <LocationTreeView
+              onLocationClick={() => {}}
+              onLocationEdit={(location) => handleLocationEdit(location)}
+              onLocationDelete={(location) => handleLocationDelete(location)}
+              onLocationAdd={(parentLocation) => handleLocationAdd(parentLocation)}
+              onMachineClick={(machine) => handleMachineClick(machine)}
+              showActions={true}
+              showMachines={true}
+              refreshTrigger={refreshTrigger}
+              className=""
+            />
+          </div>
+        </div>
       ) : (
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
+          <div className="p-4">
             <DataTable
               data={locations}
               columns={columns}
@@ -460,7 +468,7 @@ export default function LocationsPage() {
             </FormSelect>
           </FormGroup>
 
-          <div className="flex justify-end space-x-3 mt-6">
+          <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
             <FormButton
               type="button"
               variant="secondary"
@@ -469,10 +477,11 @@ export default function LocationsPage() {
                 setEditingLocation(null);
                 reset();
               }}
+              className="w-full sm:w-auto"
             >
               {t("common.cancel")}
             </FormButton>
-            <FormButton type="submit" disabled={isSubmitting}>
+            <FormButton type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
               {isSubmitting
                 ? t("common.saving")
                 : editingLocation

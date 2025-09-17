@@ -39,9 +39,9 @@ export function UserDropdown() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+        <div className="absolute right-0 mt-2 w-48 sm:w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 z-50">
           <div className="py-1">
-            <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+            <div className="px-3 sm:px-4 py-2 border-b border-gray-200 dark:border-gray-700">
               <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
                 {session.user.name}
               </p>
@@ -54,7 +54,7 @@ export function UserDropdown() {
                 signOut();
                 setIsOpen(false);
               }}
-              className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="flex items-center w-full px-3 sm:px-4 py-3 sm:py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-h-[44px] touch-manipulation"
             >
               <LogOut className="h-4 w-4 mr-3" />
               Cerrar Sesión

@@ -647,35 +647,35 @@ export default function WorkOrderFormModal({
 
         {/* Work Order Information Section (solo en edición) */}
         {editingWorkOrder && (
-          <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg mb-6">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+          <div className="bg-gray-50 dark:bg-gray-700 p-3 sm:p-4 rounded-lg mb-4 sm:mb-6">
+            <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-3 sm:mb-4">
               {t("workOrders.workOrderInformation")}
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t("workOrders.workOrderId")}
                 </label>
                 <input
                   type="text"
                   value={editingWorkOrder._id}
                   disabled
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+                  className="w-full px-3 py-2 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm min-h-[44px] touch-manipulation"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t("workOrders.workOrderCode")}
                 </label>
                 <input
                   type="text"
                   value={editingWorkOrder.customCode || "N/A"}
                   disabled
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+                  className="w-full px-3 py-2 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm min-h-[44px] touch-manipulation"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t("workOrders.workOrderType")}
                 </label>
                 <input
@@ -686,11 +686,11 @@ export default function WorkOrderFormModal({
                       : t("workOrders.corrective")
                   }
                   disabled
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+                  className="w-full px-3 py-2 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm min-h-[44px] touch-manipulation"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t("workOrders.workOrderLocationInfo")}
                 </label>
                 <input
@@ -700,7 +700,7 @@ export default function WorkOrderFormModal({
                     "Unknown Location"
                   }
                   disabled
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+                  className="w-full px-3 py-2 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 text-sm min-h-[44px] touch-manipulation"
                 />
               </div>
             </div>
@@ -726,7 +726,7 @@ export default function WorkOrderFormModal({
         )}
 
         {!editingWorkOrder && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormGroup>
               <FormLabel>{t("workOrders.customCode")}</FormLabel>
               <FormInput
@@ -770,13 +770,13 @@ export default function WorkOrderFormModal({
                     selectedLocationDisplay ? selectedLocationDisplay.path : ""
                   }
                   placeholder={t("placeholders.selectLocation")}
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="flex-1 px-3 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-l-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base sm:text-sm min-h-[44px] touch-manipulation"
                   readOnly
                 />
                 <button
                   type="button"
                   onClick={() => setShowLocationSelector(!showLocationSelector)}
-                  className="px-3 py-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-md bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="px-3 py-3 sm:py-2 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r-md bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px] touch-manipulation flex items-center justify-center"
                   disabled={isReadOnly}
                 >
                   {showLocationSelector ? (
@@ -787,13 +787,13 @@ export default function WorkOrderFormModal({
                 </button>
               </div>
               {selectedLocationDisplay && (
-                <div className="text-sm text-gray-600 dark:text-gray-400">
+                <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                   <span className="font-medium">Selected:</span>{" "}
                   {selectedLocationDisplay.path}
                 </div>
               )}
               {showLocationSelector && !isReadOnly && (
-                <div className="border border-gray-200 dark:border-gray-700 rounded-md p-2 h-auto">
+                <div className="border border-gray-200 dark:border-gray-700 rounded-md p-2 h-auto max-h-64 sm:max-h-80 overflow-y-auto">
                   <LocationTreeView
                     onLocationClick={(location) => {
                       setSelectedLocationDisplay({
@@ -818,7 +818,7 @@ export default function WorkOrderFormModal({
               )}
             </div>
             {errors.workOrderLocation && (
-              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+              <p className="mt-1 text-xs sm:text-sm text-red-600 dark:text-red-400">
                 {errors.workOrderLocation.message}
               </p>
             )}
@@ -826,11 +826,11 @@ export default function WorkOrderFormModal({
         )}
 
         {isFormDisabled && !editingWorkOrder && (
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-            <div className="flex items-center">
-              <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-2" />
+          <div className="p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-start">
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 dark:text-blue-400 mr-2 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                <p className="text-xs sm:text-sm font-medium text-blue-800 dark:text-blue-200">
                   {t("workOrders.selectWorkOrderTypeFirst")}
                 </p>
                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
@@ -852,7 +852,7 @@ export default function WorkOrderFormModal({
           />
         </FormGroup>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormGroup>
             <FormLabel required>{t("workOrders.scheduledDate")}</FormLabel>
             <FormInput
@@ -874,7 +874,7 @@ export default function WorkOrderFormModal({
           </FormGroup>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <FormGroup>
             <FormLabel>{t("common.status")}</FormLabel>
             <FormSelect
@@ -1401,11 +1401,11 @@ export default function WorkOrderFormModal({
               })}
 
               {workOrderMachines.length === 0 && (
-                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                  <div className="flex items-center">
-                    <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" />
+                <div className="p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <div className="flex items-start">
+                    <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600 dark:text-yellow-400 mr-2 mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                      <p className="text-xs sm:text-sm font-medium text-yellow-800 dark:text-yellow-200">
                         {t("workOrders.noMachinesSelected")}
                       </p>
                       <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
@@ -1417,11 +1417,11 @@ export default function WorkOrderFormModal({
               )}
             </div>
           ) : (
-            <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-              <div className="flex items-center">
-                <AlertCircle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2" />
+            <div className="mt-4 p-3 sm:p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <div className="flex items-start">
+                <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-600 dark:text-yellow-400 mr-2 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-yellow-800 dark:text-orange-200">
+                  <p className="text-xs sm:text-sm font-medium text-yellow-800 dark:text-orange-200">
                     {t("workOrders.selectLocationToSeeMachines")}
                   </p>
                   <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
@@ -1433,13 +1433,14 @@ export default function WorkOrderFormModal({
           )}
         </FormGroup>
 
-        <div className="flex justify-end space-x-3 mt-6">
-          <FormButton type="button" variant="secondary" onClick={handleClose}>
+        <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6">
+          <FormButton type="button" variant="secondary" onClick={handleClose} className="w-full sm:w-auto">
             {t("common.cancel")}
           </FormButton>
           <FormButton
             type="submit"
             disabled={isSubmitting || isFormDisabled || isReadOnly}
+            className="w-full sm:w-auto"
           >
             {isSubmitting
               ? t("common.saving")

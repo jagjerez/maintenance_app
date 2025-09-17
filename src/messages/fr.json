@@ -452,7 +452,9 @@
     "moveMachinesFirst": "Please move or delete the machines first",
     "deleteChildrenFirst": "Please delete the children first",
     "deleteError": "Error deleting location",
-    "deleteSuccess": "Location deleted successfully"
+    "deleteSuccess": "Location deleted successfully",
+    "treeView": "Vue Arbre",
+    "listView": "Vue Liste"
   },
   "settings": {
     "title": "Settings",
