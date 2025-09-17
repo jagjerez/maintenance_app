@@ -8,7 +8,7 @@ import { authOptions } from '@/lib/auth';
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -24,14 +24,10 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Contar total de operaciones
-    const totalItems = await Operation.countDocuments({ 
-      companyId: session.user.companyId 
-    });
+    const totalItems = await Operation.countDocuments({ companyId: session.user.companyId });
 
     // Obtener operaciones con paginación
-    const operations = await Operation.find({ 
-      companyId: session.user.companyId 
-    })
+    const operations = await Operation.find({ companyId: session.user.companyId })
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
@@ -57,7 +53,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

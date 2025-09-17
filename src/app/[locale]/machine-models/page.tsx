@@ -1,8 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { Plus, Settings } from 'lucide-react';
 import DataTable from '@/components/DataTable';
 import Modal from '@/components/Modal';
 import { ConfirmationModal } from '@/components/ConfirmationModal';
@@ -21,7 +20,6 @@ interface MachineModel {
   manufacturer: string;
   brand: string;
   year: number;
-  companyId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -29,7 +27,6 @@ interface MachineModel {
 const ITEMS_PER_PAGE = 10;
 
 export default function MachineModelsPage() {
-  const { data: session } = useSession();
   const { t } = useTranslations();
   const [machineModels, setMachineModels] = useState<MachineModel[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,13 +72,8 @@ export default function MachineModelsPage() {
     }
   };
 
-  const onSubmit = async (data: { name: string; manufacturer: string; brand: string; year: number; companyId: string; }) => {
+  const onSubmit = async (data: { name: string; manufacturer: string; brand: string; year: number; }) => {
     try {
-      if (!session?.user?.companyId) {
-        toast.error(t("machineModels.companyError"));
-        return;
-      }
-
       const url = editingModel ? `/api/machine-models/${editingModel._id}` : '/api/machine-models';
       const method = editingModel ? 'PUT' : 'POST';
 
@@ -183,12 +175,44 @@ export default function MachineModelsPage() {
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-          <div className="bg-white shadow rounded-lg p-6">
-            <div className="space-y-4">
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-2 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-96 animate-pulse"></div>
+            </div>
+            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Item Count Indicator Skeleton */}
+        <div className="mb-6 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="animate-pulse">
+              {/* Table Header */}
+              <div className="grid grid-cols-5 gap-4 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+              {/* Table Rows */}
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded"></div>
+                <div key={i} className="grid grid-cols-5 gap-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                </div>
               ))}
             </div>
           </div>
@@ -214,6 +238,16 @@ export default function MachineModelsPage() {
             <Plus className="h-4 w-4 mr-2" />
             {t("machineModels.newModel")}
           </button>
+        </div>
+      </div>
+
+      {/* Item Count Indicator */}
+      <div className="mb-6 flex justify-between items-center">
+        <div className="flex items-center space-x-2">
+          <Settings className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {machineModels.length} {t("machineModels.title")}{machineModels.length !== 1 ? 's' : ''}
+          </span>
         </div>
       </div>
 
@@ -250,12 +284,6 @@ export default function MachineModelsPage() {
         size="xl"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
-          {/* Campo oculto para companyId */}
-          <input
-            type="hidden"
-            {...register('companyId')}
-            value={session?.user?.companyId || ''}
-          />
           
           <FormGroup>
             <FormLabel required>{t("common.name")}</FormLabel>

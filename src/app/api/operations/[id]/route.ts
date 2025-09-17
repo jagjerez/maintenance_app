@@ -11,7 +11,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -21,10 +21,9 @@ export async function GET(
     await connectDB();
     const { id } = await params;
     const operation = await Operation.findOne({ 
-      _id: id, 
-      companyId: session.user.companyId 
+      _id: id,
+      companyId: session.user.companyId
     });
-    
     if (!operation) {
       return NextResponse.json(
         { error: 'Operation not found' },
@@ -48,7 +47,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -95,7 +94,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -107,8 +106,8 @@ export async function DELETE(
     
     // Verificar si la operación existe
     const operation = await Operation.findOne({ 
-      _id: id, 
-      companyId: session.user.companyId 
+      _id: id,
+      companyId: session.user.companyId
     });
     
     if (!operation) {

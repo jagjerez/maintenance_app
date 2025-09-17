@@ -11,7 +11,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -21,12 +21,26 @@ export async function GET(
     await connectDB();
     const { id } = await params;
     const machine = await Machine.findOne({ 
-      _id: id, 
-      companyId: session.user.companyId 
+      _id: id,
+      companyId: session.user.companyId
     })
-      .populate('model')
-      .populate('maintenanceRanges')
-      .populate('operations');
+      .populate({
+        path: 'model',
+        match: { companyId: session.user.companyId }
+      })
+      .populate({
+        path: 'maintenanceRanges',
+        match: { companyId: session.user.companyId },
+        populate: {
+          path: 'operations',
+          model: 'Operation',
+          match: { companyId: session.user.companyId }
+        }
+      })
+      .populate({
+        path: 'operations',
+        match: { companyId: session.user.companyId }
+      });
     
     if (!machine) {
       return NextResponse.json(
@@ -51,7 +65,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -71,8 +85,8 @@ export async function PUT(
     
     // Get current machine to check if we need to validate
     const currentMachine = await Machine.findOne({ 
-      _id: id, 
-      companyId: session.user.companyId 
+      _id: id,
+      companyId: session.user.companyId
     });
     if (!currentMachine) {
       return NextResponse.json(
@@ -81,21 +95,21 @@ export async function PUT(
       );
     }
     
-    // Validate no duplicate model with same maintenance ranges (only if model or maintenanceRanges are being updated)
-    if (validatedData.model || validatedData.maintenanceRanges) {
+    // Validate no duplicate model in same location (only if model or locationId are being updated)
+    if (validatedData.model || validatedData.locationId !== undefined) {
       const modelToCheck = validatedData.model || currentMachine.model;
-      const rangesToCheck = validatedData.maintenanceRanges || currentMachine.maintenanceRanges;
+      const locationIdToCheck = validatedData.locationId !== undefined ? validatedData.locationId : currentMachine.locationId;
       
       const existingMachine = await Machine.findOne({
         _id: { $ne: id },
         model: modelToCheck,
-        maintenanceRanges: { $all: rangesToCheck },
-        companyId: currentMachine.companyId,
+        locationId: locationIdToCheck,
+        companyId: session.user.companyId,
       });
       
       if (existingMachine) {
         return NextResponse.json(
-          { error: 'A machine with this model and maintenance ranges already exists' },
+          { error: 'duplicateModelLocation' },
           { status: 400 }
         );
       }
@@ -106,13 +120,13 @@ export async function PUT(
       const { Operation } = await import('@/models');
       const operations = await Operation.find({
         _id: { $in: validatedData.operations },
-        companyId: currentMachine.companyId,
+        companyId: session.user.companyId,
       });
       
       const { MaintenanceRange } = await import('@/models');
       const maintenanceRanges = await MaintenanceRange.find({
         _id: { $in: validatedData.maintenanceRanges || currentMachine.maintenanceRanges },
-        companyId: currentMachine.companyId,
+        companyId: session.user.companyId,
       }).populate('operations');
       
       // Check for duplicate operations
@@ -133,9 +147,23 @@ export async function PUT(
       validatedData,
       { new: true, runValidators: true }
     )
-      .populate('model')
-      .populate('maintenanceRanges')
-      .populate('operations');
+      .populate({
+        path: 'model',
+        match: { companyId: session.user.companyId }
+      })
+      .populate({
+        path: 'maintenanceRanges',
+        match: { companyId: session.user.companyId },
+        populate: {
+          path: 'operations',
+          model: 'Operation',
+          match: { companyId: session.user.companyId }
+        }
+      })
+      .populate({
+        path: 'operations',
+        match: { companyId: session.user.companyId }
+      });
     
     if (!machine) {
       return NextResponse.json(
@@ -166,7 +194,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -176,8 +204,8 @@ export async function DELETE(
     await connectDB();
     const { id } = await params;
     const machine = await Machine.findOneAndDelete({ 
-      _id: id, 
-      companyId: session.user.companyId 
+      _id: id,
+      companyId: session.user.companyId
     });
     
     if (!machine) {

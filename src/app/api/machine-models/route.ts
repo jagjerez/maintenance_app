@@ -5,10 +5,10 @@ import { MachineModel } from '@/models';
 import { machineModelCreateSchema } from '@/lib/validations';
 import { authOptions } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -16,10 +16,28 @@ export async function GET() {
     }
 
     await connectDB();
-    const machineModels = await MachineModel.find({ 
-      companyId: session.user.companyId 
-    }).sort({ createdAt: -1 });
-    return NextResponse.json(machineModels);
+    
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const skip = (page - 1) * limit;
+
+    const totalItems = await MachineModel.countDocuments({ companyId: session.user.companyId });
+
+    const machineModels = await MachineModel.find({ companyId: session.user.companyId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return NextResponse.json({
+      machineModels,
+      totalItems,
+      totalPages,
+      currentPage: page,
+      itemsPerPage: limit
+    });
   } catch (error) {
     console.error('Error fetching machine models:', error);
     return NextResponse.json(
@@ -32,7 +50,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

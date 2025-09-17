@@ -11,7 +11,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -21,8 +21,8 @@ export async function GET(
     await connectDB();
     const { id } = await params;
     const maintenanceRange = await MaintenanceRange.findOne({ 
-      _id: id, 
-      companyId: session.user.companyId 
+      _id: id,
+      companyId: session.user.companyId
     }).populate('operations');
     
     if (!maintenanceRange) {
@@ -48,7 +48,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -95,7 +95,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -108,7 +108,6 @@ export async function DELETE(
     // Check if maintenance range exists
     const maintenanceRange = await MaintenanceRange.findOne({ 
       _id: id, 
-      companyId: session.user.companyId 
     });
     
     if (!maintenanceRange) {
@@ -121,7 +120,6 @@ export async function DELETE(
     // Check if maintenance range is being used in any work orders
     const workOrdersUsingRange = await WorkOrder.countDocuments({
       maintenanceRange: id,
-      companyId: session.user.companyId
     });
 
     if (workOrdersUsingRange > 0) {
@@ -138,7 +136,6 @@ export async function DELETE(
     // If not in use, proceed with deletion
     await MaintenanceRange.findOneAndDelete({ 
       _id: id, 
-      companyId: session.user.companyId 
     });
     
     return NextResponse.json({ message: 'Maintenance range deleted successfully' });

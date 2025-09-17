@@ -31,7 +31,6 @@ export const userSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
   name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
   role: z.enum(['admin', 'user']).default('user'),
-  companyId: z.string().min(1, 'Company is required'),
   isActive: z.boolean().default(true),
   preferences: z.object({
     theme: z.enum(['light', 'dark', 'system']).default('system'),
@@ -59,10 +58,9 @@ export const machineModelSchema = z.object({
   manufacturer: z.string().min(1, 'Manufacturer is required').max(100, 'Manufacturer name too long'),
   brand: z.string().min(1, 'Brand is required').max(100, 'Brand name too long'),
   year: z.number().min(1900, 'Year must be after 1900').max(new Date().getFullYear() + 1, 'Year cannot be in the future'),
-  companyId: z.string().min(1, 'Company is required'),
 });
 
-export const machineModelCreateSchema = machineModelSchema.omit({ companyId: true });
+export const machineModelCreateSchema = machineModelSchema;
 
 export const machineModelUpdateSchema = machineModelSchema.partial();
 
@@ -75,10 +73,9 @@ export const machineSchema = z.object({
   maintenanceRanges: z.array(z.string()).optional(),
   operations: z.array(z.string()).optional(),
   properties: z.record(z.string(), z.unknown()).default({}),
-  companyId: z.string().min(1, 'Company is required'),
 });
 
-export const machineCreateSchema = machineSchema.omit({ companyId: true });
+export const machineCreateSchema = machineSchema;
 export const machineUpdateSchema = machineSchema.partial();
 
 // Operation validations
@@ -88,10 +85,9 @@ export const operationSchema = z.object({
   type: z.enum(['text', 'date', 'time', 'datetime', 'boolean'], {
     message: 'Type must be one of: text, date, time, datetime, boolean'
   }),
-  companyId: z.string().min(1, 'Company is required'),
 });
 
-export const operationCreateSchema = operationSchema.omit({ companyId: true });
+export const operationCreateSchema = operationSchema;
 export const operationUpdateSchema = operationSchema.partial();
 
 // Maintenance Range validations
@@ -99,10 +95,9 @@ export const maintenanceRangeSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
   description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
   operations: z.array(z.string()).default([]),
-  companyId: z.string().min(1, 'Company is required'),
 });
 
-export const maintenanceRangeCreateSchema = maintenanceRangeSchema.omit({ companyId: true });
+export const maintenanceRangeCreateSchema = maintenanceRangeSchema;
 export const maintenanceRangeUpdateSchema = maintenanceRangeSchema.partial();
 
 // Work Order validations
@@ -157,7 +152,6 @@ export const workOrderSchema = z.object({
     unit: z.string().min(1, 'Unit is required'),
   })).optional().default([]),
   properties: z.record(z.string(), z.unknown()).optional().default({}),
-  companyId: z.string().min(1, 'Company is required'),
 }).refine((data) => {
   // If type is corrective, at least one machine must have maintenanceDescription
   if (data.type === 'corrective') {
@@ -174,7 +168,7 @@ export const workOrderSchema = z.object({
   path: ['machines'],
 });
 
-export const workOrderCreateSchema = workOrderSchema.omit({ companyId: true });
+export const workOrderCreateSchema = workOrderSchema;
 export const workOrderUpdateSchema = workOrderSchema.partial();
 
 // Labor validations
@@ -222,10 +216,9 @@ export const locationSchema = z.object({
   name: z.string().min(1, 'Location name is required').max(100, 'Location name too long'),
   description: z.string().max(500, 'Description too long').optional(),
   parentId: z.string().nullable().optional().transform(val => val === '' ? null : val),
-  companyId: z.string().min(1, 'Company is required'),
 });
 
-export const locationCreateSchema = locationSchema.omit({ companyId: true });
+export const locationCreateSchema = locationSchema;
 export const locationUpdateSchema = locationSchema.partial();
 
 // Dynamic properties validation

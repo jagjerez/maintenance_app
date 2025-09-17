@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
@@ -15,6 +14,8 @@ import { Pagination } from '@/components/Pagination';
 import DataTable from '@/components/DataTable';
 import { locationSchema } from '@/lib/validations';
 import LocationTreeView from '@/components/LocationTreeView';
+
+const ITEMS_PER_PAGE = 10;
 
 interface Machine {
   _id: string;
@@ -48,7 +49,6 @@ interface Location {
 
 export default function LocationsPage() {
   const { t } = useTranslations();
-  const { data: session } = useSession();
   const router = useRouter();
   const [locations, setLocations] = useState<Location[]>([]);
   const [parentLocations, setParentLocations] = useState<Location[]>([]);
@@ -75,15 +75,12 @@ export default function LocationsPage() {
   // Fetch all locations for list view
   const fetchLocations = useCallback(async () => {
     try {
-      const response = await fetch('/api/locations?includeChildren=true&flat=true');
+      const response = await fetch(`/api/locations?page=${currentPage}&limit=${ITEMS_PER_PAGE}`);
       if (response.ok) {
         const data = await response.json();
-        setTotalItems(data.length);
-        setTotalPages(Math.ceil(data.length / 10)); // 10 items per page
-        // Set current page items
-        const startIndex = (currentPage - 1) * 10;
-        const endIndex = startIndex + 10;
-        setLocations(data.slice(startIndex, endIndex));
+        setLocations(data.locations || data);
+        setTotalPages(data.totalPages || Math.ceil((data.locations || data).length / ITEMS_PER_PAGE));
+        setTotalItems(data.totalItems || (data.locations || data).length);
       } else {
         toast.error(t("locations.locationLoadError"));
       }
@@ -118,7 +115,7 @@ export default function LocationsPage() {
     loadData();
   }, [fetchLocations, fetchAllLocations]);
 
-  const onSubmit = async (data: { name: string; description?: string; parentId?: string | null; companyId: string }) => {
+  const onSubmit = async (data: { name: string; description?: string; parentId?: string | null }) => {
     try {
       const url = editingLocation ? `/api/locations/${editingLocation._id}` : '/api/locations';
       const method = editingLocation ? 'PUT' : 'POST';
@@ -247,17 +244,43 @@ export default function LocationsPage() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('locations.title')}</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {t("locations.subtitle")}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-2 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-96 animate-pulse"></div>
+            </div>
+            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+          </div>
         </div>
-        
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+
+        {/* Item Count Indicator Skeleton */}
+        <div className="mb-6 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="animate-pulse">
+              {/* Table Header */}
+              <div className="grid grid-cols-4 gap-4 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+              {/* Table Rows */}
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="grid grid-cols-4 gap-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -366,12 +389,6 @@ export default function LocationsPage() {
         size="xl"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
-          {/* Campo oculto para companyId */}
-          <input
-            type="hidden"
-            {...register('companyId')}
-            value={session?.user?.companyId || ''}
-          />
           
           <FormGroup>
             <FormLabel required>{t("locations.locationName")}</FormLabel>

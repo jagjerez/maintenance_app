@@ -7,7 +7,7 @@ import { useTranslations } from '@/hooks/useTranslations';
 interface Column<T> {
   key: keyof T;
   label: string;
-  render?: (value: unknown, item: T) => ReactNode;
+  render?: (value: T[keyof T], item: T) => ReactNode;
   className?: string;
 }
 

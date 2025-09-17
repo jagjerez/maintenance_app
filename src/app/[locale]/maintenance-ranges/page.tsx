@@ -1,20 +1,26 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useTranslations } from '@/hooks/useTranslations';
-import { Plus } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import Modal from '@/components/Modal';
-import { ConfirmationModal } from '@/components/ConfirmationModal';
-import { Form, FormGroup, FormLabel, FormInput, FormTextarea, FormButton } from '@/components/Form';
-import { Pagination } from '@/components/Pagination';
-import DataTable from '@/components/DataTable';
-import MultiSelect from '@/components/MultiSelect';
-import { maintenanceRangeSchema } from '@/lib/validations';
-import { formatDateSafe } from '@/lib/utils';
+import { useState, useEffect, useCallback } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslations } from "@/hooks/useTranslations";
+import { Plus, Wrench } from "lucide-react";
+import { toast } from "react-hot-toast";
+import Modal from "@/components/Modal";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
+import {
+  Form,
+  FormGroup,
+  FormLabel,
+  FormInput,
+  FormTextarea,
+  FormButton,
+} from "@/components/Form";
+import { Pagination } from "@/components/Pagination";
+import DataTable from "@/components/DataTable";
+import MultiSelect from "@/components/MultiSelect";
+import { maintenanceRangeSchema } from "@/lib/validations";
+import { formatDateSafe } from "@/lib/utils";
 
 interface Operation {
   _id: string;
@@ -35,14 +41,19 @@ const ITEMS_PER_PAGE = 10;
 
 export default function MaintenanceRangesPage() {
   const { t } = useTranslations();
-  const { data: session } = useSession();
-  const [maintenanceRanges, setMaintenanceRanges] = useState<MaintenanceRange[]>([]);
+  const [maintenanceRanges, setMaintenanceRanges] = useState<
+    MaintenanceRange[]
+  >([]);
   const [operations, setOperations] = useState<Operation[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editingRange, setEditingRange] = useState<MaintenanceRange | null>(null);
+  const [editingRange, setEditingRange] = useState<MaintenanceRange | null>(
+    null
+  );
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [rangeToDelete, setRangeToDelete] = useState<MaintenanceRange | null>(null);
+  const [rangeToDelete, setRangeToDelete] = useState<MaintenanceRange | null>(
+    null
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -61,27 +72,39 @@ export default function MaintenanceRangesPage() {
   });
 
   // Fetch maintenance ranges with pagination
-  const fetchMaintenanceRanges = useCallback(async (page = 1) => {
-    try {
-      const response = await fetch(`/api/maintenance-ranges?page=${page}&limit=${ITEMS_PER_PAGE}`);
-      if (response.ok) {
-        const data = await response.json();
-        setMaintenanceRanges(data.maintenanceRanges || data);
-        setTotalPages(data.totalPages || Math.ceil((data.maintenanceRanges || data).length / ITEMS_PER_PAGE));
-        setTotalItems(data.totalItems || (data.maintenanceRanges || data).length);
-      } else {
+  const fetchMaintenanceRanges = useCallback(
+    async (page = 1) => {
+      try {
+        const response = await fetch(
+          `/api/maintenance-ranges?page=${page}&limit=${ITEMS_PER_PAGE}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setMaintenanceRanges(data.maintenanceRanges || data);
+          setTotalPages(
+            data.totalPages ||
+              Math.ceil(
+                (data.maintenanceRanges || data).length / ITEMS_PER_PAGE
+              )
+          );
+          setTotalItems(
+            data.totalItems || (data.maintenanceRanges || data).length
+          );
+        } else {
+          toast.error(t("maintenanceRanges.rangeLoadError"));
+        }
+      } catch (error) {
+        console.error("Error fetching maintenance ranges:", error);
         toast.error(t("maintenanceRanges.rangeLoadError"));
       }
-    } catch (error) {
-      console.error('Error fetching maintenance ranges:', error);
-      toast.error(t("maintenanceRanges.rangeLoadError"));
-    }
-  }, [t]);
+    },
+    [t]
+  );
 
   // Fetch operations for dropdown
   const fetchOperations = useCallback(async () => {
     try {
-      const response = await fetch('/api/operations?limit=1000'); // Get all operations for dropdown
+      const response = await fetch("/api/operations?limit=1000"); // Get all operations for dropdown
       if (response.ok) {
         const data = await response.json();
         setOperations(data.operations || data); // Handle both paginated and non-paginated responses
@@ -89,7 +112,7 @@ export default function MaintenanceRangesPage() {
         toast.error(t("operations.operationError"));
       }
     } catch (error) {
-      console.error('Error fetching operations:', error);
+      console.error("Error fetching operations:", error);
       toast.error(t("operations.operationError"));
     }
   }, [t]);
@@ -97,21 +120,29 @@ export default function MaintenanceRangesPage() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchMaintenanceRanges(currentPage), fetchOperations()]);
+      await Promise.all([
+        fetchMaintenanceRanges(currentPage),
+        fetchOperations(),
+      ]);
       setLoading(false);
     };
     loadData();
   }, [currentPage, fetchMaintenanceRanges, fetchOperations]);
 
-  const onSubmit = async (data: { name: string; description: string; companyId: string }) => {
+  const onSubmit = async (data: {
+    name: string;
+    description: string;
+  }) => {
     try {
-      const url = editingRange ? `/api/maintenance-ranges/${editingRange._id}` : '/api/maintenance-ranges';
-      const method = editingRange ? 'PUT' : 'POST';
+      const url = editingRange
+        ? `/api/maintenance-ranges/${editingRange._id}`
+        : "/api/maintenance-ranges";
+      const method = editingRange ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           ...data,
@@ -125,19 +156,23 @@ export default function MaintenanceRangesPage() {
         setEditingRange(null);
         setSelectedOperations([]);
         reset();
-        toast.success(editingRange ? t("maintenanceRanges.rangeUpdated") : t("maintenanceRanges.rangeCreated"));
+        toast.success(
+          editingRange
+            ? t("maintenanceRanges.rangeUpdated")
+            : t("maintenanceRanges.rangeCreated")
+        );
       } else {
         toast.error(t("maintenanceRanges.rangeError"));
       }
     } catch (error) {
-      console.error('Error saving maintenance range:', error);
+      console.error("Error saving maintenance range:", error);
       toast.error(t("maintenanceRanges.rangeError"));
     }
   };
 
   const handleEdit = (range: MaintenanceRange) => {
     setEditingRange(range);
-    setSelectedOperations(range.operations.map(op => op._id));
+    setSelectedOperations(Array.isArray(range.operations) ? range.operations.map((op) => op._id) : []);
     reset({
       name: range.name,
       description: range.description,
@@ -154,22 +189,28 @@ export default function MaintenanceRangesPage() {
     if (!rangeToDelete) return;
 
     try {
-      const response = await fetch(`/api/maintenance-ranges/${rangeToDelete._id}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `/api/maintenance-ranges/${rangeToDelete._id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (response.ok) {
         await fetchMaintenanceRanges(currentPage);
         toast.success(t("maintenanceRanges.rangeDeleted"));
       } else {
         const errorData = await response.json();
-        
+
         // Check if it's a validation error (range in use)
         if (response.status === 400 && errorData.workOrdersCount) {
           toast.error(
-            t("maintenanceRanges.rangeInUse", { 
+            t("maintenanceRanges.rangeInUse", {
               count: errorData.workOrdersCount,
-              workOrders: errorData.workOrdersCount > 1 ? t("common.workOrders") : t("common.workOrder")
+              workOrders:
+                errorData.workOrdersCount > 1
+                  ? t("common.workOrders")
+                  : t("common.workOrder"),
             })
           );
         } else {
@@ -177,7 +218,7 @@ export default function MaintenanceRangesPage() {
         }
       }
     } catch (error) {
-      console.error('Error deleting maintenance range:', error);
+      console.error("Error deleting maintenance range:", error);
       toast.error(t("maintenanceRanges.rangeError"));
     } finally {
       setShowDeleteModal(false);
@@ -191,16 +232,16 @@ export default function MaintenanceRangesPage() {
 
   const columns = [
     {
-      key: 'name' as keyof MaintenanceRange,
+      key: "name" as keyof MaintenanceRange,
       label: t("maintenanceRanges.rangeName"),
     },
     {
-      key: 'description' as keyof MaintenanceRange,
+      key: "description" as keyof MaintenanceRange,
       label: t("maintenanceRanges.description"),
-      render: (value: unknown) => (value as string) || '-',
+      render: (value: unknown) => (value as string) || "-",
     },
     {
-      key: 'operations' as keyof MaintenanceRange,
+      key: "operations" as keyof MaintenanceRange,
       label: t("maintenanceRanges.operations"),
       render: (value: unknown) => {
         const operations = value as Operation[];
@@ -208,28 +249,53 @@ export default function MaintenanceRangesPage() {
       },
     },
     {
-      key: 'createdAt' as keyof MaintenanceRange,
+      key: "createdAt" as keyof MaintenanceRange,
       label: t("common.createdAt"),
       render: (value: unknown) => formatDateSafe(value as string),
     },
   ];
 
-
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('maintenanceRanges.title')}</h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {t('maintenanceRanges.subtitle')}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-2 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-96 animate-pulse"></div>
+            </div>
+            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+          </div>
         </div>
-        
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+
+        {/* Item Count Indicator Skeleton */}
+        <div className="mb-6 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="animate-pulse">
+              {/* Table Header */}
+              <div className="grid grid-cols-4 gap-4 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+              {/* Table Rows */}
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="grid grid-cols-4 gap-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -239,16 +305,11 @@ export default function MaintenanceRangesPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('maintenanceRanges.title')}</h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          {t('maintenanceRanges.subtitle')}
-        </p>
-      </div>
-
-      <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('maintenanceRanges.title')}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {t("maintenanceRanges.title")}
+            </h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400">
               {t("maintenanceRanges.subtitle")}
             </p>
@@ -265,6 +326,16 @@ export default function MaintenanceRangesPage() {
             <Plus className="h-4 w-4 mr-2" />
             {t("maintenanceRanges.newRange")}
           </button>
+        </div>
+      </div>
+
+      {/* Item Count Indicator */}
+      <div className="mb-6 flex justify-between items-center">
+        <div className="flex items-center space-x-2">
+          <Wrench className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {totalItems} {t("maintenanceRanges.title")}{totalItems !== 1 ? 's' : ''}
+          </span>
         </div>
       </div>
 
@@ -298,31 +369,28 @@ export default function MaintenanceRangesPage() {
           setSelectedOperations([]);
           reset();
         }}
-        title={editingRange ? t("maintenanceRanges.editRange") : t("maintenanceRanges.newRange")}
+        title={
+          editingRange
+            ? t("maintenanceRanges.editRange")
+            : t("maintenanceRanges.newRange")
+        }
         size="xl"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
-          {/* Campo oculto para companyId */}
-          <input
-            type="hidden"
-            {...register('companyId')}
-            value={session?.user?.companyId || ''}
-          />
-          
+
           <FormGroup>
             <FormLabel required>{t("maintenanceRanges.rangeName")}</FormLabel>
             <FormInput
-              {...register('name')}
+              {...register("name")}
               error={errors.name?.message}
               placeholder={t("placeholders.maintenanceRangeName")}
             />
           </FormGroup>
 
-
           <FormGroup>
             <FormLabel required>{t("maintenanceRanges.description")}</FormLabel>
             <FormTextarea
-              {...register('description')}
+              {...register("description")}
               error={errors.description?.message}
               placeholder={t("placeholders.maintenanceRangeDescription")}
               rows={3}
@@ -332,10 +400,10 @@ export default function MaintenanceRangesPage() {
           <FormGroup>
             <FormLabel>{t("maintenanceRanges.operations")}</FormLabel>
             <MultiSelect
-              options={(operations || []).map(op => ({
+              options={(operations || []).map((op) => ({
                 value: op._id,
                 label: op.name,
-                description: op.description
+                description: op.description,
               }))}
               selectedValues={selectedOperations}
               onChange={setSelectedOperations}
@@ -360,11 +428,12 @@ export default function MaintenanceRangesPage() {
             >
               {t("common.cancel")}
             </FormButton>
-            <FormButton
-              type="submit"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? t("common.saving") : editingRange ? t("common.update") : t("common.create")}
+            <FormButton type="submit" disabled={isSubmitting}>
+              {isSubmitting
+                ? t("common.saving")
+                : editingRange
+                ? t("common.update")
+                : t("common.create")}
             </FormButton>
           </div>
         </Form>
@@ -379,10 +448,14 @@ export default function MaintenanceRangesPage() {
         message={t("modals.deleteMaintenanceRangeMessage")}
         confirmText={t("common.delete")}
         variant="danger"
-        itemDetails={rangeToDelete ? {
-          name: rangeToDelete.name,
-          description: rangeToDelete.description,
-        } : undefined}
+        itemDetails={
+          rangeToDelete
+            ? {
+                name: rangeToDelete.name,
+                description: rangeToDelete.description,
+              }
+            : undefined
+        }
       />
     </div>
   );

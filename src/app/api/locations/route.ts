@@ -30,7 +30,7 @@ interface FlatLocation {
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -41,14 +41,14 @@ export async function GET(request: NextRequest) {
     const includeChildren = searchParams.get('includeChildren') === 'true';
     const includeMachines = searchParams.get('includeMachines') === 'true';
     const flat = searchParams.get('flat') === 'true';
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const skip = (page - 1) * limit;
 
     const query: Record<string, unknown> = { companyId: session.user.companyId };
 
     if (parentId) {
       query.parentId = parentId;
-    } else if (!includeChildren) {
-      // Only get root locations (no parent)
-      query.parentId = { $exists: false };
     }
 
     let populateFields = '';
@@ -56,24 +56,44 @@ export async function GET(request: NextRequest) {
       populateFields = 'machines';
     }
 
-    const locations = await Location.find(query)
-      .populate(populateFields)
-      .sort({ name: 1 })
-      .lean();
-
-    // If includeChildren is true, build the tree structure
+    // If includeChildren is true, get all locations for tree building
     if (includeChildren) {
+      const allLocations = await Location.find(query)
+        .populate(populateFields)
+        .sort({ name: 1 })
+        .lean();
+
       if (flat) {
         // Return flat array with level information for dropdown
-        const flatLocations = flattenLocationTree(locations as LocationWithChildren[]);
+        const flatLocations = flattenLocationTree(allLocations as LocationWithChildren[]);
         return NextResponse.json(flatLocations);
       } else {
-        const tree = buildLocationTree(locations as LocationWithChildren[]);
+        const tree = buildLocationTree(allLocations as LocationWithChildren[]);
         return NextResponse.json(tree);
       }
     }
 
-    return NextResponse.json(locations);
+    // For regular list view, get all locations and flatten them for pagination
+    const allLocations = await Location.find(query)
+      .populate(populateFields)
+      .sort({ name: 1 })
+      .lean();
+
+    // Flatten the tree structure for list view
+    const flatLocations = flattenLocationTree(allLocations as LocationWithChildren[]);
+    
+    // Apply pagination to flattened results
+    const totalItems = flatLocations.length;
+    const paginatedLocations = flatLocations.slice(skip, skip + limit);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return NextResponse.json({
+      locations: paginatedLocations,
+      totalItems,
+      totalPages,
+      currentPage: page,
+      itemsPerPage: limit
+    });
   } catch (error) {
     console.error('Error fetching locations:', error);
     return NextResponse.json(
@@ -87,7 +107,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -103,14 +123,14 @@ export async function POST(request: NextRequest) {
       ...validatedData,
       companyId: session.user.companyId,
     };
-
+    
     await connectDB();
 
     // Check if parent exists and belongs to the same company
     if (dataWithCompany.parentId && dataWithCompany.parentId !== null) {
       const parent = await Location.findOne({
         _id: dataWithCompany.parentId,
-        companyId: session.user.companyId,
+        companyId: session.user.companyId
       });
       if (!parent) {
         return NextResponse.json(

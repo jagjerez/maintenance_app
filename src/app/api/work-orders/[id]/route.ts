@@ -11,7 +11,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -21,8 +21,8 @@ export async function GET(
     await connectDB();
     const { id } = await params;
     const workOrder = await WorkOrder.findOne({ 
-      _id: id, 
-      companyId: session.user.companyId 
+      _id: id,
+      companyId: session.user.companyId
     })
       .populate({
         path: 'machines',
@@ -61,7 +61,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -76,8 +76,7 @@ export async function PUT(
     
     // First, get the current work order to check business rules
     const currentWorkOrder = await WorkOrder.findOne({ 
-      _id: id, 
-      companyId: session.user.companyId 
+      _id: id
     });
     
     if (!currentWorkOrder) {
@@ -180,7 +179,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -192,8 +191,8 @@ export async function DELETE(
     
     // First, get the work order to check if it can be deleted
     const workOrder = await WorkOrder.findOne({ 
-      _id: id, 
-      companyId: session.user.companyId 
+      _id: id,
+      companyId: session.user.companyId
     });
     
     if (!workOrder) {
@@ -226,8 +225,8 @@ export async function DELETE(
     }
     
     await WorkOrder.findOneAndDelete({ 
-      _id: id, 
-      companyId: session.user.companyId 
+      _id: id,
+      companyId: session.user.companyId
     });
     
     return NextResponse.json({ message: 'Work order deleted successfully' });

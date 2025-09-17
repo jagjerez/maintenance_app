@@ -12,7 +12,7 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -21,7 +21,7 @@ export async function GET(
 
     const location = await Location.findOne({
       _id: id,
-      companyId: session.user.companyId,
+      companyId: session.user.companyId
     })
       .populate('machines')
       .lean();
@@ -47,7 +47,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -59,7 +59,7 @@ export async function PUT(
 
     const location = await Location.findOne({
       _id: id,
-      companyId: session.user.companyId,
+      companyId: session.user.companyId
     });
 
     if (!location) {
@@ -70,7 +70,6 @@ export async function PUT(
     if (validatedData.parentId && validatedData.parentId !== '') {
       const parent = await Location.findOne({
         _id: validatedData.parentId,
-        companyId: session.user.companyId,
       });
       if (!parent) {
         return NextResponse.json(
@@ -105,7 +104,6 @@ export async function PUT(
       const existingLocation = await Location.findOne({
         name: validatedData.name,
         parentId: validatedData.parentId || location.parentId || { $exists: false },
-        companyId: session.user.companyId,
         _id: { $ne: id },
       });
 
@@ -143,7 +141,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -152,7 +150,7 @@ export async function DELETE(
 
     const location = await Location.findOne({
       _id: id,
-      companyId: session.user.companyId,
+      companyId: session.user.companyId
     });
 
     if (!location) {

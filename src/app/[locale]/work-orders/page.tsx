@@ -1,28 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "@/hooks/useTranslations";
-import {
-  Plus,
-  Edit,
-  Trash2,
-  FileText,
-  Calendar,
-  User,
-  Settings,
-  Wrench,
-  MapPin,
-} from "lucide-react";
+import { Plus, FileText } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { FormButton } from "@/components/Form";
 import { Pagination } from "@/components/Pagination";
 import DataTable from "@/components/DataTable";
 import MaintenanceWorkModal from "@/components/MaintenanceWorkModal";
 import WorkOrderFormModal from "@/components/WorkOrderFormModal";
 import WorkOrderDeleteModal from "@/components/WorkOrderDeleteModal";
-import { WorkOrderInput } from "@/lib/validations";
 import {
   IFilledOperation,
   ILabor,
@@ -89,17 +76,18 @@ const ITEMS_PER_PAGE = 10;
 
 export default function WorkOrdersPage() {
   const { t } = useTranslations();
-  const { data: session } = useSession();
   const searchParams = useSearchParams();
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [machines, setMachines] = useState<Machine[]>([]);
   const [, setLocations] = useState<Location[]>([]);
   const [operations, setOperations] = useState<IOperation[]>([]);
-  const [maintenanceRanges, setMaintenanceRanges] = useState<Array<{
-    _id: string;
-    name: string;
-    operations: IOperation[];
-  }>>([]);
+  const [maintenanceRanges, setMaintenanceRanges] = useState<
+    Array<{
+      _id: string;
+      name: string;
+      operations: IOperation[];
+    }>
+  >([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showMaintenanceWorkModal, setShowMaintenanceWorkModal] =
@@ -108,7 +96,9 @@ export default function WorkOrdersPage() {
     null
   );
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | null>(null);
+  const [workOrderToDelete, setWorkOrderToDelete] = useState<WorkOrder | null>(
+    null
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -235,7 +225,7 @@ export default function WorkOrdersPage() {
     }
   }, [searchParams]);
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: Record<string, unknown>) => {
     try {
       const url = editingWorkOrder
         ? `/api/work-orders/${editingWorkOrder._id}`
@@ -273,19 +263,25 @@ export default function WorkOrdersPage() {
     // Convert WorkOrder to the format expected by the modal
     const workOrderForModal = {
       ...workOrder,
-      machines: workOrder.machines.map(workOrderMachine => {
-        const machine = machines.find(m => m._id === workOrderMachine.machineId);
-        return {
-          ...workOrderMachine,
-          // Add machine details for display
-          machine: machine ? {
-            _id: machine._id,
-            model: machine.model,
-            location: machine.location,
-            locationId: machine.locationId,
-          } : undefined,
-        };
-      }),
+      machines: Array.isArray(workOrder.machines)
+        ? workOrder.machines.map((workOrderMachine) => {
+            const machine = machines.find(
+              (m) => m._id === workOrderMachine.machineId
+            );
+            return {
+              ...workOrderMachine,
+              // Add machine details for display
+              machine: machine
+                ? {
+                    _id: machine._id,
+                    model: machine.model,
+                    location: machine.location,
+                    locationId: machine.locationId,
+                  }
+                : undefined,
+            };
+          })
+        : [],
     };
     setEditingWorkOrder(workOrderForModal);
     setShowModal(true);
@@ -294,9 +290,10 @@ export default function WorkOrdersPage() {
   // Check if work order has maintenance data
   const hasMaintenanceData = (workOrder: WorkOrder) => {
     return (
-      workOrder.machines.some(machine => 
-        (machine.filledOperations?.length || 0) > 0 ||
-        (machine.images?.length || 0) > 0
+      workOrder.machines.some(
+        (machine) =>
+          (machine.filledOperations?.length || 0) > 0 ||
+          (machine.images?.length || 0) > 0
       ) ||
       (workOrder.images?.length || 0) > 0 ||
       (workOrder.labor?.length || 0) > 0 ||
@@ -344,17 +341,6 @@ export default function WorkOrdersPage() {
     }
   };
 
-  const handlePerformMaintenance = (workOrder: WorkOrder) => {
-    // Create a work order with proper structure for the modal
-    const workOrderForModal = {
-      ...workOrder,
-      workOrderLocation: workOrder.location, // Use the location object instead of ID
-    };
-
-    setEditingWorkOrder(workOrderForModal);
-    setShowMaintenanceWorkModal(true);
-  };
-
   const handleMaintenanceSave = async (data: {
     filledOperations: IFilledOperation[];
     labor: ILabor[];
@@ -370,7 +356,8 @@ export default function WorkOrdersPage() {
         ...editingWorkOrder,
         images: data.images,
         status: data.status,
-        completedDate: data.status === "completed" ? new Date().toISOString() : undefined,
+        completedDate:
+          data.status === "completed" ? new Date().toISOString() : undefined,
         // Note: In the new structure, filledOperations, labor, and materials are stored per machine
         // This would need to be handled differently based on which machine the maintenance was performed on
       };
@@ -404,25 +391,31 @@ export default function WorkOrdersPage() {
 
   const columns = [
     {
-      key: 'customCode' as keyof WorkOrder,
+      key: "customCode" as keyof WorkOrder,
       label: t("workOrders.code"),
       render: (value: unknown, workOrder: WorkOrder) => {
         return workOrder.customCode || workOrder._id;
       },
     },
     {
-      key: 'machines' as keyof WorkOrder,
+      key: "machines" as keyof WorkOrder,
       label: t("workOrders.machines"),
       render: (value: unknown, workOrder: WorkOrder) => {
         const workOrderMachines = workOrder.machines || [];
-        return workOrderMachines.map((workOrderMachine) => {
-          const machine = machines.find(m => m._id === workOrderMachine.machineId);
-          return machine?.model?.name || "Unknown Machine";
-        }).join(", ") || "-";
+        return (
+          workOrderMachines
+            .map((workOrderMachine) => {
+              const machine = machines.find(
+                (m) => m._id === workOrderMachine.machineId
+              );
+              return machine?.model?.name || "Unknown Machine";
+            })
+            .join(", ") || "-"
+        );
       },
     },
     {
-      key: 'location' as keyof WorkOrder,
+      key: "location" as keyof WorkOrder,
       label: t("workOrders.location"),
       render: (value: unknown) => {
         const location = value as Location;
@@ -430,23 +423,27 @@ export default function WorkOrdersPage() {
       },
     },
     {
-      key: 'type' as keyof WorkOrder,
+      key: "type" as keyof WorkOrder,
       label: t("workOrders.type"),
       render: (value: unknown) => {
         const type = value as string;
         return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-            type === "preventive"
-              ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-              : "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300"
-          }`}>
-            {type === "preventive" ? t("workOrders.preventive") : t("workOrders.corrective")}
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              type === "preventive"
+                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                : "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300"
+            }`}
+          >
+            {type === "preventive"
+              ? t("workOrders.preventive")
+              : t("workOrders.corrective")}
           </span>
         );
       },
     },
     {
-      key: 'status' as keyof WorkOrder,
+      key: "status" as keyof WorkOrder,
       label: t("workOrders.status"),
       render: (value: unknown) => {
         const status = value as string;
@@ -463,14 +460,18 @@ export default function WorkOrdersPage() {
           }
         };
         return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(
+              status
+            )}`}
+          >
             {getStatusLabel(status)}
           </span>
         );
       },
     },
     {
-      key: 'scheduledDate' as keyof WorkOrder,
+      key: "scheduledDate" as keyof WorkOrder,
       label: t("workOrders.scheduledDate"),
       render: (value: unknown) => {
         const date = value as string;
@@ -478,19 +479,6 @@ export default function WorkOrdersPage() {
       },
     },
   ];
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
-      case "in_progress":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-      case "completed":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
-    }
-  };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -505,31 +493,54 @@ export default function WorkOrdersPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("es-ES", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  };
-
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {t("workOrders.title")}
-          </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {t("workOrders.subtitle")}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-2 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-96 animate-pulse"></div>
+            </div>
+            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+          </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+        {/* Item Count Indicator Skeleton */}
+        <div className="mb-6 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="animate-pulse">
+              {/* Table Header */}
+              <div className="grid grid-cols-6 gap-4 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+              {/* Table Rows */}
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="grid grid-cols-6 gap-4 py-3 border-b border-gray-100 dark:border-gray-700"
+                >
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -539,18 +550,11 @@ export default function WorkOrdersPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          {t("workOrders.title")}
-        </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          {t("workOrders.subtitle")}
-        </p>
-      </div>
-
-      <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('workOrders.title')}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {t("workOrders.title")}
+            </h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400">
               {t("workOrders.subtitle")}
             </p>
@@ -565,6 +569,17 @@ export default function WorkOrdersPage() {
             <Plus className="h-4 w-4 mr-2" />
             {t("workOrders.newWorkOrder")}
           </button>
+        </div>
+      </div>
+
+      {/* Item Count Indicator */}
+      <div className="mb-6 flex justify-between items-center">
+        <div className="flex items-center space-x-2">
+          <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {totalItems} {t("workOrders.title")}
+            {totalItems !== 1 ? "s" : ""}
+          </span>
         </div>
       </div>
 

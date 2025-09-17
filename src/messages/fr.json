@@ -118,7 +118,9 @@
     "machineDeleted": "Machine deleted successfully",
     "machineError": "Error saving machine",
     "machineLoadError": "Error loading machines",
-    "companyError": "Error getting company information"
+    "companyError": "Error getting company information",
+    "duplicateModelLocation": "Une machine avec ce modèle existe déjà dans cet emplacement",
+    "modelCannotBeChanged": "Le modèle ne peut pas être modifié lors de l'édition"
   },
   "machineModels": {
     "title": "Machine Models",
@@ -427,6 +429,8 @@
     "deleteLocation": "Delete Location",
     "locationName": "Location Name",
     "description": "Description",
+    "path": "Chemin",
+    "level": "Niveau",
     "parentLocation": "Parent Location",
     "selectParentLocation": "Select Parent Location",
     "noLocations": "No locations",

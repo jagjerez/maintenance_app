@@ -118,7 +118,9 @@
     "machineDeleted": "Máquina eliminada correctamente",
     "machineError": "Error al guardar la máquina",
     "machineLoadError": "Error al cargar las máquinas",
-    "companyError": "Error al obtener la información de la empresa"
+    "companyError": "Error al obtener la información de la empresa",
+    "duplicateModelLocation": "Ya existe una máquina con este modelo en esta ubicación",
+    "modelCannotBeChanged": "El modelo no se puede cambiar al editar"
   },
   "machineModels": {
     "title": "Modelos de Máquinas",
@@ -427,6 +429,8 @@
     "deleteLocation": "Eliminar Ubicación",
     "locationName": "Nombre de la Ubicación",
     "description": "Descripción",
+    "path": "Ruta",
+    "level": "Nivel",
     "parentLocation": "Ubicación Padre",
     "selectParentLocation": "Seleccionar Ubicación Padre",
     "noLocations": "No hay ubicaciones",

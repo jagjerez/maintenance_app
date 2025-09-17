@@ -1,16 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "@/hooks/useTranslations";
-import {
-  Plus,
-  ChevronDown,
-  ChevronRight,
-} from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
@@ -58,26 +53,12 @@ interface MaintenanceRange {
 
 interface Machine {
   _id: string;
-  model: {
-    _id: string;
-    name: string;
-    manufacturer: string;
-    brand: string;
-    year: number;
-  };
+  model: MachineModel;
   location: string;
   locationId?: string;
   description?: string;
-  maintenanceRanges?: {
-    _id: string;
-    name: string;
-  }[];
-  operations?: {
-    _id: string;
-    name: string;
-    description: string;
-    type?: string;
-  }[];
+  maintenanceRanges?: MaintenanceRange[];
+  operations?: Operation[];
   properties: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -85,7 +66,6 @@ interface Machine {
 
 export default function MachinesPage() {
   const { t } = useTranslations();
-  const { data: session } = useSession();
   const searchParams = useSearchParams();
   const [machines, setMachines] = useState<Machine[]>([]);
   const [machineModels, setMachineModels] = useState<MachineModel[]>([]);
@@ -200,7 +180,7 @@ export default function MachinesPage() {
       const response = await fetch("/api/machine-models");
       if (response.ok) {
         const data = await response.json();
-        setMachineModels(data);
+        setMachineModels(data.machineModels || data);
       } else {
         toast.error(t("machineModels.modelError"));
       }
@@ -349,11 +329,6 @@ export default function MachinesPage() {
     properties: Record<string, unknown>;
   }) => {
     try {
-      if (!session?.user?.companyId) {
-        toast.error(t("machines.companyError"));
-        return;
-      }
-
       if (!selectedLocation) {
         toast.error(t("machines.locationRequired"));
         return;
@@ -392,7 +367,9 @@ export default function MachinesPage() {
         reset();
       } else {
         const error = await response.json();
-        if (error.error === "duplicateMaintenanceRangeType") {
+        if (error.error === "duplicateModelLocation") {
+          toast.error(t("machines.duplicateModelLocation"));
+        } else if (error.error === "duplicateMaintenanceRangeType") {
           toast.error(t("machines.duplicateMaintenanceRangeType"));
         } else {
           toast.error(error.error || t("machines.machineError"));
@@ -438,29 +415,40 @@ export default function MachinesPage() {
 
   const columns = [
     {
-      key: 'model' as keyof Machine,
+      key: "model" as keyof Machine,
       label: t("machines.machineModel"),
-      render: (value: unknown) => {
-        const machine = value as Machine;
-        return `${machine.model.name} - ${machine.model.manufacturer} ${machine.model.brand} (${machine.model.year})`;
+      render: (value: Machine[keyof Machine]) => {
+        const model = value as Machine["model"];
+        if (!model || typeof model === 'string') {
+          return model || '-';
+        }
+        return `${model.name} - ${model.manufacturer} ${model.brand} (${model.year})`;
       },
     },
     {
-      key: 'location' as keyof Machine,
+      key: "location" as keyof Machine,
       label: t("machines.location"),
     },
     {
-      key: 'maintenanceRanges' as keyof Machine,
+      key: "maintenanceRanges" as keyof Machine,
       label: t("machines.maintenanceRanges"),
-      render: (value: unknown) => {
-        const ranges = value as Machine['maintenanceRanges'];
-        return ranges?.map(range => range.name).join(', ') || '-';
+      render: (value: Machine[keyof Machine]) => {
+        const ranges = value as Machine["maintenanceRanges"];
+        if (!ranges || !Array.isArray(ranges)) {
+          return "-";
+        }
+        return ranges.map((range) => {
+          if (typeof range === 'string') {
+            return range;
+          }
+          return range?.name || '-';
+        }).join(", ");
       },
     },
     {
-      key: 'createdAt' as keyof Machine,
+      key: "createdAt" as keyof Machine,
       label: t("common.createdAt"),
-      render: (value: unknown) => formatDateSafe(value as string),
+      render: (value: Machine[keyof Machine]) => formatDateSafe(value as string),
     },
   ];
 
@@ -468,19 +456,50 @@ export default function MachinesPage() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {t("machines.title")}
-          </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {t("machines.subtitle")}
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-64 mb-2 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-96 animate-pulse"></div>
+            </div>
+            <div className="h-10 bg-gray-200 dark:bg-gray-700 rounded w-32 animate-pulse"></div>
+          </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <div className="animate-pulse space-y-4">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+        {/* Item Count Indicator Skeleton */}
+        <div className="mb-6 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <div className="h-5 w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-24 animate-pulse"></div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <div className="animate-pulse">
+              {/* Table Header */}
+              <div className="grid grid-cols-6 gap-4 mb-4 pb-2 border-b border-gray-200 dark:border-gray-700">
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+              </div>
+              {/* Table Rows */}
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className="grid grid-cols-6 gap-4 py-3 border-b border-gray-100 dark:border-gray-700"
+                >
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -490,18 +509,11 @@ export default function MachinesPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-          {t("machines.title")}
-        </h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-400">
-          {t("machines.subtitle")}
-        </p>
-      </div>
-
-      <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('machines.title')}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {t("machines.title")}
+            </h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400">
               {t("machines.subtitle")}
             </p>
@@ -521,6 +533,17 @@ export default function MachinesPage() {
             <Plus className="h-4 w-4 mr-2" />
             {t("machines.newMachine")}
           </button>
+        </div>
+      </div>
+
+      {/* Item Count Indicator */}
+      <div className="mb-6 flex justify-between items-center">
+        <div className="flex items-center space-x-2">
+          <Wrench className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {totalItems} {t("machines.title")}
+            {totalItems !== 1 ? "s" : ""}
+          </span>
         </div>
       </div>
 
@@ -574,15 +597,25 @@ export default function MachinesPage() {
 
           <FormGroup>
             <FormLabel required>{t("machines.machineModel")}</FormLabel>
-            <FormSelect {...register("model")} error={errors.model?.message}>
+            <FormSelect 
+              {...register("model")} 
+              error={errors.model?.message}
+              disabled={!!editingMachine}
+            >
               <option value="">{t("machines.selectModel")}</option>
-              {machineModels.map((model) => (
-                <option key={model._id} value={model._id}>
-                  {model.name} - {model.manufacturer} {model.brand} (
-                  {model.year})
-                </option>
-              ))}
+              {Array.isArray(machineModels) &&
+                machineModels.map((model) => (
+                  <option key={model._id} value={model._id}>
+                    {model.name} - {model.manufacturer} {model.brand} (
+                    {model.year})
+                  </option>
+                ))}
             </FormSelect>
+            {editingMachine && (
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {t("machines.modelCannotBeChanged")}
+              </p>
+            )}
           </FormGroup>
 
           <FormGroup>
@@ -657,11 +690,15 @@ export default function MachinesPage() {
           <FormGroup>
             <FormLabel>{t("machines.maintenanceRanges")}</FormLabel>
             <MultiSelect
-              options={maintenanceRanges.map((range) => ({
-                value: range._id,
-                label: range.name,
-                description: range.description,
-              }))}
+              options={
+                Array.isArray(maintenanceRanges)
+                  ? maintenanceRanges.map((range) => ({
+                      value: range._id,
+                      label: range.name,
+                      description: range.description,
+                    }))
+                  : []
+              }
               selectedValues={selectedMaintenanceRanges}
               onChange={setSelectedMaintenanceRanges}
               placeholder={t("machines.selectMaintenanceRanges")}
@@ -672,18 +709,28 @@ export default function MachinesPage() {
           <FormGroup>
             <FormLabel>{t("machines.operations")}</FormLabel>
             <MultiSelect
-              options={operations
-                .filter(
-                  (operation) =>
-                    !maintenanceRanges?.some((range) =>
-                      range.operations?.some((op) => op._id === operation._id)
-                    )
-                )
-                .map((operation) => ({
-                  value: operation._id,
-                  label: operation.name,
-                  description: operation.description,
-                }))}
+              options={
+                Array.isArray(operations)
+                  ? operations
+                      .filter(
+                        (operation) =>
+                          !maintenanceRanges
+                            .filter((range) =>
+                              selectedMaintenanceRanges.includes(range._id)
+                            )
+                            .some((range) =>
+                              range.operations?.some(
+                                (op) => op._id === operation._id
+                              )
+                            )
+                      )
+                      .map((operation) => ({
+                        value: operation._id,
+                        label: operation.name,
+                        description: operation.description,
+                      }))
+                  : []
+              }
               selectedValues={selectedOperations}
               onChange={setSelectedOperations}
               placeholder={t("machines.selectOperations")}
@@ -845,10 +892,18 @@ export default function MachinesPage() {
         message={t("modals.deleteMachineMessage")}
         confirmText={t("common.delete")}
         variant="danger"
-        itemDetails={machineToDelete ? {
-          name: machineToDelete.model.name,
-          description: `${machineToDelete.model.manufacturer} ${machineToDelete.model.brand} - ${machineToDelete.location}`,
-        } : undefined}
+        itemDetails={
+          machineToDelete
+            ? {
+                name: machineToDelete.model && typeof machineToDelete.model === 'object' 
+                  ? machineToDelete.model.name 
+                  : machineToDelete.model || 'Unknown',
+                description: machineToDelete.model && typeof machineToDelete.model === 'object'
+                  ? `${machineToDelete.model.manufacturer} ${machineToDelete.model.brand} - ${machineToDelete.location}`
+                  : machineToDelete.location,
+              }
+            : undefined
+        }
       />
     </div>
   );
