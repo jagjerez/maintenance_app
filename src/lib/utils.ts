@@ -6,7 +6,11 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(date: string | Date) {
-  return new Date(date).toLocaleDateString('es-ES', {
+  const dateObj = new Date(date);
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid Date';
+  }
+  return dateObj.toLocaleDateString(undefined, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -14,7 +18,11 @@ export function formatDate(date: string | Date) {
 }
 
 export function formatDateTime(date: string | Date) {
-  return new Date(date).toLocaleString('es-ES', {
+  const dateObj = new Date(date);
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid Date';
+  }
+  return dateObj.toLocaleString(undefined, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -26,10 +34,49 @@ export function formatDateTime(date: string | Date) {
 // Client-safe date formatting to prevent hydration mismatches
 export function formatDateSafe(date: string | Date) {
   const d = new Date(date);
+  if (isNaN(d.getTime())) {
+    return 'Invalid Date';
+  }
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${day}/${month}/${year}`;
+}
+
+// Create UTC date from local date input (for datetime-local inputs)
+export function createUTCDateFromLocalInput(localDateTimeString: string): Date {
+  // localDateTimeString format: "2024-01-15T14:30"
+  const localDate = new Date(localDateTimeString);
+  // Convert to UTC by adjusting for timezone offset
+  const utcDate = new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
+  return utcDate;
+}
+
+// Create local date from UTC date (for datetime-local inputs)
+export function createLocalDateFromUTC(utcDate: Date | string): string {
+  const date = new Date(utcDate);
+  if (isNaN(date.getTime())) {
+    return '';
+  }
+  // Adjust for timezone offset to get local time
+  const localDate = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 16);
+}
+
+// Format date with timezone information
+export function formatDateTimeWithTimezone(date: string | Date) {
+  const dateObj = new Date(date);
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid Date';
+  }
+  return dateObj.toLocaleString(undefined, {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  });
 }
 
 export function getStatusColor(status: string) {

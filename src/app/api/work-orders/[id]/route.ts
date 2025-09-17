@@ -135,8 +135,8 @@ export async function PUT(
       ...(validatedData.labor && {
         labor: validatedData.labor.map(l => ({
           ...l,
-          startTime: new Date(l.startTime),
-          endTime: l.endTime ? new Date(l.endTime) : undefined,
+          startTime: new Date(l.startTime), // Already UTC from frontend
+          endTime: l.endTime ? new Date(l.endTime) : undefined, // Already UTC from frontend
         }))
       }),
       ...(validatedData.materials && { materials: validatedData.materials }),
@@ -164,11 +164,16 @@ export async function PUT(
             let filledAt: Date;
             
             if (filledAtValue instanceof Date) {
-              filledAt = filledAtValue;
+              filledAt = filledAtValue; // Already UTC
             } else if (typeof filledAtValue === 'string') {
-              filledAt = new Date(filledAtValue);
+              filledAt = new Date(filledAtValue); // ISO string is already UTC
             } else {
-              filledAt = new Date(); // fallback to current date
+              filledAt = new Date(); // fallback to current UTC date
+            }
+            
+            // Ensure the date is valid
+            if (isNaN(filledAt.getTime())) {
+              filledAt = new Date(); // fallback to current UTC date
             }
             
             return {
@@ -185,11 +190,16 @@ export async function PUT(
             let uploadedAt: Date;
             
             if (uploadedAtValue instanceof Date) {
-              uploadedAt = uploadedAtValue;
+              uploadedAt = uploadedAtValue; // Already UTC
             } else if (typeof uploadedAtValue === 'string') {
-              uploadedAt = new Date(uploadedAtValue);
+              uploadedAt = new Date(uploadedAtValue); // ISO string is already UTC
             } else {
-              uploadedAt = new Date(); // fallback to current date
+              uploadedAt = new Date(); // fallback to current UTC date
+            }
+            
+            // Ensure the date is valid
+            if (isNaN(uploadedAt.getTime())) {
+              uploadedAt = new Date(); // fallback to current UTC date
             }
             
             return {

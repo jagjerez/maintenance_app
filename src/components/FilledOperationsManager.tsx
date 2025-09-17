@@ -121,11 +121,11 @@ export default function FilledOperationsManager({
       case 'boolean':
         return value ? t('common.yes') : t('common.no');
       case 'date':
-        return value ? new Date(value as string).toLocaleDateString() : '-';
+        return value ? new Date(value as string).toLocaleDateString(undefined) : '-';
       case 'time':
         return String(value);
       case 'datetime':
-        return value ? new Date(value as string).toLocaleString() : '-';
+        return value ? new Date(value as string).toLocaleString(undefined) : '-';
       default:
         return String(value);
     }

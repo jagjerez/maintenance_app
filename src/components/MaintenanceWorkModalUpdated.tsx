@@ -22,6 +22,7 @@ import {
   FormTextarea,
 } from "@/components/Form";
 import ImageUpload from "@/components/ImageUpload";
+import { formatDateTime, createUTCDateFromLocalInput, createLocalDateFromUTC } from "@/lib/utils";
 import {
   IFilledOperation,
   ILabor,
@@ -413,24 +414,8 @@ export default function MaintenanceWorkModalUpdated({
     }
   };
 
-  const formatDateTime = (date: Date | string) => {
-    try {
-      const dateObj = new Date(date);
-      if (isNaN(dateObj.getTime())) {
-        return "Invalid Date";
-      }
-      return dateObj.toLocaleString("es-ES", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } catch (error) {
-      console.error("Error formatting date:", error);
-      return "Invalid Date";
-    }
-  };
+  // Use the global formatDateTime function from utils
+  // const formatDateTime = (date: Date | string) => { ... } // Removed local implementation
 
   const calculateLaborHours = (laborEntry: ILabor) => {
     if (!laborEntry.endTime) return 0;
@@ -757,22 +742,10 @@ export default function MaintenanceWorkModalUpdated({
                       <FormLabel>{t("workOrders.startTime")}</FormLabel>
                       <FormInput
                         type="datetime-local"
-                        value={(() => {
-                          try {
-                            const date = new Date(laborEntry.startTime);
-                            if (isNaN(date.getTime())) return "";
-                            return date.toISOString().slice(0, 16);
-                          } catch (error) {
-                            console.error(
-                              "Error formatting start time:",
-                              error
-                            );
-                            return "";
-                          }
-                        })()}
+                        value={createLocalDateFromUTC(laborEntry.startTime)}
                         onChange={(e) => {
-                          const newTime = new Date(e.target.value);
-                          handleUpdateLabor(index, "startTime", newTime);
+                          const utcTime = createUTCDateFromLocalInput(e.target.value);
+                          handleUpdateLabor(index, "startTime", utcTime);
                         }}
                       />
                     </div>
@@ -782,24 +755,11 @@ export default function MaintenanceWorkModalUpdated({
                       <div className="flex space-x-2">
                         <FormInput
                           type="datetime-local"
-                          value={(() => {
-                            if (!laborEntry.endTime) return "";
-                            try {
-                              const date = new Date(laborEntry.endTime);
-                              if (isNaN(date.getTime())) return "";
-                              return date.toISOString().slice(0, 16);
-                            } catch (error) {
-                              console.error(
-                                "Error formatting end time:",
-                                error
-                              );
-                              return "";
-                            }
-                          })()}
+                          value={laborEntry.endTime ? createLocalDateFromUTC(laborEntry.endTime) : ""}
                           onChange={(e) => {
                             if (e.target.value) {
-                              const newTime = new Date(e.target.value);
-                              handleUpdateLabor(index, "endTime", newTime);
+                              const utcTime = createUTCDateFromLocalInput(e.target.value);
+                              handleUpdateLabor(index, "endTime", utcTime);
                             }
                           }}
                           disabled={laborEntry.isActive}
