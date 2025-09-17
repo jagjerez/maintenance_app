@@ -30,28 +30,27 @@ export async function GET(request: NextRequest) {
     
     const workOrders = await WorkOrder.find(query)
       .populate({
-        path: 'machines',
+        path: 'machines.machineId',
+        model: 'Machine',
         populate: {
           path: 'model',
           model: 'MachineModel'
         }
       })
       .populate({
-        path: 'machines',
+        path: 'machines.maintenanceRangeIds',
+        model: 'MaintenanceRange',
         populate: {
-          path: 'maintenanceRanges',
-          populate: {
-            path: 'operations',
-            model: 'Operation'
-          }
+          path: 'operations',
+          model: 'Operation'
         }
       })
-      .populate('location')
-      .populate('operations')
       .populate({
-        path: 'filledOperations.operationId',
+        path: 'machines.operations',
         model: 'Operation'
       })
+      .populate('location')
+      .populate('workOrderLocation')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -116,28 +115,27 @@ export async function POST(request: NextRequest) {
     
     const populatedWorkOrder = await WorkOrder.findById(workOrder._id)
       .populate({
-        path: 'machines',
+        path: 'machines.machineId',
+        model: 'Machine',
         populate: {
           path: 'model',
           model: 'MachineModel'
         }
       })
       .populate({
-        path: 'machines',
+        path: 'machines.maintenanceRangeIds',
+        model: 'MaintenanceRange',
         populate: {
-          path: 'maintenanceRanges',
-          populate: {
-            path: 'operations',
-            model: 'Operation'
-          }
+          path: 'operations',
+          model: 'Operation'
         }
       })
-      .populate('location')
-      .populate('operations')
       .populate({
-        path: 'filledOperations.operationId',
+        path: 'machines.operations',
         model: 'Operation'
-      });
+      })
+      .populate('location')
+      .populate('workOrderLocation');
     
     return NextResponse.json(populatedWorkOrder, { status: 201 });
   } catch (error) {

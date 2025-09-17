@@ -1,13 +1,27 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
-import { useTranslations } from '@/hooks/useTranslations';
-import { Settings, User, Bell, Globe, Palette, Building2, Save } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import { Form, FormGroup, FormLabel, FormInput, FormButton } from '@/components/Form';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import LanguageSelector from '@/components/LanguageSelector';
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useTranslations } from "@/hooks/useTranslations";
+import {
+  Settings,
+  User,
+  Bell,
+  Globe,
+  Palette,
+  Building2,
+  Save,
+} from "lucide-react";
+import { toast } from "react-hot-toast";
+import {
+  Form,
+  FormGroup,
+  FormLabel,
+  FormInput,
+  FormButton,
+} from "@/components/Form";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import LanguageSelector from "@/components/LanguageSelector";
 
 export default function SettingsPage() {
   const { t } = useTranslations();
@@ -16,9 +30,9 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
 
   const [settings, setSettings] = useState({
-    companyName: session?.user?.company?.name || '',
-    appName: session?.user?.company?.appName || '',
-    email: session?.user?.email || '',
+    companyName: session?.user?.company?.name || "",
+    appName: session?.user?.company?.appName || "",
+    email: session?.user?.email || "",
     notifications: {
       email: true,
       push: true,
@@ -29,12 +43,12 @@ export default function SettingsPage() {
     setLoading(true);
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       setSaved(true);
       toast.success(t("settings.settingsSaved"));
       setTimeout(() => setSaved(false), 3000);
     } catch (error) {
-      console.error('Error saving settings:', error);
+      console.error("Error saving settings:", error);
       toast.error(t("settings.settingsError"));
     } finally {
       setLoading(false);
@@ -42,17 +56,20 @@ export default function SettingsPage() {
   };
 
   const handleInputChange = (field: string, value: string | boolean) => {
-    if (field.includes('.')) {
-      const [parent, child] = field.split('.');
-      setSettings(prev => ({
+    if (field.includes(".")) {
+      const [parent, child] = field.split(".");
+      setSettings((prev) => ({
         ...prev,
         [parent]: {
-          ...(prev[parent as keyof typeof prev] as Record<string, string | boolean>),
+          ...(prev[parent as keyof typeof prev] as Record<
+            string,
+            string | boolean
+          >),
           [child]: value,
         },
       }));
     } else {
-      setSettings(prev => ({
+      setSettings((prev) => ({
         ...prev,
         [field]: value,
       }));
@@ -62,12 +79,14 @@ export default function SettingsPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('settings.title')}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          {t("settings.title")}
+        </h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400">
           {t("settings.subtitle")}
         </p>
       </div>
-      
+
       <div className="space-y-6">
         {/* Company Settings */}
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
@@ -75,7 +94,7 @@ export default function SettingsPage() {
             <div className="flex items-center space-x-2">
               <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">
-                {t('settings.company')}
+                {t("settings.company")}
               </h2>
             </div>
           </div>
@@ -84,7 +103,9 @@ export default function SettingsPage() {
               <FormLabel>{t("settings.companyName")}</FormLabel>
               <FormInput
                 value={settings.companyName}
-                onChange={(e) => handleInputChange('companyName', e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("companyName", e.target.value)
+                }
                 placeholder={t("placeholders.companyName")}
               />
             </FormGroup>
@@ -92,7 +113,7 @@ export default function SettingsPage() {
               <FormLabel>{t("settings.appName")}</FormLabel>
               <FormInput
                 value={settings.appName}
-                onChange={(e) => handleInputChange('appName', e.target.value)}
+                onChange={(e) => handleInputChange("appName", e.target.value)}
                 placeholder={t("placeholders.appName")}
               />
             </FormGroup>
@@ -114,7 +135,7 @@ export default function SettingsPage() {
               <FormLabel>{t("auth.email")}</FormLabel>
               <FormInput
                 value={settings.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
+                onChange={(e) => handleInputChange("email", e.target.value)}
                 placeholder={t("placeholders.email")}
                 type="email"
               />
@@ -136,7 +157,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                  {t('settings.theme')}
+                  {t("settings.theme")}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {t("settings.themeDescription")}
@@ -147,7 +168,7 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                  {t('settings.language')}
+                  {t("settings.language")}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {t("settings.languageDescription")}
@@ -164,7 +185,7 @@ export default function SettingsPage() {
             <div className="flex items-center space-x-2">
               <Bell className="h-5 w-5 text-orange-600 dark:text-orange-400" />
               <h2 className="text-lg font-medium text-gray-900 dark:text-white">
-                {t('settings.notifications')}
+                {t("settings.notifications")}
               </h2>
             </div>
           </div>
@@ -181,7 +202,9 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={settings.notifications.email}
-                onChange={(e) => handleInputChange('notifications.email', e.target.checked)}
+                onChange={(e) =>
+                  handleInputChange("notifications.email", e.target.checked)
+                }
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
             </div>
@@ -197,7 +220,9 @@ export default function SettingsPage() {
               <input
                 type="checkbox"
                 checked={settings.notifications.push}
-                onChange={(e) => handleInputChange('notifications.push', e.target.checked)}
+                onChange={(e) =>
+                  handleInputChange("notifications.push", e.target.checked)
+                }
                 className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
             </div>
@@ -213,7 +238,11 @@ export default function SettingsPage() {
           >
             <Save className="h-4 w-4" />
             <span>
-              {loading ? t("common.saving") : saved ? t("settings.saved") : t("settings.saveChanges")}
+              {loading
+                ? t("common.saving")
+                : saved
+                ? t("settings.saved")
+                : t("settings.saveChanges")}
             </span>
           </FormButton>
         </div>

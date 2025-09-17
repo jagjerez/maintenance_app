@@ -129,10 +129,7 @@ export default function MaintenanceRangesPage() {
     loadData();
   }, [currentPage, fetchMaintenanceRanges, fetchOperations]);
 
-  const onSubmit = async (data: {
-    name: string;
-    description: string;
-  }) => {
+  const onSubmit = async (data: { name: string; description: string }) => {
     try {
       const url = editingRange
         ? `/api/maintenance-ranges/${editingRange._id}`
@@ -172,7 +169,11 @@ export default function MaintenanceRangesPage() {
 
   const handleEdit = (range: MaintenanceRange) => {
     setEditingRange(range);
-    setSelectedOperations(Array.isArray(range.operations) ? range.operations.map((op) => op._id) : []);
+    setSelectedOperations(
+      Array.isArray(range.operations)
+        ? range.operations.map((op) => op._id)
+        : []
+    );
     reset({
       name: range.name,
       description: range.description,
@@ -288,7 +289,10 @@ export default function MaintenanceRangesPage() {
               </div>
               {/* Table Rows */}
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="grid grid-cols-4 gap-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                <div
+                  key={i}
+                  className="grid grid-cols-4 gap-4 py-3 border-b border-gray-100 dark:border-gray-700"
+                >
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -334,7 +338,8 @@ export default function MaintenanceRangesPage() {
         <div className="flex items-center space-x-2">
           <Wrench className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {totalItems} {t("maintenanceRanges.title")}{totalItems !== 1 ? 's' : ''}
+            {totalItems} {t("maintenanceRanges.title")}
+            {totalItems !== 1 ? "s" : ""}
           </span>
         </div>
       </div>
@@ -377,7 +382,6 @@ export default function MaintenanceRangesPage() {
         size="xl"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
-
           <FormGroup>
             <FormLabel required>{t("maintenanceRanges.rangeName")}</FormLabel>
             <FormInput

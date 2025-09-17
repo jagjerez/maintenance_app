@@ -257,7 +257,10 @@ export default function OperationsPage() {
               </div>
               {/* Table Rows */}
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="grid grid-cols-4 gap-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                <div
+                  key={i}
+                  className="grid grid-cols-4 gap-4 py-3 border-b border-gray-100 dark:border-gray-700"
+                >
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -289,7 +292,12 @@ export default function OperationsPage() {
               reset({
                 name: "",
                 description: "",
-                type: "text" as "text" | "date" | "time" | "datetime" | "boolean"
+                type: "text" as
+                  | "text"
+                  | "date"
+                  | "time"
+                  | "datetime"
+                  | "boolean",
               });
               setShowModal(true);
             }}
@@ -306,7 +314,8 @@ export default function OperationsPage() {
         <div className="flex items-center space-x-2">
           <Wrench className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {totalItems} {t("operations.title")}{totalItems !== 1 ? 's' : ''}
+            {totalItems} {t("operations.title")}
+            {totalItems !== 1 ? "s" : ""}
           </span>
         </div>
       </div>
@@ -348,7 +357,6 @@ export default function OperationsPage() {
         size="xl"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
-
           <FormGroup>
             <FormLabel required>{t("operations.operationName")}</FormLabel>
             <FormInput
@@ -400,9 +408,7 @@ export default function OperationsPage() {
             >
               {t("common.cancel")}
             </FormButton>
-            <FormButton type="submit" disabled={isSubmitting} onClick={() => {
-              console.log(errors);
-            }}>
+            <FormButton type="submit" disabled={isSubmitting}>
               {isSubmitting
                 ? t("common.saving")
                 : editingOperation

@@ -25,18 +25,27 @@ export async function GET(
       companyId: session.user.companyId
     })
       .populate({
-        path: 'machines',
+        path: 'machines.machineId',
+        model: 'Machine',
         populate: {
           path: 'model',
           model: 'MachineModel'
         }
       })
-      .populate('location')
-      .populate('operations')
       .populate({
-        path: 'filledOperations.operationId',
+        path: 'machines.maintenanceRangeIds',
+        model: 'MaintenanceRange',
+        populate: {
+          path: 'operations',
+          model: 'Operation'
+        }
+      })
+      .populate({
+        path: 'machines.operations',
         model: 'Operation'
-      });
+      })
+      .populate('location')
+      .populate('workOrderLocation');
     
     if (!workOrder) {
       return NextResponse.json(
@@ -137,18 +146,27 @@ export async function PUT(
       { new: true, runValidators: true }
     )
       .populate({
-        path: 'machines',
+        path: 'machines.machineId',
+        model: 'Machine',
         populate: {
           path: 'model',
           model: 'MachineModel'
         }
       })
-      .populate('location')
-      .populate('operations')
       .populate({
-        path: 'filledOperations.operationId',
+        path: 'machines.maintenanceRangeIds',
+        model: 'MaintenanceRange',
+        populate: {
+          path: 'operations',
+          model: 'Operation'
+        }
+      })
+      .populate({
+        path: 'machines.operations',
         model: 'Operation'
-      });
+      })
+      .populate('location')
+      .populate('workOrderLocation');
     
     if (!workOrder) {
       return NextResponse.json(

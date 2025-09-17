@@ -102,7 +102,7 @@ export default function WorkOrdersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   // Fetch work orders with pagination
   const fetchWorkOrders = useCallback(
     async (page = 1) => {
@@ -227,6 +227,7 @@ export default function WorkOrdersPage() {
 
   const onSubmit = async (data: Record<string, unknown>) => {
     try {
+      setIsSubmitting(true);
       const url = editingWorkOrder
         ? `/api/work-orders/${editingWorkOrder._id}`
         : "/api/work-orders";
@@ -616,6 +617,7 @@ export default function WorkOrdersPage() {
         machines={machines}
         operations={operations}
         maintenanceRanges={maintenanceRanges}
+        isSubmitting={isSubmitting}
       />
       {/* Delete Confirmation Modal */}
       <WorkOrderDeleteModal

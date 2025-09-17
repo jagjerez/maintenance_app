@@ -1,18 +1,24 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { Plus, Settings } from 'lucide-react';
-import DataTable from '@/components/DataTable';
-import Modal from '@/components/Modal';
-import { ConfirmationModal } from '@/components/ConfirmationModal';
-import { Form, FormGroup, FormLabel, FormInput, FormButton } from '@/components/Form';
-import { Pagination } from '@/components/Pagination';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { machineModelSchema } from '@/lib/validations';
-import { formatDateSafe } from '@/lib/utils';
-import toast from 'react-hot-toast';
-import { useTranslations } from '@/hooks/useTranslations';
+import { useEffect, useState } from "react";
+import { Plus, Settings } from "lucide-react";
+import DataTable from "@/components/DataTable";
+import Modal from "@/components/Modal";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
+import {
+  Form,
+  FormGroup,
+  FormLabel,
+  FormInput,
+  FormButton,
+} from "@/components/Form";
+import { Pagination } from "@/components/Pagination";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { machineModelSchema } from "@/lib/validations";
+import { formatDateSafe } from "@/lib/utils";
+import toast from "react-hot-toast";
+import { useTranslations } from "@/hooks/useTranslations";
 
 interface MachineModel {
   _id: string;
@@ -41,7 +47,7 @@ export default function MachineModelsPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
     reset,
     setValue,
   } = useForm({
@@ -55,38 +61,54 @@ export default function MachineModelsPage() {
   const fetchMachineModels = async (page = 1) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/machine-models?page=${page}&limit=${ITEMS_PER_PAGE}`);
+      const response = await fetch(
+        `/api/machine-models?page=${page}&limit=${ITEMS_PER_PAGE}`
+      );
       if (response.ok) {
         const data = await response.json();
         setMachineModels(data.machineModels || data);
-        setTotalPages(data.totalPages || Math.ceil((data.machineModels || data).length / ITEMS_PER_PAGE));
+        setTotalPages(
+          data.totalPages ||
+            Math.ceil((data.machineModels || data).length / ITEMS_PER_PAGE)
+        );
         setTotalItems(data.totalItems || (data.machineModels || data).length);
       } else {
         toast.error(t("machineModels.modelError"));
       }
     } catch (error) {
-      console.error('Error fetching machine models:', error);
+      console.error("Error fetching machine models:", error);
       toast.error(t("machineModels.modelError"));
     } finally {
       setLoading(false);
     }
   };
 
-  const onSubmit = async (data: { name: string; manufacturer: string; brand: string; year: number; }) => {
+  const onSubmit = async (data: {
+    name: string;
+    manufacturer: string;
+    brand: string;
+    year: number;
+  }) => {
     try {
-      const url = editingModel ? `/api/machine-models/${editingModel._id}` : '/api/machine-models';
-      const method = editingModel ? 'PUT' : 'POST';
+      const url = editingModel
+        ? `/api/machine-models/${editingModel._id}`
+        : "/api/machine-models";
+      const method = editingModel ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
 
       if (response.ok) {
-        toast.success(editingModel ? t("machineModels.modelUpdated") : t("machineModels.modelCreated"));
+        toast.success(
+          editingModel
+            ? t("machineModels.modelUpdated")
+            : t("machineModels.modelCreated")
+        );
         fetchMachineModels(currentPage);
         setShowModal(false);
         setEditingModel(null);
@@ -96,17 +118,17 @@ export default function MachineModelsPage() {
         toast.error(error.error || t("machineModels.modelError"));
       }
     } catch (error) {
-      console.error('Error saving machine model:', error);
+      console.error("Error saving machine model:", error);
       toast.error(t("machineModels.modelError"));
     }
   };
 
   const handleEdit = (model: MachineModel) => {
     setEditingModel(model);
-    setValue('name', model.name);
-    setValue('manufacturer', model.manufacturer);
-    setValue('brand', model.brand);
-    setValue('year', model.year);
+    setValue("name", model.name);
+    setValue("manufacturer", model.manufacturer);
+    setValue("brand", model.brand);
+    setValue("year", model.year);
     setShowModal(true);
   };
 
@@ -120,7 +142,7 @@ export default function MachineModelsPage() {
 
     try {
       const response = await fetch(`/api/machine-models/${modelToDelete._id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (response.ok) {
@@ -130,7 +152,7 @@ export default function MachineModelsPage() {
         toast.error(t("machineModels.modelError"));
       }
     } catch (error) {
-      console.error('Error deleting machine model:', error);
+      console.error("Error deleting machine model:", error);
       toast.error(t("machineModels.modelError"));
     } finally {
       setShowDeleteModal(false);
@@ -150,23 +172,23 @@ export default function MachineModelsPage() {
 
   const columns = [
     {
-      key: 'name' as keyof MachineModel,
+      key: "name" as keyof MachineModel,
       label: t("common.name"),
     },
     {
-      key: 'manufacturer' as keyof MachineModel,
+      key: "manufacturer" as keyof MachineModel,
       label: t("common.manufacturer"),
     },
     {
-      key: 'brand' as keyof MachineModel,
+      key: "brand" as keyof MachineModel,
       label: t("common.brand"),
     },
     {
-      key: 'year' as keyof MachineModel,
+      key: "year" as keyof MachineModel,
       label: t("common.year"),
     },
     {
-      key: 'createdAt' as keyof MachineModel,
+      key: "createdAt" as keyof MachineModel,
       label: t("common.createdAt"),
       render: (value: unknown) => formatDateSafe(value as string),
     },
@@ -206,7 +228,10 @@ export default function MachineModelsPage() {
               </div>
               {/* Table Rows */}
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="grid grid-cols-5 gap-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                <div
+                  key={i}
+                  className="grid grid-cols-5 gap-4 py-3 border-b border-gray-100 dark:border-gray-700"
+                >
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -226,9 +251,11 @@ export default function MachineModelsPage() {
       <div className="mb-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('machineModels.title')}</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {t("machineModels.title")}
+            </h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400">
-               {t("machineModels.subtitle")}
+              {t("machineModels.subtitle")}
             </p>
           </div>
           <button
@@ -246,7 +273,8 @@ export default function MachineModelsPage() {
         <div className="flex items-center space-x-2">
           <Settings className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {machineModels.length} {t("machineModels.title")}{machineModels.length !== 1 ? 's' : ''}
+            {machineModels.length} {t("machineModels.title")}
+            {machineModels.length !== 1 ? "s" : ""}
           </span>
         </div>
       </div>
@@ -280,15 +308,18 @@ export default function MachineModelsPage() {
           setEditingModel(null);
           reset();
         }}
-        title={editingModel ? t("machineModels.editModel") : t("machineModels.newModel")}
+        title={
+          editingModel
+            ? t("machineModels.editModel")
+            : t("machineModels.newModel")
+        }
         size="xl"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
-          
           <FormGroup>
             <FormLabel required>{t("common.name")}</FormLabel>
             <FormInput
-              {...register('name')}
+              {...register("name")}
               error={errors.name?.message}
               placeholder={t("placeholders.modelName")}
             />
@@ -297,7 +328,7 @@ export default function MachineModelsPage() {
           <FormGroup>
             <FormLabel required>{t("common.manufacturer")}</FormLabel>
             <FormInput
-              {...register('manufacturer')}
+              {...register("manufacturer")}
               error={errors.manufacturer?.message}
               placeholder={t("placeholders.manufacturerName")}
             />
@@ -306,7 +337,7 @@ export default function MachineModelsPage() {
           <FormGroup>
             <FormLabel required>{t("common.brand")}</FormLabel>
             <FormInput
-              {...register('brand')}
+              {...register("brand")}
               error={errors.brand?.message}
               placeholder={t("placeholders.manufacturerBrand")}
             />
@@ -316,12 +347,11 @@ export default function MachineModelsPage() {
             <FormLabel required>{t("common.year")}</FormLabel>
             <FormInput
               type="number"
-              {...register('year', { valueAsNumber: true })}
+              {...register("year", { valueAsNumber: true })}
               error={errors.year?.message}
               placeholder={t("placeholders.manufacturingYear")}
             />
           </FormGroup>
-
 
           <div className="flex justify-end space-x-3 mt-6">
             <FormButton
@@ -335,8 +365,12 @@ export default function MachineModelsPage() {
             >
               {t("common.cancel")}
             </FormButton>
-            <FormButton type="submit">
-              {editingModel ? t("common.update") : t("common.create")}
+            <FormButton type="submit" disabled={isSubmitting}>
+              {isSubmitting
+                  ? t("common.saving")
+                  : editingModel
+                  ? t("common.update")
+                  : t("common.create")}
             </FormButton>
           </div>
         </Form>
@@ -351,10 +385,14 @@ export default function MachineModelsPage() {
         message={t("modals.deleteModelMessage")}
         confirmText={t("common.delete")}
         variant="danger"
-        itemDetails={modelToDelete ? {
-          name: modelToDelete.name,
-          description: `${modelToDelete.manufacturer} - ${modelToDelete.year}`
-        } : undefined}
+        itemDetails={
+          modelToDelete
+            ? {
+                name: modelToDelete.name,
+                description: `${modelToDelete.manufacturer} - ${modelToDelete.year}`,
+              }
+            : undefined
+        }
       />
     </div>
   );

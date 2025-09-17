@@ -1,19 +1,27 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'next/navigation';
-import { useTranslations } from '@/hooks/useTranslations';
-import { Plus, MapPin, Folder } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import Modal from '@/components/Modal';
-import { ConfirmationModal } from '@/components/ConfirmationModal';
-import { Form, FormGroup, FormLabel, FormInput, FormTextarea, FormSelect, FormButton } from '@/components/Form';
-import { Pagination } from '@/components/Pagination';
-import DataTable from '@/components/DataTable';
-import { locationSchema } from '@/lib/validations';
-import LocationTreeView from '@/components/LocationTreeView';
+import { useState, useEffect, useCallback } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "@/hooks/useTranslations";
+import { Plus, MapPin, Folder } from "lucide-react";
+import { toast } from "react-hot-toast";
+import Modal from "@/components/Modal";
+import { ConfirmationModal } from "@/components/ConfirmationModal";
+import {
+  Form,
+  FormGroup,
+  FormLabel,
+  FormInput,
+  FormTextarea,
+  FormSelect,
+  FormButton,
+} from "@/components/Form";
+import { Pagination } from "@/components/Pagination";
+import DataTable from "@/components/DataTable";
+import { locationSchema } from "@/lib/validations";
+import LocationTreeView from "@/components/LocationTreeView";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -29,7 +37,7 @@ interface Machine {
   maintenanceRange?: {
     _id: string;
     name: string;
-    type: 'preventive' | 'corrective';
+    type: "preventive" | "corrective";
   };
   location: string;
 }
@@ -46,7 +54,6 @@ interface Location {
   children: Location[];
 }
 
-
 export default function LocationsPage() {
   const { t } = useTranslations();
   const router = useRouter();
@@ -56,11 +63,13 @@ export default function LocationsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [locationToDelete, setLocationToDelete] = useState<Location | null>(null);
+  const [locationToDelete, setLocationToDelete] = useState<Location | null>(
+    null
+  );
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [viewMode, setViewMode] = useState<'list' | 'tree'>('tree');
+  const [viewMode, setViewMode] = useState<"list" | "tree">("tree");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const {
@@ -75,17 +84,22 @@ export default function LocationsPage() {
   // Fetch all locations for list view
   const fetchLocations = useCallback(async () => {
     try {
-      const response = await fetch(`/api/locations?page=${currentPage}&limit=${ITEMS_PER_PAGE}`);
+      const response = await fetch(
+        `/api/locations?page=${currentPage}&limit=${ITEMS_PER_PAGE}`
+      );
       if (response.ok) {
         const data = await response.json();
         setLocations(data.locations || data);
-        setTotalPages(data.totalPages || Math.ceil((data.locations || data).length / ITEMS_PER_PAGE));
+        setTotalPages(
+          data.totalPages ||
+            Math.ceil((data.locations || data).length / ITEMS_PER_PAGE)
+        );
         setTotalItems(data.totalItems || (data.locations || data).length);
       } else {
         toast.error(t("locations.locationLoadError"));
       }
     } catch (error) {
-      console.error('Error fetching locations:', error);
+      console.error("Error fetching locations:", error);
       toast.error(t("locations.locationLoadError"));
     }
   }, [t, currentPage]);
@@ -93,7 +107,9 @@ export default function LocationsPage() {
   // Fetch all locations for parent selection
   const fetchAllLocations = useCallback(async () => {
     try {
-      const response = await fetch('/api/locations?includeChildren=true&flat=true');
+      const response = await fetch(
+        "/api/locations?includeChildren=true&flat=true"
+      );
       if (response.ok) {
         const data = await response.json();
         setParentLocations(data);
@@ -101,7 +117,7 @@ export default function LocationsPage() {
         toast.error(t("locations.locationLoadError"));
       }
     } catch (error) {
-      console.error('Error fetching all locations:', error);
+      console.error("Error fetching all locations:", error);
       toast.error(t("locations.locationLoadError"));
     }
   }, [t]);
@@ -115,24 +131,34 @@ export default function LocationsPage() {
     loadData();
   }, [fetchLocations, fetchAllLocations]);
 
-  const onSubmit = async (data: { name: string; description?: string; parentId?: string | null }) => {
+  const onSubmit = async (data: {
+    name: string;
+    description?: string;
+    parentId?: string | null;
+  }) => {
     try {
-      const url = editingLocation ? `/api/locations/${editingLocation._id}` : '/api/locations';
-      const method = editingLocation ? 'PUT' : 'POST';
+      const url = editingLocation
+        ? `/api/locations/${editingLocation._id}`
+        : "/api/locations";
+      const method = editingLocation ? "PUT" : "POST";
 
       const response = await fetch(url, {
         method,
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
 
       if (response.ok) {
-        toast.success(editingLocation ? t("locations.locationUpdated") : t("locations.locationCreated"));
+        toast.success(
+          editingLocation
+            ? t("locations.locationUpdated")
+            : t("locations.locationCreated")
+        );
         await fetchLocations();
         await fetchAllLocations();
-        setRefreshTrigger(prev => prev + 1); // Trigger tree refresh
+        setRefreshTrigger((prev) => prev + 1); // Trigger tree refresh
         setShowModal(false);
         setEditingLocation(null);
         reset();
@@ -141,7 +167,7 @@ export default function LocationsPage() {
         toast.error(error.error || t("locations.locationError"));
       }
     } catch (error) {
-      console.error('Error saving location:', error);
+      console.error("Error saving location:", error);
       toast.error(t("locations.locationError"));
     }
   };
@@ -150,8 +176,8 @@ export default function LocationsPage() {
     setEditingLocation(location);
     reset({
       name: location.name,
-      description: location.description || '',
-      parentId: location.parentId || '',
+      description: location.description || "",
+      parentId: location.parentId || "",
     });
     setShowModal(true);
   };
@@ -166,14 +192,14 @@ export default function LocationsPage() {
 
     try {
       const response = await fetch(`/api/locations/${locationToDelete._id}`, {
-        method: 'DELETE',
+        method: "DELETE",
       });
 
       if (response.ok) {
         toast.success(t("locations.locationDeleted"));
         await fetchLocations();
         await fetchAllLocations();
-        setRefreshTrigger(prev => prev + 1); // Trigger tree refresh
+        setRefreshTrigger((prev) => prev + 1); // Trigger tree refresh
       } else {
         const error = await response.json();
         if (error.machinesCount) {
@@ -185,7 +211,7 @@ export default function LocationsPage() {
         }
       }
     } catch (error) {
-      console.error('Error deleting location:', error);
+      console.error("Error deleting location:", error);
       toast.error(t("locations.locationError"));
     } finally {
       setShowDeleteModal(false);
@@ -199,20 +225,20 @@ export default function LocationsPage() {
 
   const columns = [
     {
-      key: 'name' as keyof Location,
+      key: "name" as keyof Location,
       label: t("locations.locationName"),
     },
     {
-      key: 'description' as keyof Location,
+      key: "description" as keyof Location,
       label: t("locations.description"),
-      render: (value: unknown) => (value as string) || '-',
+      render: (value: unknown) => (value as string) || "-",
     },
     {
-      key: 'path' as keyof Location,
+      key: "path" as keyof Location,
       label: t("locations.path"),
     },
     {
-      key: 'level' as keyof Location,
+      key: "level" as keyof Location,
       label: t("locations.level"),
     },
   ];
@@ -228,9 +254,9 @@ export default function LocationsPage() {
   const handleLocationAdd = (parentLocation?: Location) => {
     setEditingLocation(null);
     reset({
-      name: '',
-      description: '',
-      parentId: parentLocation?._id || '',
+      name: "",
+      description: "",
+      parentId: parentLocation?._id || "",
     });
     setShowModal(true);
   };
@@ -273,7 +299,10 @@ export default function LocationsPage() {
               </div>
               {/* Table Rows */}
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="grid grid-cols-4 gap-4 py-3 border-b border-gray-100 dark:border-gray-700">
+                <div
+                  key={i}
+                  className="grid grid-cols-4 gap-4 py-3 border-b border-gray-100 dark:border-gray-700"
+                >
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
                   <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
@@ -290,7 +319,9 @@ export default function LocationsPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{t('locations.title')}</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+          {t("locations.title")}
+        </h1>
         <p className="mt-2 text-gray-600 dark:text-gray-400">
           {t("locations.subtitle")}
         </p>
@@ -301,34 +332,35 @@ export default function LocationsPage() {
         <div className="flex items-center space-x-2">
           <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {totalItems} {t("locations.title")}{totalItems !== 1 ? 's' : ''}
+            {totalItems} {t("locations.title")}
+            {totalItems !== 1 ? "s" : ""}
           </span>
         </div>
         <div className="flex items-center space-x-4">
           {/* View Mode Toggle */}
           <div className="flex rounded-md shadow-sm">
             <button
-              onClick={() => setViewMode('tree')}
+              onClick={() => setViewMode("tree")}
               className={`px-3 py-2 text-sm font-medium rounded-l-md border ${
-                viewMode === 'tree'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                viewMode === "tree"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
               }`}
             >
               <Folder className="h-4 w-4" />
             </button>
             <button
-              onClick={() => setViewMode('list')}
+              onClick={() => setViewMode("list")}
               className={`px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b ${
-                viewMode === 'list'
-                  ? 'bg-blue-600 text-white border-blue-600'
-                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                viewMode === "list"
+                  ? "bg-blue-600 text-white border-blue-600"
+                  : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
               }`}
             >
               <MapPin className="h-4 w-4" />
             </button>
           </div>
-          
+
           <FormButton
             onClick={() => handleLocationAdd()}
             className="flex items-center space-x-2"
@@ -340,7 +372,7 @@ export default function LocationsPage() {
       </div>
 
       {/* Content */}
-      {viewMode === 'tree' ? (
+      {viewMode === "tree" ? (
         <LocationTreeView
           onLocationClick={() => {}}
           onLocationEdit={(location) => handleLocationEdit(location)}
@@ -366,7 +398,7 @@ export default function LocationsPage() {
       )}
 
       {/* Pagination for list view */}
-      {viewMode === 'list' && (
+      {viewMode === "list" && (
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
@@ -385,15 +417,18 @@ export default function LocationsPage() {
           setEditingLocation(null);
           reset();
         }}
-        title={editingLocation ? t("locations.editLocation") : t("locations.newLocation")}
+        title={
+          editingLocation
+            ? t("locations.editLocation")
+            : t("locations.newLocation")
+        }
         size="xl"
       >
         <Form onSubmit={handleSubmit(onSubmit)}>
-          
           <FormGroup>
             <FormLabel required>{t("locations.locationName")}</FormLabel>
             <FormInput
-              {...register('name')}
+              {...register("name")}
               error={errors.name?.message}
               placeholder={t("placeholders.locationName")}
             />
@@ -402,7 +437,7 @@ export default function LocationsPage() {
           <FormGroup>
             <FormLabel>{t("locations.description")}</FormLabel>
             <FormTextarea
-              {...register('description')}
+              {...register("description")}
               error={errors.description?.message}
               placeholder={t("placeholders.locationDescription")}
               rows={3}
@@ -412,13 +447,14 @@ export default function LocationsPage() {
           <FormGroup>
             <FormLabel>{t("locations.parentLocation")}</FormLabel>
             <FormSelect
-              {...register('parentId')}
+              {...register("parentId")}
               error={errors.parentId?.message}
             >
               <option value="">{t("locations.selectParentLocation")}</option>
               {parentLocations.map((location) => (
                 <option key={location._id} value={location._id}>
-                  {'  '.repeat(location.level)}{location.name}
+                  {"  ".repeat(location.level)}
+                  {location.name}
                 </option>
               ))}
             </FormSelect>
@@ -436,11 +472,12 @@ export default function LocationsPage() {
             >
               {t("common.cancel")}
             </FormButton>
-            <FormButton
-              type="submit"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? t("common.saving") : editingLocation ? t("common.update") : t("common.create")}
+            <FormButton type="submit" disabled={isSubmitting}>
+              {isSubmitting
+                ? t("common.saving")
+                : editingLocation
+                ? t("common.update")
+                : t("common.create")}
             </FormButton>
           </div>
         </Form>
@@ -455,10 +492,14 @@ export default function LocationsPage() {
         message={t("modals.deleteLocationMessage")}
         confirmText={t("common.delete")}
         variant="danger"
-        itemDetails={locationToDelete ? {
-          name: locationToDelete.name,
-          description: locationToDelete.description || '',
-        } : undefined}
+        itemDetails={
+          locationToDelete
+            ? {
+                name: locationToDelete.name,
+                description: locationToDelete.description || "",
+              }
+            : undefined
+        }
       />
     </div>
   );

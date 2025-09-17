@@ -419,8 +419,8 @@ export default function MachinesPage() {
       label: t("machines.machineModel"),
       render: (value: Machine[keyof Machine]) => {
         const model = value as Machine["model"];
-        if (!model || typeof model === 'string') {
-          return model || '-';
+        if (!model || typeof model === "string") {
+          return model || "-";
         }
         return `${model.name} - ${model.manufacturer} ${model.brand} (${model.year})`;
       },
@@ -437,18 +437,21 @@ export default function MachinesPage() {
         if (!ranges || !Array.isArray(ranges)) {
           return "-";
         }
-        return ranges.map((range) => {
-          if (typeof range === 'string') {
-            return range;
-          }
-          return range?.name || '-';
-        }).join(", ");
+        return ranges
+          .map((range) => {
+            if (typeof range === "string") {
+              return range;
+            }
+            return range?.name || "-";
+          })
+          .join(", ");
       },
     },
     {
       key: "createdAt" as keyof Machine,
       label: t("common.createdAt"),
-      render: (value: Machine[keyof Machine]) => formatDateSafe(value as string),
+      render: (value: Machine[keyof Machine]) =>
+        formatDateSafe(value as string),
     },
   ];
 
@@ -597,8 +600,8 @@ export default function MachinesPage() {
 
           <FormGroup>
             <FormLabel required>{t("machines.machineModel")}</FormLabel>
-            <FormSelect 
-              {...register("model")} 
+            <FormSelect
+              {...register("model")}
               error={errors.model?.message}
               disabled={!!editingMachine}
             >
@@ -866,13 +869,7 @@ export default function MachinesPage() {
             >
               {t("common.cancel")}
             </FormButton>
-            <FormButton
-              type="submit"
-              disabled={isSubmitting}
-              onClick={() => {
-                console.log(errors);
-              }}
-            >
+            <FormButton type="submit" disabled={isSubmitting}>
               {isSubmitting
                 ? t("common.saving")
                 : editingMachine
@@ -895,12 +892,16 @@ export default function MachinesPage() {
         itemDetails={
           machineToDelete
             ? {
-                name: machineToDelete.model && typeof machineToDelete.model === 'object' 
-                  ? machineToDelete.model.name 
-                  : machineToDelete.model || 'Unknown',
-                description: machineToDelete.model && typeof machineToDelete.model === 'object'
-                  ? `${machineToDelete.model.manufacturer} ${machineToDelete.model.brand} - ${machineToDelete.location}`
-                  : machineToDelete.location,
+                name:
+                  machineToDelete.model &&
+                  typeof machineToDelete.model === "object"
+                    ? machineToDelete.model.name
+                    : machineToDelete.model || "Unknown",
+                description:
+                  machineToDelete.model &&
+                  typeof machineToDelete.model === "object"
+                    ? `${machineToDelete.model.manufacturer} ${machineToDelete.model.brand} - ${machineToDelete.location}`
+                    : machineToDelete.location,
               }
             : undefined
         }

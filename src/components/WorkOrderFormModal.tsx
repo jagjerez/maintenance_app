@@ -25,8 +25,8 @@ type WorkOrderFormData = {
   customCode?: string;
   location: string;
   workOrderLocation: string;
-  type: 'preventive' | 'corrective' | '';
-  status?: 'pending' | 'in_progress' | 'completed';
+  type: "preventive" | "corrective" | "";
+  status?: "pending" | "in_progress" | "completed";
   description: string;
   maintenanceDescription?: string;
   scheduledDate: string;
@@ -184,9 +184,14 @@ export default function WorkOrderFormModal({
 }: WorkOrderFormModalProps) {
   const { t } = useTranslations();
   const [workOrderType, setWorkOrderType] = useState<string>("");
-  const [selectedWorkOrderLocation, setSelectedWorkOrderLocation] = useState<string>("");
-  const [workOrderMachines, setWorkOrderMachines] = useState<WorkOrderMachine[]>([]);
-  const [customProperties, setCustomProperties] = useState<Record<string, unknown>>({});
+  const [selectedWorkOrderLocation, setSelectedWorkOrderLocation] =
+    useState<string>("");
+  const [workOrderMachines, setWorkOrderMachines] = useState<
+    WorkOrderMachine[]
+  >([]);
+  const [customProperties, setCustomProperties] = useState<
+    Record<string, unknown>
+  >({});
   const [availableMachines, setAvailableMachines] = useState<Machine[]>([]);
   const [isResettingType, setIsResettingType] = useState(false);
   const [showLocationSelector, setShowLocationSelector] = useState(false);
@@ -246,7 +251,9 @@ export default function WorkOrderFormModal({
   useEffect(() => {
     if (editingWorkOrder) {
       setWorkOrderType(editingWorkOrder.type);
-      setSelectedWorkOrderLocation(editingWorkOrder.workOrderLocation?._id || "");
+      setSelectedWorkOrderLocation(
+        editingWorkOrder.workOrderLocation?._id || ""
+      );
       setWorkOrderMachines(editingWorkOrder.machines || []);
       setCustomProperties(editingWorkOrder.properties || {});
 
@@ -256,14 +263,17 @@ export default function WorkOrderFormModal({
       if (editingWorkOrder.workOrderLocation) {
         // Get machines from the work order location
         const locationMachines = machines.filter(
-          (machine) => machine.locationId === editingWorkOrder.workOrderLocation._id
+          (machine) =>
+            machine.locationId === editingWorkOrder.workOrderLocation._id
         );
         availableMachinesList = locationMachines;
       }
 
       // Always include machines that are already assigned to this work order
       const assignedMachines = machines.filter((machine) =>
-        editingWorkOrder.machines.some((woMachine) => woMachine.machineId === machine._id)
+        editingWorkOrder.machines.some(
+          (woMachine) => woMachine.machineId === machine._id
+        )
       );
 
       // Combine location machines with assigned machines, removing duplicates
@@ -304,7 +314,7 @@ export default function WorkOrderFormModal({
         notes: editingWorkOrder.notes || "",
         location: editingWorkOrder.location?._id || "",
         workOrderLocation: editingWorkOrder.workOrderLocation?._id || "",
-        machines: (editingWorkOrder.machines || []).map(m => ({
+        machines: (editingWorkOrder.machines || []).map((m) => ({
           machineId: m.machineId,
           maintenanceRangeIds: m.maintenanceRangeIds || [],
           operations: m.operations || [],
@@ -326,7 +336,7 @@ export default function WorkOrderFormModal({
   useEffect(() => {
     // Don't interfere when resetting type
     if (isResettingType) return;
-    
+
     if (selectedWorkOrderLocation) {
       const locationMachines = machines.filter(
         (machine) => machine.locationId === selectedWorkOrderLocation
@@ -346,6 +356,21 @@ export default function WorkOrderFormModal({
       setValue("workOrderLocation", "");
     }
   }, [selectedWorkOrderLocation, machines, setValue, isResettingType]);
+
+  // Sync workOrderMachines with form field whenever it changes
+  useEffect(() => {
+    setValue(
+      "machines",
+      workOrderMachines.map((m) => ({
+        machineId: m.machineId,
+        maintenanceRangeIds: m.maintenanceRangeIds || [],
+        operations: m.operations || [],
+        filledOperations: m.filledOperations || [],
+        images: m.images || [],
+        maintenanceDescription: m.maintenanceDescription,
+      }))
+    );
+  }, [workOrderMachines, setValue]);
 
   // Update workOrderType when form type changes
   useEffect(() => {
@@ -369,6 +394,12 @@ export default function WorkOrderFormModal({
     }
   }, [workOrderType, setValue]);
 
+  useEffect(() => {
+    if (isSubmitting) {
+      resetForm(true);
+    }
+  }, [isSubmitting, resetForm]);
+
   // Use watchedType for form control instead of workOrderType
   // In edit mode, don't disable the form
   const isFormDisabled = !watchedType && !editingWorkOrder;
@@ -380,58 +411,142 @@ export default function WorkOrderFormModal({
     const machine = availableMachines.find((m) => m._id === machineId);
     if (!machine) return;
 
+    // Get automatic operations from maintenance ranges and machine operations
+    const automaticOperations: string[] = [];
+    const operationIds = new Set<string>();
+
+    // Add operations from all maintenance ranges of the machine
+    if (machine.maintenanceRanges) {
+      machine.maintenanceRanges.forEach((range) => {
+        if (range.operations) {
+          range.operations.forEach((operation) => {
+            if (
+              operation &&
+              operation._id &&
+              !operationIds.has(operation._id)
+            ) {
+              operationIds.add(operation._id);
+              automaticOperations.push(operation._id);
+            }
+          });
+        }
+      });
+    }
+
+    // Add operations directly from machine
+    if (machine.operations) {
+      machine.operations.forEach((operation) => {
+        if (operation && operation._id && !operationIds.has(operation._id)) {
+          operationIds.add(operation._id);
+          automaticOperations.push(operation._id);
+        }
+      });
+    }
+
     const newWorkOrderMachine: WorkOrderMachine = {
       machineId,
-      maintenanceRangeIds: [], // No longer needed - just for display
-      operations: [],
+      maintenanceRangeIds:
+        machine.maintenanceRanges?.map((range) => range._id) || [],
+      operations: automaticOperations,
       filledOperations: [],
       images: [],
     };
 
-    setWorkOrderMachines([...workOrderMachines, newWorkOrderMachine]);
-  };
+    const updatedMachines = [...workOrderMachines, newWorkOrderMachine];
+    setWorkOrderMachines(updatedMachines);
 
-  const removeMachine = (machineId: string) => {
-    setWorkOrderMachines(workOrderMachines.filter((m) => m.machineId !== machineId));
-  };
-
-  const updateMachineOperations = (machineId: string, operations: string[]) => {
-    setWorkOrderMachines(
-      workOrderMachines.map((m) =>
-        m.machineId === machineId ? { ...m, operations } : m
-      )
-    );
-  };
-
-  const updateMachineMaintenanceDescription = (machineId: string, description: string) => {
-    setWorkOrderMachines(
-      workOrderMachines.map((m) =>
-        m.machineId === machineId ? { ...m, maintenanceDescription: description } : m
-      )
-    );
-  };
-
-
-  const handleFormSubmit = async (data: WorkOrderFormData) => {
-    await onSubmit({
-      ...data,
-      location: selectedWorkOrderLocation,
-      workOrderLocation: selectedWorkOrderLocation,
-      machines: workOrderMachines.map(m => ({
+    // Update the form field
+    setValue(
+      "machines",
+      updatedMachines.map((m) => ({
         machineId: m.machineId,
         maintenanceRangeIds: m.maintenanceRangeIds || [],
         operations: m.operations || [],
         filledOperations: m.filledOperations || [],
         images: m.images || [],
         maintenanceDescription: m.maintenanceDescription,
-      })),
+      }))
+    );
+  };
+
+  const removeMachine = (machineId: string) => {
+    const updatedMachines = workOrderMachines.filter(
+      (m) => m.machineId !== machineId
+    );
+    setWorkOrderMachines(updatedMachines);
+
+    // Update the form field
+    setValue(
+      "machines",
+      updatedMachines.map((m) => ({
+        machineId: m.machineId,
+        maintenanceRangeIds: m.maintenanceRangeIds || [],
+        operations: m.operations || [],
+        filledOperations: m.filledOperations || [],
+        images: m.images || [],
+        maintenanceDescription: m.maintenanceDescription,
+      }))
+    );
+  };
+
+  const updateMachineOperations = (machineId: string, operations: string[]) => {
+    const updatedMachines = workOrderMachines.map((m) =>
+      m.machineId === machineId ? { ...m, operations } : m
+    );
+    setWorkOrderMachines(updatedMachines);
+
+    // Update the form field
+    setValue(
+      "machines",
+      updatedMachines.map((m) => ({
+        machineId: m.machineId,
+        maintenanceRangeIds: m.maintenanceRangeIds || [],
+        operations: m.operations || [],
+        filledOperations: m.filledOperations || [],
+        images: m.images || [],
+        maintenanceDescription: m.maintenanceDescription,
+      }))
+    );
+  };
+
+  const updateMachineMaintenanceDescription = (
+    machineId: string,
+    description: string
+  ) => {
+    const updatedMachines = workOrderMachines.map((m) =>
+      m.machineId === machineId
+        ? { ...m, maintenanceDescription: description }
+        : m
+    );
+    setWorkOrderMachines(updatedMachines);
+
+    // Update the form field
+    setValue(
+      "machines",
+      updatedMachines.map((m) => ({
+        machineId: m.machineId,
+        maintenanceRangeIds: m.maintenanceRangeIds || [],
+        operations: m.operations || [],
+        filledOperations: m.filledOperations || [],
+        images: m.images || [],
+        maintenanceDescription: m.maintenanceDescription,
+      }))
+    );
+  };
+
+  const handleFormSubmit = async (data: WorkOrderFormData) => {
+    // The data.machines should already be properly formatted from the useEffect
+    await onSubmit({
+      ...data,
+      location: selectedWorkOrderLocation,
+      workOrderLocation: selectedWorkOrderLocation,
       properties: customProperties,
     });
   };
 
   const handleClose = () => {
     reset();
-    resetForm(false);
+    resetForm(true);
     onClose();
   };
 
@@ -447,9 +562,11 @@ export default function WorkOrderFormModal({
       size="xl"
     >
       <Form onSubmit={handleSubmit(handleFormSubmit)}>
-
         {/* Campo oculto para location */}
         <input type="hidden" {...register("location")} />
+
+        {/* Campo oculto para machines */}
+        <input type="hidden" {...register("machines")} />
 
         {/* Work Order Information Section (solo en edición) */}
         {editingWorkOrder && (
@@ -665,7 +782,6 @@ export default function WorkOrderFormModal({
           />
         </FormGroup>
 
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormGroup>
             <FormLabel required>{t("workOrders.scheduledDate")}</FormLabel>
@@ -761,6 +877,8 @@ export default function WorkOrderFormModal({
                   onChange={(e) => {
                     if (e.target.value) {
                       addMachine(e.target.value);
+                      // Reset the select value after adding
+                      e.target.value = "";
                     }
                   }}
                   className="w-full"
@@ -770,11 +888,14 @@ export default function WorkOrderFormModal({
                   {availableMachines
                     .filter(
                       (machine) =>
-                        !workOrderMachines.some((wm) => wm.machineId === machine._id)
+                        !workOrderMachines.some(
+                          (wm) => wm.machineId === machine._id
+                        )
                     )
                     .map((machine) => (
                       <option key={machine._id} value={machine._id}>
-                        {machine.model?.name || "Unknown Machine"} - {machine.model?.manufacturer || "Unknown Manufacturer"}
+                        {machine.model?.name || "Unknown Machine"} -{" "}
+                        {machine.model?.manufacturer || "Unknown Manufacturer"}
                       </option>
                     ))}
                 </FormSelect>
@@ -782,7 +903,9 @@ export default function WorkOrderFormModal({
 
               {/* Selected Machines */}
               {workOrderMachines.map((workOrderMachine) => {
-                const machine = machines.find((m) => m._id === workOrderMachine.machineId);
+                const machine = machines.find(
+                  (m) => m._id === workOrderMachine.machineId
+                );
                 if (!machine) return null;
 
                 return (
@@ -796,12 +919,15 @@ export default function WorkOrderFormModal({
                           {machine.model?.name || "Unknown Machine"}
                         </h4>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {machine.model?.manufacturer || "Unknown Manufacturer"}
+                          {machine.model?.manufacturer ||
+                            "Unknown Manufacturer"}
                         </p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => removeMachine(workOrderMachine.machineId)}
+                        onClick={() =>
+                          removeMachine(workOrderMachine.machineId)
+                        }
                         className="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                         disabled={isReadOnly}
                       >
@@ -810,284 +936,380 @@ export default function WorkOrderFormModal({
                     </div>
 
                     {/* Maintenance Ranges Information - Only for preventive */}
-                    {workOrderType === "preventive" && (() => {
-                      const machine = machines.find((m) => m._id === workOrderMachine.machineId);
-                      if (!machine || !machine.maintenanceRanges || machine.maintenanceRanges.length === 0) {
+                    {workOrderType === "preventive" &&
+                      (() => {
+                        const machine = machines.find(
+                          (m) => m._id === workOrderMachine.machineId
+                        );
+                        if (
+                          !machine ||
+                          !machine.maintenanceRanges ||
+                          machine.maintenanceRanges.length === 0
+                        ) {
+                          return (
+                            <div className="mb-4">
+                              <FormLabel>
+                                {t("workOrders.maintenanceRange")}
+                              </FormLabel>
+                              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                  No maintenance ranges configured for this
+                                  machine.
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+
                         return (
                           <div className="mb-4">
-                            <FormLabel>{t("workOrders.maintenanceRange")}</FormLabel>
-                            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                                No maintenance ranges configured for this machine.
-                              </p>
+                            <FormLabel>
+                              {t("workOrders.maintenanceRange")}
+                            </FormLabel>
+                            <div className="space-y-3">
+                              {machine.maintenanceRanges.map((range) => (
+                                <div
+                                  key={range._id}
+                                  className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+                                >
+                                  <div className="flex items-center justify-between mb-2">
+                                    <h4 className="font-medium text-blue-900 dark:text-blue-100">
+                                      {range.name}
+                                    </h4>
+                                    <span className="text-xs text-blue-600 dark:text-blue-400">
+                                      {range.operations?.length || 0} operations
+                                    </span>
+                                  </div>
+                                  {/* Description not available in current type */}
+                                  {range.operations &&
+                                    range.operations.length > 0 && (
+                                      <div className="space-y-1">
+                                        <p className="text-xs font-medium text-blue-800 dark:text-blue-200">
+                                          Operations:
+                                        </p>
+                                        <div className="space-y-1">
+                                          {range.operations.map((operation) => (
+                                            <div
+                                              key={operation._id}
+                                              className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border"
+                                            >
+                                              <div>
+                                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                                  {operation.name}
+                                                </span>
+                                                {operation.description && (
+                                                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                                                    {operation.description}
+                                                  </p>
+                                                )}
+                                              </div>
+                                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                {operation.type}
+                                              </span>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                </div>
+                              ))}
                             </div>
                           </div>
                         );
-                      }
-
-                      return (
-                        <div className="mb-4">
-                          <FormLabel>{t("workOrders.maintenanceRange")}</FormLabel>
-                          <div className="space-y-3">
-                            {machine.maintenanceRanges.map((range) => (
-                              <div key={range._id} className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                <div className="flex items-center justify-between mb-2">
-                                  <h4 className="font-medium text-blue-900 dark:text-blue-100">
-                                    {range.name}
-                                  </h4>
-                                  <span className="text-xs text-blue-600 dark:text-blue-400">
-                                    {range.operations?.length || 0} operations
-                                  </span>
-                                </div>
-                                {/* Description not available in current type */}
-                                {range.operations && range.operations.length > 0 && (
-                                  <div className="space-y-1">
-                                    <p className="text-xs font-medium text-blue-800 dark:text-blue-200">
-                                      Operations:
-                                    </p>
-                                    <div className="space-y-1">
-                                      {range.operations.map((operation) => (
-                                        <div key={operation._id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border">
-                                          <div>
-                                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                              {operation.name}
-                                            </span>
-                                            {operation.description && (
-                                              <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                {operation.description}
-                                              </p>
-                                            )}
-                                          </div>
-                                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                                            {operation.type}
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })()}
+                      })()}
 
                     {/* Operations - Only for preventive */}
-                    {workOrderType === "preventive" && (() => {
-                      const machine = machines.find((m) => m._id === workOrderMachine.machineId);
-                      if (!machine) return null;
+                    {workOrderType === "preventive" &&
+                      (() => {
+                        const machine = machines.find(
+                          (m) => m._id === workOrderMachine.machineId
+                        );
+                        if (!machine) return null;
 
-                      const automaticOperations: IOperation[] = [];
-                      const operationIds = new Set<string>();
+                        const automaticOperations: IOperation[] = [];
+                        const operationIds = new Set<string>();
 
-                      // Add operations from all maintenance ranges of the machine
-                      if (machine.maintenanceRanges) {
-                        machine.maintenanceRanges.forEach(range => {
-                          if (range.operations) {
-                            range.operations.forEach((operation) => {
-                              if (operation && operation._id && !operationIds.has(operation._id)) {
-                                operationIds.add(operation._id);
-                                automaticOperations.push(operation);
-                              }
-                            });
-                          }
-                        });
-                      }
-
-                      // Add operations directly from machine
-                      if (machine.operations) {
-                        machine.operations.forEach((operation) => {
-                          if (operation && operation._id && !operationIds.has(operation._id)) {
-                            operationIds.add(operation._id);
-                            automaticOperations.push(operation);
-                          }
-                        });
-                      }
-
-                      // Get additional operations (from workOrderMachine.operations that are not automatic)
-                      const additionalOperationIds = workOrderMachine.operations?.filter(opId => 
-                        !operationIds.has(opId)
-                      ) || [];
-                      
-                      const additionalOperations = additionalOperationIds.map(opId => 
-                        operations.find(op => op._id === opId)
-                      ).filter(Boolean) as IOperation[];
-
-                      const allOperations = [...automaticOperations, ...additionalOperations];
-
-                      return (
-                        <div className="mb-4">
-                          <FormLabel>{t("workOrders.operations")}</FormLabel>
-                          <div className="space-y-3">
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                              <strong>All operations (automatic + additional):</strong>
-                            </div>
-                            {allOperations.length > 0 ? (
-                              <div className="space-y-2">
-                                {/* Automatic operations */}
-                                {automaticOperations.map((operation) => (
-                                  <div
-                                    key={operation._id}
-                                    className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
-                                  >
-                                    <div>
-                                      <span className="font-medium text-green-900 dark:text-green-100">
-                                        {operation.name}
-                                      </span>
-                                      {operation.description && (
-                                        <p className="text-xs text-green-700 dark:text-green-300">
-                                          {operation.description}
-                                        </p>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      <span className="text-xs text-green-600 dark:text-green-400">
-                                        {operation.type}
-                                      </span>
-                                      <span className="text-xs text-green-600 dark:text-green-400">
-                                        Auto
-                                      </span>
-                                    </div>
-                                  </div>
-                                ))}
-                                
-                                {/* Additional operations */}
-                                {additionalOperations.map((operation) => (
-                                  <div
-                                    key={operation._id}
-                                    className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
-                                  >
-                                    <div>
-                                      <span className="font-medium text-blue-900 dark:text-blue-100">
-                                        {operation.name}
-                                      </span>
-                                      {operation.description && (
-                                        <p className="text-xs text-blue-700 dark:text-blue-300">
-                                          {operation.description}
-                                        </p>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                      <span className="text-xs text-blue-600 dark:text-blue-400">
-                                        {operation.type}
-                                      </span>
-                                      <span className="text-xs text-blue-600 dark:text-blue-400">
-                                        Additional
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          const currentOps = workOrderMachine.operations || [];
-                                          updateMachineOperations(
-                                            workOrderMachine.machineId, 
-                                            currentOps.filter(id => id !== operation._id)
-                                          );
-                                        }}
-                                        className="text-red-500 hover:text-red-700 text-xs"
-                                        disabled={isReadOnly}
-                                      >
-                                        ✕
-                                      </button>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                                  No operations found for this machine.
-                                </p>
-                              </div>
-                            )}
-
-                            {/* Additional operations selector */}
-                            {(() => {
-                              const machine = machines.find((m) => m._id === workOrderMachine.machineId);
-                              if (!machine) return null;
-
-                              const availableAdditionalOps = operations.filter((operation) => {
-                                const isFromMachine = machine.operations?.some((op) => op._id === operation._id);
-                                const isFromRange = machine.maintenanceRanges?.some((range) =>
-                                  range.operations?.some((op) => op._id === operation._id)
-                                );
-                                
-                                return !isFromMachine && !isFromRange;
+                        // Add operations from all maintenance ranges of the machine
+                        if (machine.maintenanceRanges) {
+                          machine.maintenanceRanges.forEach((range) => {
+                            if (range.operations) {
+                              range.operations.forEach((operation) => {
+                                if (
+                                  operation &&
+                                  operation._id &&
+                                  !operationIds.has(operation._id)
+                                ) {
+                                  operationIds.add(operation._id);
+                                  automaticOperations.push(operation);
+                                }
                               });
+                            }
+                          });
+                        }
 
-                              // Only show if there are additional operations available
-                              if (availableAdditionalOps.length === 0) return null;
+                        // Add operations directly from machine
+                        if (machine.operations) {
+                          machine.operations.forEach((operation) => {
+                            if (
+                              operation &&
+                              operation._id &&
+                              !operationIds.has(operation._id)
+                            ) {
+                              operationIds.add(operation._id);
+                              automaticOperations.push(operation);
+                            }
+                          });
+                        }
 
-                              return (
-                                <div className="mt-4">
-                                  <div className="mb-2">
-                                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                      Additional Operations:
-                                    </span>
-                                  </div>
-                                  
-                                  <MultiSelect
-                                    options={availableAdditionalOps.map((operation) => ({
-                                      value: operation._id,
-                                      label: operation.name,
-                                      description: operation.description,
-                                    }))}
-                                    selectedValues={workOrderMachine.operations?.filter((opId) => {
-                                      const isFromMachine = machine.operations?.some((op) => op._id === opId);
-                                      const isFromRange = machine.maintenanceRanges?.some((range) =>
-                                        range.operations?.some((op) => op._id === opId)
-                                      );
-                                      
-                                      return !isFromMachine && !isFromRange;
-                                    }) || []}
-                                    onChange={(values) => {
-                                      const machineOperations: string[] = [];
-                                      const operationIds = new Set<string>();
+                        // Get additional operations (from workOrderMachine.operations that are not automatic)
+                        const additionalOperationIds =
+                          workOrderMachine.operations?.filter(
+                            (opId) => !operationIds.has(opId)
+                          ) || [];
 
-                                      // Add operations from all maintenance ranges of the machine
-                                      if (machine.maintenanceRanges) {
-                                        machine.maintenanceRanges.forEach(range => {
-                                          if (range.operations) {
-                                            range.operations.forEach((operation) => {
-                                              if (operation && operation._id && !operationIds.has(operation._id)) {
-                                                operationIds.add(operation._id);
-                                                machineOperations.push(operation._id);
-                                              }
-                                            });
-                                          }
-                                        });
-                                      }
+                        const additionalOperations = additionalOperationIds
+                          .map((opId) =>
+                            operations.find((op) => op._id === opId)
+                          )
+                          .filter(Boolean) as IOperation[];
 
-                                      // Add operations directly from machine
-                                      if (machine.operations) {
-                                        machine.operations.forEach((operation) => {
-                                          if (operation && operation._id && !operationIds.has(operation._id)) {
-                                            operationIds.add(operation._id);
-                                            machineOperations.push(operation._id);
-                                          }
-                                        });
-                                      }
+                        const allOperations = [
+                          ...automaticOperations,
+                          ...additionalOperations,
+                        ];
 
-                                      // Combine with additional operations
-                                      const allOperations = [...machineOperations, ...values];
-                                      updateMachineOperations(workOrderMachine.machineId, allOperations);
-                                    }}
-                                    placeholder="Select additional operations..."
-                                    disabled={isReadOnly}
-                                    hideSelected={true}
-                                  />
+                        return (
+                          <div className="mb-4">
+                            <FormLabel>{t("workOrders.operations")}</FormLabel>
+                            <div className="space-y-3">
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                <strong>
+                                  All operations (automatic + additional):
+                                </strong>
+                              </div>
+                              {allOperations.length > 0 ? (
+                                <div className="space-y-2">
+                                  {/* Automatic operations */}
+                                  {automaticOperations.map((operation) => (
+                                    <div
+                                      key={operation._id}
+                                      className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800"
+                                    >
+                                      <div>
+                                        <span className="font-medium text-green-900 dark:text-green-100">
+                                          {operation.name}
+                                        </span>
+                                        {operation.description && (
+                                          <p className="text-xs text-green-700 dark:text-green-300">
+                                            {operation.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-xs text-green-600 dark:text-green-400">
+                                          {operation.type}
+                                        </span>
+                                        <span className="text-xs text-green-600 dark:text-green-400">
+                                          Auto
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+
+                                  {/* Additional operations */}
+                                  {additionalOperations.map((operation) => (
+                                    <div
+                                      key={operation._id}
+                                      className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
+                                    >
+                                      <div>
+                                        <span className="font-medium text-blue-900 dark:text-blue-100">
+                                          {operation.name}
+                                        </span>
+                                        {operation.description && (
+                                          <p className="text-xs text-blue-700 dark:text-blue-300">
+                                            {operation.description}
+                                          </p>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center space-x-2">
+                                        <span className="text-xs text-blue-600 dark:text-blue-400">
+                                          {operation.type}
+                                        </span>
+                                        <span className="text-xs text-blue-600 dark:text-blue-400">
+                                          Additional
+                                        </span>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            const currentOps =
+                                              workOrderMachine.operations || [];
+                                            updateMachineOperations(
+                                              workOrderMachine.machineId,
+                                              currentOps.filter(
+                                                (id) => id !== operation._id
+                                              )
+                                            );
+                                          }}
+                                          className="text-red-500 hover:text-red-700 text-xs"
+                                          disabled={isReadOnly}
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
                                 </div>
-                              );
-                            })()}
+                              ) : (
+                                <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                                    No operations found for this machine.
+                                  </p>
+                                </div>
+                              )}
+
+                              {/* Additional operations selector */}
+                              {(() => {
+                                const machine = machines.find(
+                                  (m) => m._id === workOrderMachine.machineId
+                                );
+                                if (!machine) return null;
+
+                                const availableAdditionalOps =
+                                  operations.filter((operation) => {
+                                    const isFromMachine =
+                                      machine.operations?.some(
+                                        (op) => op._id === operation._id
+                                      );
+                                    const isFromRange =
+                                      machine.maintenanceRanges?.some((range) =>
+                                        range.operations?.some(
+                                          (op) => op._id === operation._id
+                                        )
+                                      );
+
+                                    return !isFromMachine && !isFromRange;
+                                  });
+
+                                // Only show if there are additional operations available
+                                if (availableAdditionalOps.length === 0)
+                                  return null;
+
+                                return (
+                                  <div className="mt-4">
+                                    <div className="mb-2">
+                                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                        Additional Operations:
+                                      </span>
+                                    </div>
+
+                                    <MultiSelect
+                                      options={availableAdditionalOps.map(
+                                        (operation) => ({
+                                          value: operation._id,
+                                          label: operation.name,
+                                          description: operation.description,
+                                        })
+                                      )}
+                                      selectedValues={
+                                        workOrderMachine.operations?.filter(
+                                          (opId) => {
+                                            const isFromMachine =
+                                              machine.operations?.some(
+                                                (op) => op._id === opId
+                                              );
+                                            const isFromRange =
+                                              machine.maintenanceRanges?.some(
+                                                (range) =>
+                                                  range.operations?.some(
+                                                    (op) => op._id === opId
+                                                  )
+                                              );
+
+                                            return (
+                                              !isFromMachine && !isFromRange
+                                            );
+                                          }
+                                        ) || []
+                                      }
+                                      onChange={(values) => {
+                                        const machineOperations: string[] = [];
+                                        const operationIds = new Set<string>();
+
+                                        // Add operations from all maintenance ranges of the machine
+                                        if (machine.maintenanceRanges) {
+                                          machine.maintenanceRanges.forEach(
+                                            (range) => {
+                                              if (range.operations) {
+                                                range.operations.forEach(
+                                                  (operation) => {
+                                                    if (
+                                                      operation &&
+                                                      operation._id &&
+                                                      !operationIds.has(
+                                                        operation._id
+                                                      )
+                                                    ) {
+                                                      operationIds.add(
+                                                        operation._id
+                                                      );
+                                                      machineOperations.push(
+                                                        operation._id
+                                                      );
+                                                    }
+                                                  }
+                                                );
+                                              }
+                                            }
+                                          );
+                                        }
+
+                                        // Add operations directly from machine
+                                        if (machine.operations) {
+                                          machine.operations.forEach(
+                                            (operation) => {
+                                              if (
+                                                operation &&
+                                                operation._id &&
+                                                !operationIds.has(operation._id)
+                                              ) {
+                                                operationIds.add(operation._id);
+                                                machineOperations.push(
+                                                  operation._id
+                                                );
+                                              }
+                                            }
+                                          );
+                                        }
+
+                                        // Combine with additional operations
+                                        const allOperations = [
+                                          ...machineOperations,
+                                          ...values,
+                                        ];
+                                        updateMachineOperations(
+                                          workOrderMachine.machineId,
+                                          allOperations
+                                        );
+                                      }}
+                                      placeholder="Select additional operations..."
+                                      disabled={isReadOnly}
+                                      hideSelected={true}
+                                    />
+                                  </div>
+                                );
+                              })()}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })()}
+                        );
+                      })()}
 
                     {/* Maintenance Description - Only for corrective */}
                     {workOrderType === "corrective" && (
                       <div className="mb-4">
-                        <FormLabel>{t("workOrders.maintenanceDescription")}</FormLabel>
+                        <FormLabel>
+                          {t("workOrders.maintenanceDescription")}
+                        </FormLabel>
                         <FormTextarea
                           value={workOrderMachine.maintenanceDescription || ""}
                           onChange={(e) =>
@@ -1096,7 +1318,9 @@ export default function WorkOrderFormModal({
                               e.target.value
                             )
                           }
-                          placeholder={t("workOrders.maintenanceDescriptionPlaceholder")}
+                          placeholder={t(
+                            "workOrders.maintenanceDescriptionPlaceholder"
+                          )}
                           rows={3}
                           disabled={isReadOnly}
                         />
