@@ -119,9 +119,9 @@ export default function Navigation() {
       {/* Mobile menu - Always available */}
       <div className={cn(
         "overflow-hidden transition-all duration-300 ease-in-out",
-        mobileMenuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+        mobileMenuOpen ? "max-h-auto opacity-100" : "max-h-0 opacity-0"
       )}>
-        <div className="px-2 pt-2 pb-3 space-y-1 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
+        <div className="px-2 pt-2 pb-4 space-y-1 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
           {/* Language selector for mobile */}
           <div className="sm:hidden px-3 py-2 border-b border-gray-200 dark:border-gray-700 mb-2">
             <LanguageSelector />
