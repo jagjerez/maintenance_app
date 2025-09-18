@@ -430,7 +430,7 @@ export default function WorkOrderFormModal({
       setValue("machines", []);
       setValue("workOrderLocation", "");
     }
-  }, [selectedWorkOrderLocation, machines, setValue, isResettingType]);
+  }, [selectedWorkOrderLocation, machines, setValue, isResettingType, editingWorkOrder]);
 
   // Sync workOrderMachines with form field whenever it changes
   useEffect(() => {

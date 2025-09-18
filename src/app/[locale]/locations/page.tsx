@@ -380,7 +380,6 @@ export default function LocationsPage() {
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
           <div className="p-4">
             <LocationTreeView
-              onLocationClick={() => {}}
               onLocationEdit={(location) => handleLocationEdit(location)}
               onLocationDelete={(location) => handleLocationDelete(location)}
               onLocationAdd={(parentLocation) => handleLocationAdd(parentLocation)}

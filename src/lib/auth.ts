@@ -1,14 +1,11 @@
-import { NextAuthOptions } from 'next-auth';
-import { MongoDBAdapter } from '@auth/mongodb-adapter';
+
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import connectDB from './db';
-import { User, Company } from '@/models';
-import { MongoClient } from 'mongodb';
+import { AuthOptions, User as NextAuthUser } from "next-auth/";
+import { User } from '@/models';
 
-const client = new MongoClient(process.env.STORAGE_MONGODB_URI || 'mongodb://localhost:27017/maintenance_app');
-
-export const authOptions: NextAuthOptions = {
+export const authOptions: AuthOptions = {
   // adapter: MongoDBAdapter(client), // Temporarily disabled due to type conflicts
   providers: [
     CredentialsProvider({
@@ -17,7 +14,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' }
       },
-      async authorize(credentials) {
+      async authorize(credentials): Promise<NextAuthUser | null> {
         if (!credentials?.email || !credentials?.password) {
           return null;
         }

@@ -15,8 +15,7 @@ import {
   User, 
   Package, 
   Image as ImageIcon,
-  AlertCircle,
-  X
+  AlertCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import Modal from '@/components/Modal';
@@ -203,7 +202,7 @@ export default function MaintenanceModal({ isOpen, onClose, workOrder, onSave }:
       });
       toast.success(t('workOrders.workOrderCompleted'));
       onClose();
-    } catch (error) {
+    } catch {
       toast.error(t('workOrders.workOrderError'));
     } finally {
       setIsSubmitting(false);

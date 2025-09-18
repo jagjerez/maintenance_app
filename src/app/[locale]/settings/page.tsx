@@ -1,20 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "@/hooks/useTranslations";
 import {
-  Settings,
   User,
   Bell,
-  Globe,
   Palette,
   Building2,
   Save,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import {
-  Form,
   FormGroup,
   FormLabel,
   FormInput,
@@ -30,8 +27,8 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
 
   const [settings, setSettings] = useState({
-    companyName: session?.user?.company?.name || "",
-    appName: session?.user?.company?.appName || "",
+    companyName: (session?.user as { company?: { name?: string; appName?: string } })?.company?.name || "",
+    appName: (session?.user as { company?: { name?: string; appName?: string } })?.company?.appName || "",
     email: session?.user?.email || "",
     notifications: {
       email: true,

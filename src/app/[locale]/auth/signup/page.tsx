@@ -7,7 +7,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'react-hot-toast';
-import { Wrench, Eye, EyeOff, Building2 } from 'lucide-react';
+import { Wrench, Eye, EyeOff } from 'lucide-react';
 import { useTranslations } from '@/hooks/useTranslations';
 
 const getSignUpSchema = (t: (key: string, params?: Record<string, string | number | Date>) => string) => z.object({
@@ -46,10 +46,6 @@ export default function SignUpPage() {
     resolver: zodResolver(signUpSchema),
   });
 
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
-
   const fetchCompanies = async () => {
     try {
       const response = await fetch('/api/companies');
@@ -64,6 +60,10 @@ export default function SignUpPage() {
       toast.error(t('auth.companiesLoadError'));
     }
   };
+
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
 
   const onSubmit = async (data: SignUpForm) => {
     setIsLoading(true);
@@ -88,7 +88,7 @@ export default function SignUpPage() {
         const error = await response.json();
         toast.error(error.error || t('errors.serverError'));
       }
-    } catch (error) {
+    } catch {
       toast.error(t('errors.serverError'));
     } finally {
       setIsLoading(false);

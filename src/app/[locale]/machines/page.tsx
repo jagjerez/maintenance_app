@@ -653,14 +653,6 @@ export default function MachinesPage() {
               {showLocationSelector && (
                 <div className="border border-gray-200 dark:border-gray-700 rounded-md p-2 h-auto">
                   <LocationTreeView
-                    onLocationClick={(location) => {
-                      setSelectedLocation({
-                        _id: location._id,
-                        name: location.name,
-                        path: location.path,
-                      });
-                      setShowLocationSelector(false);
-                    }}
                     onLocationEdit={() => {
                       // Handle location edit - could navigate to locations page
                     }}

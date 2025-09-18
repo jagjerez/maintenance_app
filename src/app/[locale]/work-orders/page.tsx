@@ -118,7 +118,7 @@ interface WorkOrderMachineForModal {
   filledOperations?: IFilledOperation[];
   images?: IWorkOrderImage[];
   maintenanceDescription?: string;
-  _id: string;
+  _id?: string;
 }
 
 interface WorkOrderForModal {
@@ -400,7 +400,7 @@ export default function WorkOrdersPage() {
   };
 
   const handleMaintenanceSave = async (data: {
-    machines?: any[];
+    machines?: WorkOrderMachineForModal[];
     filledOperations: IFilledOperation[];
     labor: ILabor[];
     materials: IMaterial[];

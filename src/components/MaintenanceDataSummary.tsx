@@ -3,11 +3,13 @@
 import { useTranslations } from '@/hooks/useTranslations';
 import { FormGroup, FormLabel } from '@/components/Form';
 
+import { IFilledOperation, ILabor, IMaterial, IWorkOrderImage } from '@/models/WorkOrder';
+
 interface WorkOrder {
-  filledOperations: any[];
-  labor: any[];
-  materials: any[];
-  images: any[];
+  filledOperations: IFilledOperation[];
+  labor: ILabor[];
+  materials: IMaterial[];
+  images: IWorkOrderImage[];
 }
 
 interface MaintenanceDataSummaryProps {

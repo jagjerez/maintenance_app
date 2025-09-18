@@ -54,10 +54,6 @@ export default function MachineModelsPage() {
     resolver: zodResolver(machineModelSchema),
   });
 
-  useEffect(() => {
-    fetchMachineModels(currentPage);
-  }, [currentPage]);
-
   const fetchMachineModels = async (page = 1) => {
     try {
       setLoading(true);
@@ -82,6 +78,10 @@ export default function MachineModelsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchMachineModels(currentPage);
+  }, [currentPage]);
 
   const onSubmit = async (data: {
     name: string;

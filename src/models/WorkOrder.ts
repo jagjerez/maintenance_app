@@ -1,5 +1,4 @@
-import mongoose, { Schema, Document } from 'mongoose';
-import { IMachine } from './Machine';
+import mongoose, { Schema } from 'mongoose';
 import { IOperation } from './Operation';
 
 export type WorkOrderStatus = 'pending' | 'in_progress' | 'completed';

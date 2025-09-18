@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import connectDB from '@/lib/db';
 import { Company } from '@/models';
-import { companySchema } from '@/lib/validations';
 import { authOptions } from '@/lib/auth';
 
 export async function GET(
@@ -48,7 +47,7 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.companyId) {
+    if (!session?.user || !(session.user as { companyId?: string })?.companyId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }

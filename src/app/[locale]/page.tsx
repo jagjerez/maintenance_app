@@ -380,8 +380,6 @@ export default function Dashboard() {
           </div>
           <div className="border border-gray-200 dark:border-gray-700 rounded-md p-2 h-auto max-h-64 sm:max-h-80 overflow-y-auto">
             <LocationTreeView
-              onLocationClick={() => {
-              }}
               onMachineClick={(machine) => {
                 // Navigate to machines page with edit parameter
                 router.push(`/machines?edit=${machine._id}`);

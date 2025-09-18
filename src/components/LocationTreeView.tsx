@@ -36,7 +36,7 @@ interface LocationNode {
 }
 
 interface LocationTreeViewProps {
-  onLocationClick?: (location: LocationNode, event: React.MouseEvent) => void;
+  onLocationClick?: (location: LocationNode) => void;
   onLocationEdit?: (location: LocationNode, event: React.MouseEvent) => void;
   onLocationDelete?: (location: LocationNode, event: React.MouseEvent) => void;
   onLocationAdd?: (parentLocation?: LocationNode, event?: React.MouseEvent) => void;
@@ -108,15 +108,6 @@ export default function LocationTreeView({
     });
   };
 
-  const handleLocationClick = (location: LocationNode, event: React.MouseEvent) => {
-    if (preventFormSubmit) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    if (onLocationClick) {
-      onLocationClick(location, event);
-    }
-  };
 
   const handleLocationEdit = (location: LocationNode, event: React.MouseEvent) => {
     if (preventFormSubmit) {
@@ -228,7 +219,21 @@ export default function LocationTreeView({
                     )}
                   </button>
                   
-                  <div className="flex items-center space-x-2">
+                  <div 
+                    className="flex items-center space-x-2 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Call onLocationClick if provided
+                      if (onLocationClick) {
+                        onLocationClick(node);
+                      } else {
+                        // Fallback to toggle expansion if no onLocationClick handler
+                        if (hasChildren || hasMachines) {
+                          toggleExpanded(node._id);
+                        }
+                      }
+                    }}
+                  >
                     {isExpanded ? (
                       <FolderOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     ) : (

@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useTranslations } from '@/hooks/useTranslations';
 import { FormInput, FormTextarea, FormSelect, FormButton } from '@/components/Form';
-import { Plus, Trash2, Edit3, Check, X } from 'lucide-react';
+import { Trash2, Edit3, Check, X } from 'lucide-react';
 import { IFilledOperation } from '@/models/WorkOrder';
 import { IOperation } from '@/models/Operation';
 
@@ -99,20 +99,6 @@ export default function FilledOperationsManager({
     }
   };
 
-  const getOperationTypeLabel = (type: string) => {
-    // Handle undefined, null, or empty types
-    if (!type || type === 'undefined' || type === 'null') {
-      return 'Unknown';
-    }
-    
-    const translationKey = `operations.types.${type}`;
-    const translation = t(translationKey);
-    // If translation is the same as the key, it means the translation doesn't exist
-    if (translation === translationKey) {
-      return type.charAt(0).toUpperCase() + type.slice(1);
-    }
-    return translation;
-  };
 
   const formatValue = (value: unknown, type: string) => {
     if (value === null || value === undefined) return '-';

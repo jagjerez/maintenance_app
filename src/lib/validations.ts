@@ -32,6 +32,7 @@ export const userSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
   role: z.enum(['admin', 'user']).default('user'),
   isActive: z.boolean().default(true),
+  companyId: z.string().min(1, 'Company ID is required'),
   preferences: z.object({
     theme: z.enum(['light', 'dark', 'system']).default('system'),
     language: z.string().default('en'),
