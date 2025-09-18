@@ -754,7 +754,7 @@ export default function MaintenanceWorkModalUpdated({
           )}
 
           {/* Client Signature Section - Only show when work order is completed */}
-          {workOrder.status === "completed" && (
+          {(workOrder.status as string) === "completed" && (
             <div>
               <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
                 <IdCard className="h-5 w-5 mr-2" />
@@ -1140,7 +1140,7 @@ export default function MaintenanceWorkModalUpdated({
                       });
 
                       if (response.ok) {
-                        const result = await response.json();
+                        await response.json();
                         toast.success(t("workOrders.clientSignatureSaved"));
                         // Refresh the work order data
                         window.location.reload();
@@ -1399,7 +1399,7 @@ export default function MaintenanceWorkModalUpdated({
                                onImageUpload={(image) =>
                                 handleImageUpload(image, machine.machineId)
                               }
-                              disabled={workOrder.status === "completed"}
+                              disabled={(workOrder.status as string) === "completed"}
                               multiple={true}
                               maxFiles={5}
                               className="w-full"
@@ -1471,7 +1471,7 @@ export default function MaintenanceWorkModalUpdated({
                                             }
                                             className="p-2"
                                             disabled={
-                                              workOrder.status === "completed"
+                                              (workOrder.status as string) === "completed"
                                             }
                                           >
                                             <Trash2 className="h-4 w-4" />
@@ -1827,7 +1827,7 @@ export default function MaintenanceWorkModalUpdated({
                             variant="danger"
                             onClick={() => handleRemoveImage(globalIndex)}
                             className="p-2"
-                            disabled={workOrder.status === "completed"}
+                            disabled={(workOrder.status as string) === "completed"}
                           >
                             <Trash2 className="h-4 w-4" />
                           </FormButton>
@@ -1911,7 +1911,7 @@ export default function MaintenanceWorkModalUpdated({
         </div>
 
         {/* Client Signature Section - Only show when work order is completed */}
-        {workOrder.status === "completed" && (
+        {(workOrder.status as string) === "completed" && (
           <div>
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
               <IdCard className="h-5 w-5 mr-2" />
@@ -1925,7 +1925,7 @@ export default function MaintenanceWorkModalUpdated({
                     value={clientName}
                     onChange={(e) => setClientName(e.target.value)}
                     placeholder={t("workOrders.clientNamePlaceholder")}
-                    disabled={workOrder.status === "completed"}
+                    disabled={(workOrder.status as string) === "completed"}
                   />
                 </div>
                 <div>
@@ -1934,7 +1934,7 @@ export default function MaintenanceWorkModalUpdated({
                     value={clientId}
                     onChange={(e) => setClientId(e.target.value)}
                     placeholder={t("workOrders.operatorIdPlaceholder")}
-                    disabled={workOrder.status === "completed"}
+                    disabled={(workOrder.status as string) === "completed"}
                   />
                 </div>
               </div>
@@ -1948,7 +1948,7 @@ export default function MaintenanceWorkModalUpdated({
                     width={Math.min(300, window?.innerWidth - 100 || 300)}
                     height={150}
                     className="w-full"
-                    disabled={workOrder.status === "completed"}
+                    disabled={(workOrder.status as string) === "completed"}
                   />
                 </div>
               </div>

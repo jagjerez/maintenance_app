@@ -9,8 +9,7 @@ import {
   X, 
   Camera,
   Plus,
-  CheckCircle,
-  AlertCircle
+  CheckCircle
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -46,7 +45,7 @@ export default function ImageUpload({
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validateFile = (file: File): string | null => {
+  const validateFile = useCallback((file: File): string | null => {
     // Validate file type
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg'];
     if (!allowedTypes.includes(file.type)) {
@@ -60,7 +59,7 @@ export default function ImageUpload({
     }
 
     return null;
-  };
+  }, [t]);
 
   const createPreview = (file: File): PreviewImage => ({
     file,
@@ -102,7 +101,7 @@ export default function ImageUpload({
       const newPreviews = validFiles.map(createPreview);
       setPreviewImages(prev => [...prev, ...newPreviews]);
     }
-  }, [disabled, isUploading, previewImages.length, maxFiles, t]);
+  }, [disabled, isUploading, previewImages.length, maxFiles, t, validateFile]);
 
   const handleFileUpload = async (file: File) => {
     setIsUploading(true);
@@ -347,9 +346,7 @@ export default function ImageUpload({
                 key={preview.id}
                 className="relative group bg-white dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 shadow-sm"
               >
-                <img
-                  src={preview.preview}
-                  alt="Preview"
+                <ImageIcon
                   className="w-full h-24 object-cover"
                 />
                 

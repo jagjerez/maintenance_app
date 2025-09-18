@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useTranslations } from '@/hooks/useTranslations';
 import { Plus, Trash2, StopCircle, Wrench, Users, Package, Camera } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -523,9 +524,11 @@ export default function MaintenanceWorkModal({ isOpen, onClose, workOrder, onSav
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {images.map((image, index) => (
                 <div key={index} className="relative group">
-                  <img
+                  <Image
                     src={image.url}
                     alt={image.filename}
+                    width={300}
+                    height={192}
                     className="w-full h-48 object-cover rounded-lg border border-gray-200 dark:border-gray-600"
                   />
                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-opacity rounded-lg flex items-center justify-center">

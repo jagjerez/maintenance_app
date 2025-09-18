@@ -46,24 +46,24 @@ export default function SignUpPage() {
     resolver: zodResolver(signUpSchema),
   });
 
-  const fetchCompanies = async () => {
-    try {
-      const response = await fetch('/api/companies');
-      if (response.ok) {
-        const data = await response.json();
-        setCompanies(data);
-      } else {
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const response = await fetch('/api/companies');
+        if (response.ok) {
+          const data = await response.json();
+          setCompanies(data);
+        } else {
+          toast.error(t('auth.companiesLoadError'));
+        }
+      } catch (error) {
+        console.error('Error fetching companies:', error);
         toast.error(t('auth.companiesLoadError'));
       }
-    } catch (error) {
-      console.error('Error fetching companies:', error);
-      toast.error(t('auth.companiesLoadError'));
-    }
-  };
+    };
 
-  useEffect(() => {
     fetchCompanies();
-  }, []);
+  }, [t]);
 
   const onSubmit = async (data: SignUpForm) => {
     setIsLoading(true);
