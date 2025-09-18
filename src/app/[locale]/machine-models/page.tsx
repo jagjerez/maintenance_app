@@ -81,7 +81,7 @@ export default function MachineModelsPage() {
 
   useEffect(() => {
     fetchMachineModels(currentPage);
-  }, [currentPage, t]);
+  }, [currentPage, t, fetchMachineModels]);
 
   const onSubmit = async (data: {
     name: string;
