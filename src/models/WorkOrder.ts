@@ -36,6 +36,20 @@ export interface IWorkOrderImage {
   uploadedBy?: string;
 }
 
+export interface ISignatureData {
+  operatorName: string;
+  operatorId: string;
+  signature: string;
+  signedAt: string;
+}
+
+export interface IClientSignatureData {
+  clientName: string;
+  clientId: string;
+  signature: string;
+  signedAt: string;
+}
+
 export interface IWorkOrderMachine {
   machineId: string;
   maintenanceRangeIds?: string[]; // Solo para preventivo - múltiples maintenance ranges
@@ -61,6 +75,8 @@ export interface IWorkOrder {
   images: IWorkOrderImage[]; // Images uploaded at work order level
   labor?: ILabor[]; // Labor tracking at work order level
   materials?: IMaterial[]; // Materials used at work order level
+  operatorSignature?: ISignatureData; // Operator signature
+  clientSignature?: IClientSignatureData; // Client signature
   properties: Map<string, unknown>; // Custom properties
   companyId: string;
   createdAt: Date;
@@ -242,6 +258,38 @@ const WorkOrderSchema = new Schema({
     type: Map,
     of: Schema.Types.Mixed,
     default: new Map(),
+  },
+  operatorSignature: {
+    operatorName: {
+      type: String,
+      trim: true,
+    },
+    operatorId: {
+      type: String,
+      trim: true,
+    },
+    signature: {
+      type: String,
+    },
+    signedAt: {
+      type: Date,
+    },
+  },
+  clientSignature: {
+    clientName: {
+      type: String,
+      trim: true,
+    },
+    clientId: {
+      type: String,
+      trim: true,
+    },
+    signature: {
+      type: String,
+    },
+    signedAt: {
+      type: Date,
+    },
   },
   companyId: {
     type: Schema.Types.ObjectId,

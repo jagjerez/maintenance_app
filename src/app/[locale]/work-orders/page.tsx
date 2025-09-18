@@ -15,6 +15,8 @@ import {
   ILabor,
   IMaterial,
   IWorkOrderImage,
+  ISignatureData,
+  IClientSignatureData,
 } from "@/models/WorkOrder";
 import { IOperation } from "@/models/Operation";
 import { formatDateSafe } from "@/lib/utils";
@@ -189,6 +191,14 @@ export default function WorkOrdersPage() {
         );
         if (response.ok) {
           const data = await response.json();
+          
+          // Debug: Log the received work orders to see if signatures are included
+          if (data.workOrders && data.workOrders.length > 0) {
+            console.log("Received work orders from API:", data.workOrders);
+            console.log("First work order operator signature:", data.workOrders[0].operatorSignature);
+            console.log("First work order client signature:", data.workOrders[0].clientSignature);
+          }
+          
           setWorkOrders(data.workOrders || data);
           setTotalPages(
             data.totalPages ||
@@ -406,10 +416,17 @@ export default function WorkOrdersPage() {
     materials: IMaterial[];
     images: IWorkOrderImage[];
     status: "pending" | "in_progress" | "completed";
+    operatorSignature?: ISignatureData | null;
+    clientSignature?: IClientSignatureData | null;
   }) => {
     if (!editingWorkOrder) return;
 
     try {
+      // Debug: Log the data being sent
+      console.log("Maintenance data being sent:", data);
+      console.log("Operator signature:", data.operatorSignature);
+      console.log("Client signature:", data.clientSignature);
+
       // Update the work order with maintenance data
       const updatedWorkOrder = {
         ...editingWorkOrder,
@@ -420,11 +437,16 @@ export default function WorkOrdersPage() {
           data.status === "completed" ? new Date().toISOString() : undefined,
         labor: data.labor,
         materials: data.materials,
+        // Include signatures
+        operatorSignature: data.operatorSignature,
+        clientSignature: data.clientSignature,
         // Update machines with their specific data if provided
         ...(data.machines && { machines: data.machines }),
         // Note: filledOperations are now stored per machine in the new structure
         // This would need to be handled differently based on which machine the maintenance was performed on
       };
+
+      console.log("Updated work order being sent to API:", updatedWorkOrder);
 
       const response = await fetch(`/api/work-orders/${editingWorkOrder._id}`, {
         method: "PUT",

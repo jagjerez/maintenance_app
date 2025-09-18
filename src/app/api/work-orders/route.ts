@@ -57,6 +57,13 @@ export async function GET(request: NextRequest) {
     const totalItems = await WorkOrder.countDocuments(query);
     const totalPages = Math.ceil(totalItems / limit);
     
+    // Debug: Log the first work order to see if signatures are included
+    if (workOrders.length > 0) {
+      console.log("First work order from GET API:", JSON.stringify(workOrders[0], null, 2));
+      console.log("Operator signature:", workOrders[0].operatorSignature);
+      console.log("Client signature:", workOrders[0].clientSignature);
+    }
+    
     return NextResponse.json({
       workOrders,
       totalItems,
@@ -107,6 +114,14 @@ export async function POST(request: NextRequest) {
         ...img,
         uploadedAt: new Date(img.uploadedAt),
       })) || [],
+      operatorSignature: dataWithCompany.operatorSignature ? {
+        ...dataWithCompany.operatorSignature,
+        signedAt: new Date(dataWithCompany.operatorSignature.signedAt),
+      } : undefined,
+      clientSignature: dataWithCompany.clientSignature ? {
+        ...dataWithCompany.clientSignature,
+        signedAt: new Date(dataWithCompany.clientSignature.signedAt),
+      } : undefined,
     };
     
     const workOrder = new WorkOrder(workOrderData);

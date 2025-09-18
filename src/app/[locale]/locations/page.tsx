@@ -343,14 +343,13 @@ export default function LocationsPage() {
           <div className="flex rounded-md shadow-sm">
             <button
               onClick={() => setViewMode("tree")}
-              className={`flex-1 sm:flex-none px-3 py-2 text-sm font-medium rounded-l-md border min-h-[44px] touch-manipulation ${
+              className={`flex-1 sm:flex-col px-3 py-2 text-sm font-medium rounded-l-md border min-h-[44px] touch-manipulation ${
                 viewMode === "tree"
                   ? "bg-blue-600 text-white border-blue-600"
                   : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
               }`}
             >
               <Folder className="h-4 w-4 mx-auto sm:mx-0" />
-              <span className="ml-2 hidden sm:inline">{t("locations.treeView")}</span>
             </button>
             <button
               onClick={() => setViewMode("list")}
@@ -361,7 +360,6 @@ export default function LocationsPage() {
               }`}
             >
               <MapPin className="h-4 w-4 mx-auto sm:mx-0" />
-              <span className="ml-2 hidden sm:inline">{t("locations.listView")}</span>
             </button>
           </div>
 

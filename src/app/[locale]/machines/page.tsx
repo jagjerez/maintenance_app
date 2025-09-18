@@ -329,7 +329,7 @@ export default function MachinesPage() {
     properties: Record<string, unknown>;
   }) => {
     try {
-      if (!selectedLocation) {
+      if (!data.location || !data.locationId) {
         toast.error(t("machines.locationRequired"));
         return;
       }
@@ -627,6 +627,7 @@ export default function MachinesPage() {
               <div className="flex">
                 <input
                   type="text"
+                  {...register("location")}
                   value={selectedLocation ? selectedLocation.path : ""}
                   placeholder={t("placeholders.machineLocation")}
                   className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -644,6 +645,11 @@ export default function MachinesPage() {
                   )}
                 </button>
               </div>
+              {errors.location && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  {errors.location.message}
+                </p>
+              )}
               {selectedLocation && (
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                   <span className="font-medium">Selected:</span>{" "}
@@ -662,6 +668,14 @@ export default function MachinesPage() {
                     onLocationAdd={() => {
                       // Handle location add - could navigate to locations page
                     }}
+                    onLocationClick={(location) => {
+                      setSelectedLocation(location);
+                      setValue("location", location.path);
+                      setValue("locationId", location._id);
+                      setShowLocationSelector(false);
+                      // Handle location click - could navigate to locations page
+                    }}
+                    selectedLocationId={selectedLocation?._id}
                     showActions={false}
                     showMachines={false}
                     preventFormSubmit={true}

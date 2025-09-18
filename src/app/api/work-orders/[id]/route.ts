@@ -78,7 +78,18 @@ export async function PUT(
 
     await connectDB();
     const body = await request.json();
+    
+    // Debug: Log the received data
+    console.log("Received work order update data:", body);
+    console.log("Operator signature in request:", body.operatorSignature);
+    console.log("Client signature in request:", body.clientSignature);
+    
     const validatedData = workOrderUpdateSchema.parse(body);
+    
+    // Debug: Log validated data
+    console.log("Validated data:", validatedData);
+    console.log("Validated operator signature:", validatedData.operatorSignature);
+    console.log("Validated client signature:", validatedData.clientSignature);
     
     const { id } = await params;
     
@@ -146,6 +157,21 @@ export async function PUT(
           uploadedAt: new Date(img.uploadedAt),
         }))
       }),
+      // Handle operator signature
+      ...(validatedData.operatorSignature ? {
+        operatorSignature: {
+          ...validatedData.operatorSignature,
+          signedAt: new Date(validatedData.operatorSignature.signedAt),
+        }
+      } : validatedData.operatorSignature === null ? { operatorSignature: null } : {}),
+      
+      // Handle client signature
+      ...(validatedData.clientSignature ? {
+        clientSignature: {
+          ...validatedData.clientSignature,
+          signedAt: new Date(validatedData.clientSignature.signedAt),
+        }
+      } : validatedData.clientSignature === null ? { clientSignature: null } : {}),
     };
 
     // Handle machine-specific maintenance data updates
@@ -227,6 +253,11 @@ export async function PUT(
       delete updateData.machines;
     }
     
+    // Debug: Log the update data being sent to MongoDB
+    console.log("Update data being sent to MongoDB:", updateData);
+    console.log("Operator signature in update data:", updateData.operatorSignature);
+    console.log("Client signature in update data:", updateData.clientSignature);
+    
     const workOrder = await WorkOrder.findOneAndUpdate(
       { _id: id, companyId: session.user.companyId },
       updateData,
@@ -260,6 +291,11 @@ export async function PUT(
         { status: 404 }
       );
     }
+    
+    // Debug: Log the updated work order to verify signatures were saved
+    console.log("Updated work order from database:", workOrder);
+    console.log("Operator signature in updated work order:", workOrder.operatorSignature);
+    console.log("Client signature in updated work order:", workOrder.clientSignature);
     
     return NextResponse.json(workOrder);
   } catch (error) {

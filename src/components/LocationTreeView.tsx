@@ -189,11 +189,10 @@ export default function LocationTreeView({
         {/* Mobile Card Layout */}
         <div className="block  mt-2">
           <div
-            className={`bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3 mb-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 min-h-[44px] touch-manipulation ${
+            className={`bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3 mb-2 hover:bg-gray-100 dark:hover:bg-gray-600 min-h-[44px] touch-manipulation ${
               isSelected ? 'bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700' : ''
             }`}
             style={{ marginLeft: `${level * 12}px` }}
-            onClick={(e) => e.stopPropagation()}
           >
             <div className="space-y-2">
               {/* Header with expand button and name */}
@@ -226,11 +225,10 @@ export default function LocationTreeView({
                       // Call onLocationClick if provided
                       if (onLocationClick) {
                         onLocationClick(node);
-                      } else {
-                        // Fallback to toggle expansion if no onLocationClick handler
-                        if (hasChildren || hasMachines) {
-                          toggleExpanded(node._id);
-                        }
+                      }
+                      // Always toggle expansion for locations with children or machines
+                      if (hasChildren || hasMachines) {
+                        toggleExpanded(node._id);
                       }
                     }}
                   >

@@ -151,6 +151,18 @@ export const workOrderSchema = z.object({
     quantity: z.number().min(0, 'Quantity must be positive'),
     unit: z.string().min(1, 'Unit is required'),
   })).optional().default([]),
+  operatorSignature: z.object({
+    operatorName: z.string().min(1, 'Operator name is required'),
+    operatorId: z.string().min(1, 'Operator ID is required'),
+    signature: z.string().min(1, 'Signature is required'),
+    signedAt: z.string(),
+  }).optional().nullable(),
+  clientSignature: z.object({
+    clientName: z.string().min(1, 'Client name is required'),
+    clientId: z.string().min(1, 'Client ID is required'),
+    signature: z.string().min(1, 'Signature is required'),
+    signedAt: z.string(),
+  }).optional().nullable(),
   properties: z.record(z.string(), z.unknown()).optional().default({}),
 }).refine((data) => {
   // If type is corrective, at least one machine must have maintenanceDescription
