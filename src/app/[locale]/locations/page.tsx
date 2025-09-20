@@ -9,6 +9,7 @@ import { Plus, MapPin, Folder } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
+import BulkDeleteModal from "@/components/BulkDeleteModal";
 import {
   Form,
   FormGroup,
@@ -71,6 +72,9 @@ export default function LocationsPage() {
   const [totalItems, setTotalItems] = useState(0);
   const [viewMode, setViewMode] = useState<"list" | "tree">("tree");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [selectedLocations, setSelectedLocations] = useState<Location[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const {
     register,
@@ -221,6 +225,47 @@ export default function LocationsPage() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedLocations.length === 0) return;
+
+    try {
+      setIsBulkDeleting(true);
+      const response = await fetch('/api/locations/bulk-delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ids: selectedLocations.map(location => location._id)
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(result.message);
+        await fetchLocations();
+        await fetchAllLocations();
+        setRefreshTrigger((prev) => prev + 1);
+        setSelectedLocations([]);
+        setShowBulkDeleteModal(false);
+      } else {
+        const error = await response.json();
+        if (error.error === 'Cannot delete locations that have children') {
+          toast.error(t("locations.cannotDeleteWithChildren"));
+        } else if (error.error === 'Cannot delete locations that have machines') {
+          toast.error(t("locations.cannotDeleteWithMachines"));
+        } else {
+          toast.error(error.error || t("locations.locationError"));
+        }
+      }
+    } catch (error) {
+      console.error("Error bulk deleting locations:", error);
+      toast.error(t("locations.locationError"));
+    } finally {
+      setIsBulkDeleting(false);
+    }
   };
 
   const columns = [
@@ -397,6 +442,13 @@ export default function LocationsPage() {
               columns={columns}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onBulkDelete={(items) => {
+                setSelectedLocations(items);
+                setShowBulkDeleteModal(true);
+              }}
+              enableBulkDelete={true}
+              selectedItems={selectedLocations}
+              onSelectionChange={setSelectedLocations}
             />
           </div>
         </div>
@@ -506,6 +558,16 @@ export default function LocationsPage() {
               }
             : undefined
         }
+      />
+
+      {/* Bulk Delete Modal */}
+      <BulkDeleteModal
+        isOpen={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        onConfirm={handleBulkDelete}
+        selectedCount={selectedLocations.length}
+        itemType={t("locations.title")}
+        isDeleting={isBulkDeleting}
       />
     </div>
   );

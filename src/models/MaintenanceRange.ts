@@ -4,7 +4,13 @@ export interface IMaintenanceRange {
   _id: string;
   name: string;
   description: string;
+  type: 'preventive' | 'corrective';
   operations: string[];
+  // Planificación para mantenimiento preventivo
+  frequency?: 'daily' | 'monthly' | 'yearly';
+  startDate?: Date; // Fecha de inicio para monthly y yearly
+  startTime?: string; // Hora de inicio para monthly y yearly (formato HH:mm)
+  daysOfWeek?: number[]; // Días de la semana para daily (0=domingo, 1=lunes, etc.)
   companyId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -21,9 +27,37 @@ const MaintenanceRangeSchema = new Schema({
     required: [true, 'Description is required'],
     trim: true,
   },
+  type: {
+    type: String,
+    required: [true, 'Type is required'],
+    enum: {
+      values: ['preventive', 'corrective'],
+      message: 'Type must be preventive or corrective',
+    },
+  },
   operations: [{
     type: Schema.Types.ObjectId,
     ref: 'Operation',
+  }],
+  // Planificación para mantenimiento preventivo
+  frequency: {
+    type: String,
+    enum: {
+      values: ['daily', 'monthly', 'yearly'],
+      message: 'Frequency must be daily, monthly, or yearly',
+    },
+  },
+  startDate: {
+    type: Date,
+  },
+  startTime: {
+    type: String,
+    match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:mm)'],
+  },
+  daysOfWeek: [{
+    type: Number,
+    min: 0,
+    max: 6,
   }],
   companyId: {
     type: Schema.Types.ObjectId,

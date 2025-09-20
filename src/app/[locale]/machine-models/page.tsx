@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Plus, Settings } from "lucide-react";
 import DataTable from "@/components/DataTable";
 import Modal from "@/components/Modal";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
+import BulkDeleteModal from "@/components/BulkDeleteModal";
 import {
   Form,
   FormGroup,
@@ -43,6 +44,9 @@ export default function MachineModelsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [selectedModels, setSelectedModels] = useState<MachineModel[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const {
     register,
@@ -54,7 +58,7 @@ export default function MachineModelsPage() {
     resolver: zodResolver(machineModelSchema),
   });
 
-  const fetchMachineModels = async (page = 1) => {
+  const fetchMachineModels = useCallback(async (page = 1) => {
     try {
       setLoading(true);
       const response = await fetch(
@@ -77,7 +81,7 @@ export default function MachineModelsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     fetchMachineModels(currentPage);
@@ -168,6 +172,43 @@ export default function MachineModelsPage() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedModels.length === 0) return;
+
+    try {
+      setIsBulkDeleting(true);
+      const response = await fetch('/api/machine-models/bulk-delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ids: selectedModels.map(model => model._id)
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(result.message);
+        fetchMachineModels(currentPage);
+        setSelectedModels([]);
+        setShowBulkDeleteModal(false);
+      } else {
+        const error = await response.json();
+        if (error.error === 'Cannot delete machine models that are being used in machines') {
+          toast.error(t("machineModels.modelInUse"));
+        } else {
+          toast.error(error.error || t("machineModels.modelError"));
+        }
+      }
+    } catch (error) {
+      console.error("Error bulk deleting machine models:", error);
+      toast.error(t("machineModels.modelError"));
+    } finally {
+      setIsBulkDeleting(false);
+    }
   };
 
   const columns = [
@@ -286,6 +327,13 @@ export default function MachineModelsPage() {
             columns={columns}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onBulkDelete={(items) => {
+              setSelectedModels(items);
+              setShowBulkDeleteModal(true);
+            }}
+            enableBulkDelete={true}
+            selectedItems={selectedModels}
+            onSelectionChange={setSelectedModels}
           />
         </div>
       </div>
@@ -393,6 +441,16 @@ export default function MachineModelsPage() {
               }
             : undefined
         }
+      />
+
+      {/* Bulk Delete Modal */}
+      <BulkDeleteModal
+        isOpen={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        onConfirm={handleBulkDelete}
+        selectedCount={selectedModels.length}
+        itemType={t("machineModels.title")}
+        isDeleting={isBulkDeleting}
       />
     </div>
   );

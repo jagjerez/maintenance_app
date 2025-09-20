@@ -9,6 +9,7 @@ import { Plus, ChevronDown, ChevronRight, Wrench } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
+import BulkDeleteModal from "@/components/BulkDeleteModal";
 import {
   Form,
   FormGroup,
@@ -48,6 +49,7 @@ interface MaintenanceRange {
   _id: string;
   name: string;
   description: string;
+  type: 'preventive' | 'corrective';
   operations: Operation[];
 }
 
@@ -93,6 +95,10 @@ export default function MachinesPage() {
   const [selectedMaintenanceRanges, setSelectedMaintenanceRanges] = useState<
     string[]
   >([]);
+  const [selectedMaintenanceType, setSelectedMaintenanceType] = useState<'preventive' | 'corrective' | ''>('');
+  const [selectedMachines, setSelectedMachines] = useState<Machine[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const ITEMS_PER_PAGE = 10;
 
@@ -238,10 +244,40 @@ export default function MachinesPage() {
         machine.maintenanceRanges?.map((range) => range._id) || [];
       setSelectedMaintenanceRanges(rangeIds);
 
-      // Set selected operations
+      // Set maintenance type based on selected ranges
+      if (rangeIds.length > 0) {
+        const selectedRanges = maintenanceRanges.filter(range => 
+          rangeIds.includes(range._id)
+        );
+        const types = selectedRanges.map(range => range.type);
+        const uniqueTypes = [...new Set(types)];
+        if (uniqueTypes.length === 1) {
+          setSelectedMaintenanceType(uniqueTypes[0]);
+        }
+      } else {
+        setSelectedMaintenanceType('');
+      }
+
+      // Set selected operations (only if not corrective)
       const operationIds =
         machine.operations?.map((operation) => operation._id) || [];
-      setSelectedOperations(operationIds);
+      
+      // Only set operations if the maintenance type is not corrective
+      if (rangeIds.length > 0) {
+        const selectedRanges = maintenanceRanges.filter(range => 
+          rangeIds.includes(range._id)
+        );
+        const types = selectedRanges.map(range => range.type);
+        const uniqueTypes = [...new Set(types)];
+        
+        if (uniqueTypes.length === 1 && uniqueTypes[0] === 'corrective') {
+          setSelectedOperations([]);
+        } else {
+          setSelectedOperations(operationIds);
+        }
+      } else {
+        setSelectedOperations(operationIds);
+      }
 
       // Set selected location if machine has locationId
       if (machine.locationId) {
@@ -256,7 +292,7 @@ export default function MachinesPage() {
 
       setShowModal(true);
     },
-    [setValue]
+    [setValue, maintenanceRanges]
   );
 
   // Load full machine data and open edit modal
@@ -334,21 +370,48 @@ export default function MachinesPage() {
         return;
       }
 
+      // Validar que solo se seleccionen gamas del mismo tipo
+      if (selectedMaintenanceRanges.length > 0) {
+        const selectedRanges = maintenanceRanges.filter(range => 
+          selectedMaintenanceRanges.includes(range._id)
+        );
+        const types = selectedRanges.map(range => range.type);
+        const uniqueTypes = [...new Set(types)];
+        
+        if (uniqueTypes.length > 1) {
+          toast.error(t("machines.onlyOneMaintenanceTypeAllowed"));
+          return;
+        }
+        
+        // Establecer el tipo seleccionado
+        if (uniqueTypes.length === 1) {
+          setSelectedMaintenanceType(uniqueTypes[0]);
+          
+          // Si es correctivo, limpiar las operaciones seleccionadas
+          if (uniqueTypes[0] === 'corrective') {
+            setSelectedOperations([]);
+          }
+        }
+      }
+
       const url = editingMachine
         ? `/api/machines/${editingMachine._id}`
         : "/api/machines";
       const method = editingMachine ? "PUT" : "POST";
+
+      // Prepare data to send
+      const dataToSend = {
+        ...data,
+        maintenanceRanges: selectedMaintenanceRanges,
+        operations: selectedMaintenanceType === 'corrective' ? [] : selectedOperations,
+      };
 
       const response = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...data,
-          maintenanceRanges: selectedMaintenanceRanges,
-          operations: selectedOperations,
-        }),
+        body: JSON.stringify(dataToSend),
       });
 
       if (response.ok) {
@@ -364,6 +427,7 @@ export default function MachinesPage() {
         setShowLocationSelector(false);
         setSelectedMaintenanceRanges([]);
         setSelectedOperations([]);
+        setSelectedMaintenanceType('');
         reset();
       } else {
         const error = await response.json();
@@ -371,6 +435,8 @@ export default function MachinesPage() {
           toast.error(t("machines.duplicateModelLocation"));
         } else if (error.error === "duplicateMaintenanceRangeType") {
           toast.error(t("machines.duplicateMaintenanceRangeType"));
+        } else if (error.error === "correctiveMaintenanceNoOperations") {
+          toast.error(t("machines.correctiveMaintenanceNoOperations"));
         } else {
           toast.error(error.error || t("machines.machineError"));
         }
@@ -411,6 +477,39 @@ export default function MachinesPage() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedMachines.length === 0) return;
+
+    try {
+      setIsBulkDeleting(true);
+      const response = await fetch('/api/machines/bulk-delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ids: selectedMachines.map(machine => machine._id)
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(result.message);
+        await fetchMachines(currentPage);
+        setSelectedMachines([]);
+        setShowBulkDeleteModal(false);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || t("machines.machineError"));
+      }
+    } catch (error) {
+      console.error("Error bulk deleting machines:", error);
+      toast.error(t("machines.machineError"));
+    } finally {
+      setIsBulkDeleting(false);
+    }
   };
 
   const columns = [
@@ -557,6 +656,13 @@ export default function MachinesPage() {
             columns={columns}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onBulkDelete={(items) => {
+              setSelectedMachines(items);
+              setShowBulkDeleteModal(true);
+            }}
+            enableBulkDelete={true}
+            selectedItems={selectedMachines}
+            onSelectionChange={setSelectedMachines}
           />
         </div>
       </div>
@@ -701,54 +807,110 @@ export default function MachinesPage() {
             <MultiSelect
               options={
                 Array.isArray(maintenanceRanges)
-                  ? maintenanceRanges.map((range) => ({
-                      value: range._id,
-                      label: range.name,
-                      description: range.description,
-                    }))
-                  : []
-              }
-              selectedValues={selectedMaintenanceRanges}
-              onChange={setSelectedMaintenanceRanges}
-              placeholder={t("machines.selectMaintenanceRanges")}
-              hideSelected={true}
-            />
-          </FormGroup>
-
-          <FormGroup>
-            <FormLabel>{t("machines.operations")}</FormLabel>
-            <MultiSelect
-              options={
-                Array.isArray(operations)
-                  ? operations
-                      .filter(
-                        (operation) =>
-                          !maintenanceRanges
-                            .filter((range) =>
-                              selectedMaintenanceRanges.includes(range._id)
-                            )
-                            .some((range) =>
-                              range.operations?.some(
-                                (op) => op._id === operation._id
-                              )
-                            )
-                      )
-                      .map((operation) => ({
-                        value: operation._id,
-                        label: operation.name,
-                        description: operation.description,
+                  ? maintenanceRanges
+                      .filter((range) => {
+                        // Si no hay tipo seleccionado, mostrar todas
+                        if (!selectedMaintenanceType) return true;
+                        // Si hay tipo seleccionado, solo mostrar las del mismo tipo
+                        return range.type === selectedMaintenanceType;
+                      })
+                      .map((range) => ({
+                        value: range._id,
+                        label: range.name,
+                        description: `${range.description} (${range.type === 'preventive' ? t("maintenanceRanges.preventive") : t("maintenanceRanges.corrective")})`,
                       }))
                   : []
               }
-              selectedValues={selectedOperations}
-              onChange={setSelectedOperations}
-              placeholder={t("machines.selectOperations")}
+              selectedValues={selectedMaintenanceRanges}
+              onChange={(values) => {
+                // Validar que solo se seleccionen gamas del mismo tipo
+                if (values.length > 0) {
+                  const selectedRanges = maintenanceRanges.filter(range => 
+                    values.includes(range._id)
+                  );
+                  const types = selectedRanges.map(range => range.type);
+                  const uniqueTypes = [...new Set(types)];
+                  
+                  if (uniqueTypes.length > 1) {
+                    toast.error(t("machines.onlyOneMaintenanceTypeAllowed"));
+                    return;
+                  }
+                  
+                  // Establecer el tipo seleccionado
+                  if (uniqueTypes.length === 1) {
+                    setSelectedMaintenanceType(uniqueTypes[0]);
+                    
+                    // Si es correctivo, limpiar las operaciones seleccionadas
+                    if (uniqueTypes[0] === 'corrective') {
+                      setSelectedOperations([]);
+                    }
+                  }
+                } else {
+                  setSelectedMaintenanceType('');
+                }
+                
+                setSelectedMaintenanceRanges(values);
+              }}
+              placeholder={t("machines.selectMaintenanceRanges")}
               hideSelected={true}
             />
+            {selectedMaintenanceType && (
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {t("machines.selectedType")}: {selectedMaintenanceType === 'preventive' ? t("maintenanceRanges.preventive") : t("maintenanceRanges.corrective")}
+              </p>
+            )}
+          </FormGroup>
 
-            {/* Operations */}
-            {(selectedOperations.length > 0 ||
-              selectedMaintenanceRanges.length > 0) &&
+          {/* Solo mostrar operaciones si es preventivo */}
+          {selectedMaintenanceType === 'preventive' && (
+            <FormGroup>
+              <FormLabel>{t("machines.operations")}</FormLabel>
+              <MultiSelect
+                options={
+                  Array.isArray(operations)
+                    ? operations
+                        .filter(
+                          (operation) =>
+                            !maintenanceRanges
+                              .filter((range) =>
+                                selectedMaintenanceRanges.includes(range._id) && range.type === 'preventive'
+                              )
+                              .some((range) =>
+                                range.operations?.some(
+                                  (op) => op._id === operation._id
+                                )
+                              )
+                        )
+                        .map((operation) => ({
+                          value: operation._id,
+                          label: operation.name,
+                          description: operation.description,
+                        }))
+                    : []
+                }
+                selectedValues={selectedOperations}
+                onChange={setSelectedOperations}
+                placeholder={t("machines.selectOperations")}
+                hideSelected={true}
+              />
+            </FormGroup>
+          )}
+
+          {/* Mensaje informativo para gamas correctivas */}
+          {selectedMaintenanceType === 'corrective' && (
+            <FormGroup>
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  {t("machines.correctiveMaintenanceNoOperations")}
+                </p>
+              </div>
+            </FormGroup>
+          )}
+
+            {/* Operations - Solo para gamas preventivas */}
+            {selectedMaintenanceType === 'preventive' &&
+              (selectedOperations.length > 0 ||
+                selectedMaintenanceRanges.length > 0) &&
               (() => {
                 const machine = machines;
                 if (!machine) return null;
@@ -756,10 +918,10 @@ export default function MachinesPage() {
                 const automaticOperations: IOperation[] = [];
                 const operationIds = new Set<string>();
 
-                // Add operations from all maintenance ranges of the machine
+                // Add operations from all maintenance ranges of the machine (only for preventive)
                 maintenanceRanges
                   .filter((range) =>
-                    selectedMaintenanceRanges.includes(range._id)
+                    selectedMaintenanceRanges.includes(range._id) && range.type === 'preventive'
                   )
                   .forEach((range) => {
                     if (range.operations) {
@@ -797,7 +959,7 @@ export default function MachinesPage() {
                         selectedOperations.includes(op._id)
                       )}
                       maintenanceRanges={maintenanceRanges.filter((range) =>
-                        selectedMaintenanceRanges.includes(range._id)
+                        selectedMaintenanceRanges.includes(range._id) && range.type === 'preventive'
                       )}
                       title={t("machines.selectedOperations")}
                       showOrder={false}
@@ -806,7 +968,6 @@ export default function MachinesPage() {
                   </div>
                 );
               })()}
-          </FormGroup>
 
           <FormGroup>
             <FormLabel>{t("machines.customProperties")}</FormLabel>
@@ -911,6 +1072,16 @@ export default function MachinesPage() {
               }
             : undefined
         }
+      />
+
+      {/* Bulk Delete Modal */}
+      <BulkDeleteModal
+        isOpen={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        onConfirm={handleBulkDelete}
+        selectedCount={selectedMachines.length}
+        itemType={t("machines.title")}
+        isDeleting={isBulkDeleting}
       />
     </div>
   );

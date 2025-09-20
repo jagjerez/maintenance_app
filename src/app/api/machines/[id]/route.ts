@@ -115,6 +115,34 @@ export async function PUT(
       }
     }
     
+    // Validate maintenance ranges have only one type
+    if (validatedData.maintenanceRanges && validatedData.maintenanceRanges.length > 0) {
+      const { MaintenanceRange } = await import('@/models');
+      const maintenanceRanges = await MaintenanceRange.find({
+        _id: { $in: validatedData.maintenanceRanges },
+        companyId: session.user.companyId,
+      });
+      
+      // Check that all maintenance ranges have the same type
+      const types = maintenanceRanges.map(range => range.type);
+      const uniqueTypes = [...new Set(types)];
+      
+      if (uniqueTypes.length > 1) {
+        return NextResponse.json(
+          { error: 'duplicateMaintenanceRangeType' },
+          { status: 400 }
+        );
+      }
+      
+      // For corrective maintenance ranges, ensure no operations are provided
+      if (uniqueTypes.length === 1 && uniqueTypes[0] === 'corrective' && validatedData.operations && validatedData.operations.length > 0) {
+        return NextResponse.json(
+          { error: 'correctiveMaintenanceNoOperations' },
+          { status: 400 }
+        );
+      }
+    }
+    
     // Validate operations are not duplicated in maintenance ranges
     if (validatedData.operations && validatedData.operations.length > 0) {
       const { Operation } = await import('@/models');
@@ -142,9 +170,27 @@ export async function PUT(
       }
     }
     
+    // For corrective maintenance ranges, ensure no operations are saved
+    const updateData = { ...validatedData };
+    if (validatedData.maintenanceRanges && validatedData.maintenanceRanges.length > 0) {
+      const { MaintenanceRange } = await import('@/models');
+      const maintenanceRanges = await MaintenanceRange.find({
+        _id: { $in: validatedData.maintenanceRanges },
+        companyId: session.user.companyId,
+      });
+      
+      const types = maintenanceRanges.map(range => range.type);
+      const uniqueTypes = [...new Set(types)];
+      
+      // If it's corrective, don't save operations
+      if (uniqueTypes.length === 1 && uniqueTypes[0] === 'corrective') {
+        updateData.operations = [];
+      }
+    }
+    
     const machine = await Machine.findOneAndUpdate(
       { _id: id, companyId: session.user.companyId },
-      validatedData,
+      updateData,
       { new: true, runValidators: true }
     )
       .populate({

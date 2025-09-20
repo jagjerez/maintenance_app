@@ -119,7 +119,7 @@ export async function DELETE(
 
     // Check if maintenance range is being used in any work orders
     const workOrdersUsingRange = await WorkOrder.countDocuments({
-      maintenanceRange: id,
+      'machines.maintenanceRangeIds': id,
     });
 
     if (workOrdersUsingRange > 0) {

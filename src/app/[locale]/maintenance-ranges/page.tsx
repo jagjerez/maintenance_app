@@ -8,6 +8,9 @@ import { Plus, Wrench } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
+import BulkDeleteModal from "@/components/BulkDeleteModal";
+import YearSelectorModal from "@/components/YearSelectorModal";
+import MonthSelectorModal from "@/components/MonthSelectorModal";
 import {
   Form,
   FormGroup,
@@ -32,7 +35,13 @@ interface MaintenanceRange {
   _id: string;
   name: string;
   description: string;
+  type: 'preventive' | 'corrective';
   operations: Operation[];
+  // Planificación para mantenimiento preventivo
+  frequency?: 'daily' | 'monthly' | 'yearly';
+  startDate?: string;
+  startTime?: string;
+  daysOfWeek?: number[];
   createdAt: string;
   updatedAt: string;
 }
@@ -58,6 +67,17 @@ export default function MaintenanceRangesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
+  const [maintenanceType, setMaintenanceType] = useState<'preventive' | 'corrective' | ''>('');
+  const [frequency, setFrequency] = useState<'daily' | 'monthly' | 'yearly' | ''>('');
+  const [selectedDaysOfWeek, setSelectedDaysOfWeek] = useState<number[]>([]);
+  const [showYearModal, setShowYearModal] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  const [showMonthModal, setShowMonthModal] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [selectedMonthYear, setSelectedMonthYear] = useState<number | null>(null);
+  const [selectedRanges, setSelectedRanges] = useState<MaintenanceRange[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const {
     register,
@@ -131,20 +151,80 @@ export default function MaintenanceRangesPage() {
 
   const onSubmit = async (data: { name: string; description: string }) => {
     try {
+      // Validar campos requeridos antes de enviar
+      if (!maintenanceType) {
+        toast.error(t("maintenanceRanges.typeRequired"));
+        return;
+      }
+      
+      if (maintenanceType === 'preventive' && !frequency) {
+        toast.error(t("maintenanceRanges.frequencyRequired"));
+        return;
+      }
+      
+      // Validar campos específicos según la frecuencia
+      if (maintenanceType === 'preventive' && frequency === 'yearly' && !selectedYear) {
+        toast.error(t("maintenanceRanges.yearRequired"));
+        return;
+      }
+      
+      if (maintenanceType === 'preventive' && frequency === 'monthly' && (!selectedMonth || !selectedMonthYear)) {
+        toast.error(t("maintenanceRanges.monthRequired"));
+        return;
+      }
+      
+      if (maintenanceType === 'preventive' && frequency === 'daily' && selectedDaysOfWeek.length === 0) {
+        toast.error(t("maintenanceRanges.daysRequired"));
+        return;
+      }
       const url = editingRange
         ? `/api/maintenance-ranges/${editingRange._id}`
         : "/api/maintenance-ranges";
       const method = editingRange ? "PUT" : "POST";
 
+      const requestData: {
+        name: string;
+        description: string;
+        type: 'preventive' | 'corrective';
+        operations: string[];
+        frequency?: string;
+        startDate?: string;
+        startTime?: string;
+        daysOfWeek?: number[];
+      } = {
+        ...data,
+        type: maintenanceType as 'preventive' | 'corrective',
+        operations: selectedOperations,
+      };
+
+      // Solo agregar campos de planificación si es preventivo
+      if (maintenanceType === 'preventive') {
+        requestData.frequency = frequency;
+        
+        // Construir datos según la frecuencia
+        if (frequency === 'yearly') {
+          requestData.startDate = `${selectedYear}-01-01`;
+        } else if (frequency === 'monthly') {
+          requestData.startDate = `${selectedMonthYear}-${selectedMonth!.toString().padStart(2, '0')}-01`;
+        } else if (frequency === 'daily') {
+          requestData.daysOfWeek = selectedDaysOfWeek;
+        }
+      }
+
+      console.log('Sending request data:', requestData);
+      console.log('Maintenance type:', maintenanceType);
+      console.log('Frequency:', frequency);
+      console.log('Selected year:', selectedYear);
+      console.log('Selected month:', selectedMonth);
+      console.log('Selected month year:', selectedMonthYear);
+      console.log('Selected days of week:', selectedDaysOfWeek);
+      
       const response = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...data,
-          operations: selectedOperations,
-        }),
+        body: JSON.stringify(requestData),
       });
 
       if (response.ok) {
@@ -152,6 +232,12 @@ export default function MaintenanceRangesPage() {
         setShowModal(false);
         setEditingRange(null);
         setSelectedOperations([]);
+        setMaintenanceType('');
+        setFrequency('');
+        setSelectedDaysOfWeek([]);
+        setSelectedYear(null);
+        setSelectedMonth(null);
+        setSelectedMonthYear(null);
         reset();
         toast.success(
           editingRange
@@ -159,7 +245,9 @@ export default function MaintenanceRangesPage() {
             : t("maintenanceRanges.rangeCreated")
         );
       } else {
-        toast.error(t("maintenanceRanges.rangeError"));
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Error response:', errorData);
+        toast.error(errorData.message || t("maintenanceRanges.rangeError"));
       }
     } catch (error) {
       console.error("Error saving maintenance range:", error);
@@ -169,11 +257,33 @@ export default function MaintenanceRangesPage() {
 
   const handleEdit = (range: MaintenanceRange) => {
     setEditingRange(range);
+    setMaintenanceType(range.type);
     setSelectedOperations(
       Array.isArray(range.operations)
         ? range.operations.map((op) => op._id)
         : []
     );
+    setFrequency(range.frequency || '');
+    setSelectedDaysOfWeek(range.daysOfWeek || []);
+    
+    // Set selected year if it's a yearly frequency
+    if (range.frequency === 'yearly' && range.startDate) {
+      const year = new Date(range.startDate).getFullYear();
+      setSelectedYear(year);
+    } else {
+      setSelectedYear(null);
+    }
+    
+    // Set selected month and year if it's a monthly frequency
+    if (range.frequency === 'monthly' && range.startDate) {
+      const date = new Date(range.startDate);
+      setSelectedMonth(date.getMonth() + 1);
+      setSelectedMonthYear(date.getFullYear());
+    } else {
+      setSelectedMonth(null);
+      setSelectedMonthYear(null);
+    }
+    
     reset({
       name: range.name,
       description: range.description,
@@ -231,10 +341,84 @@ export default function MaintenanceRangesPage() {
     setCurrentPage(page);
   };
 
+  const handleYearSelect = (year: number) => {
+    setSelectedYear(year);
+  };
+
+  const handleMonthSelect = (month: number, year: number) => {
+    setSelectedMonth(month);
+    setSelectedMonthYear(year);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedRanges.length === 0) return;
+
+    try {
+      setIsBulkDeleting(true);
+      const response = await fetch('/api/maintenance-ranges/bulk-delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ids: selectedRanges.map(range => range._id)
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(result.message);
+        await fetchMaintenanceRanges(currentPage);
+        setSelectedRanges([]);
+        setShowBulkDeleteModal(false);
+      } else {
+        const error = await response.json();
+        if (error.error === 'Cannot delete maintenance ranges that are being used in work orders') {
+          toast.error(
+            t("maintenanceRanges.rangeInUse", {
+              count: error.workOrdersCount,
+              workOrders:
+                error.workOrdersCount > 1
+                  ? t("common.workOrders")
+                  : t("common.workOrder"),
+            })
+          );
+        } else {
+          toast.error(error.error || t("maintenanceRanges.rangeError"));
+        }
+      }
+    } catch (error) {
+      console.error("Error bulk deleting maintenance ranges:", error);
+      toast.error(t("maintenanceRanges.rangeError"));
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const columns = [
     {
       key: "name" as keyof MaintenanceRange,
       label: t("maintenanceRanges.rangeName"),
+    },
+    {
+      key: "type" as keyof MaintenanceRange,
+      label: t("maintenanceRanges.type"),
+      render: (value: unknown) => {
+        const type = value as string;
+        return (
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              type === "preventive"
+                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                : "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300"
+            }`}
+          >
+            {type === "preventive"
+              ? t("maintenanceRanges.preventive")
+              : t("maintenanceRanges.corrective")}
+          </span>
+        );
+      },
     },
     {
       key: "description" as keyof MaintenanceRange,
@@ -248,6 +432,75 @@ export default function MaintenanceRangesPage() {
         const operations = value as Operation[];
         return operations?.length || 0;
       },
+    },
+    {
+      key: "frequency" as keyof MaintenanceRange,
+      label: t("maintenanceRanges.planning"),
+      render: (value: unknown, range: MaintenanceRange) => {
+        if (range.type === 'corrective') {
+          return <span className="text-gray-500 dark:text-gray-400">-</span>;
+        }
+        
+        if (!range.frequency) {
+          return <span className="text-gray-500 dark:text-gray-400">-</span>;
+        }
+        
+        let planningText = '';
+        switch (range.frequency) {
+          case 'daily':
+            const dayNames = [
+              t("maintenanceRanges.sunday"),
+              t("maintenanceRanges.monday"),
+              t("maintenanceRanges.tuesday"),
+              t("maintenanceRanges.wednesday"),
+              t("maintenanceRanges.thursday"),
+              t("maintenanceRanges.friday"),
+              t("maintenanceRanges.saturday"),
+            ];
+            const selectedDays = range.daysOfWeek?.map(day => dayNames[day]).join(', ') || '';
+            planningText = `${t("maintenanceRanges.daily")}: ${selectedDays}`;
+            break;
+          case 'monthly':
+            planningText = `${t("maintenanceRanges.monthly")}`;
+            if (range.startDate) {
+              const date = new Date(range.startDate);
+              const monthNames = [
+                t("maintenanceRanges.january"),
+                t("maintenanceRanges.february"),
+                t("maintenanceRanges.march"),
+                t("maintenanceRanges.april"),
+                t("maintenanceRanges.may"),
+                t("maintenanceRanges.june"),
+                t("maintenanceRanges.july"),
+                t("maintenanceRanges.august"),
+                t("maintenanceRanges.september"),
+                t("maintenanceRanges.october"),
+                t("maintenanceRanges.november"),
+                t("maintenanceRanges.december"),
+              ];
+              const monthName = monthNames[date.getMonth()];
+              const year = date.getFullYear();
+              planningText += ` (${monthName} ${year})`;
+            }
+            break;
+          case 'yearly':
+            planningText = `${t("maintenanceRanges.yearly")}`;
+            if (range.startDate) {
+              planningText += ` (${formatDateSafe(range.startDate)})`;
+            }
+            if (range.startTime) {
+              planningText += ` ${range.startTime}`;
+            }
+            break;
+        }
+        
+        return (
+          <span className="text-sm text-gray-600 dark:text-gray-400">
+            {planningText}
+          </span>
+        );
+      },
+      hideOnMobile: true,
     },
     {
       key: "createdAt" as keyof MaintenanceRange,
@@ -324,7 +577,16 @@ export default function MaintenanceRangesPage() {
             onClick={() => {
               setEditingRange(null);
               setSelectedOperations([]);
-              reset();
+              setMaintenanceType('');
+              setFrequency('');
+              setSelectedDaysOfWeek([]);
+              setSelectedYear(null);
+              setSelectedMonth(null);
+              setSelectedMonthYear(null);
+              reset({
+                name: "",
+                description: "",
+              });
               setShowModal(true);
             }}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -353,6 +615,13 @@ export default function MaintenanceRangesPage() {
             columns={columns}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onBulkDelete={(items) => {
+              setSelectedRanges(items);
+              setShowBulkDeleteModal(true);
+            }}
+            enableBulkDelete={true}
+            selectedItems={selectedRanges}
+            onSelectionChange={setSelectedRanges}
           />
         </div>
       </div>
@@ -374,6 +643,12 @@ export default function MaintenanceRangesPage() {
           setShowModal(false);
           setEditingRange(null);
           setSelectedOperations([]);
+          setMaintenanceType('');
+          setFrequency('');
+          setSelectedDaysOfWeek([]);
+          setSelectedYear(null);
+          setSelectedMonth(null);
+          setSelectedMonthYear(null);
           reset();
         }}
         title={
@@ -404,6 +679,127 @@ export default function MaintenanceRangesPage() {
           </FormGroup>
 
           <FormGroup>
+            <FormLabel required>{t("maintenanceRanges.type")}</FormLabel>
+            <select
+              value={maintenanceType}
+              {...register("type")}
+              onChange={(e) => {
+                setMaintenanceType(e.target.value as 'preventive' | 'corrective' | '');
+                // Limpiar campos de planificación al cambiar tipo
+                if (e.target.value !== 'preventive') {
+                  setFrequency('');
+                  setSelectedDaysOfWeek([]);
+                  setSelectedYear(null);
+                  setSelectedMonth(null);
+                  setSelectedMonthYear(null);
+                }
+              }}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">{t("placeholders.selectType")}</option>
+              <option value="preventive">{t("maintenanceRanges.preventive")}</option>
+              <option value="corrective">{t("maintenanceRanges.corrective")}</option>
+            </select>
+          </FormGroup>
+
+          {/* Campos de planificación solo para preventivo */}
+          {maintenanceType === 'preventive' && (
+            <>
+              <FormGroup>
+                <FormLabel required>{t("maintenanceRanges.frequency")}</FormLabel>
+                <select
+                  value={frequency}
+                  onChange={(e) => {
+                    setFrequency(e.target.value as 'daily' | 'monthly' | 'yearly' | '');
+                    // Limpiar campos específicos al cambiar frecuencia
+                    if (e.target.value !== 'daily') {
+                      setSelectedDaysOfWeek([]);
+                    }
+                    if (e.target.value !== 'yearly') {
+                      setSelectedYear(null);
+                    }
+                    if (e.target.value !== 'monthly') {
+                      setSelectedMonth(null);
+                      setSelectedMonthYear(null);
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">{t("placeholders.selectFrequency")}</option>
+                  <option value="daily">{t("maintenanceRanges.daily")}</option>
+                  <option value="monthly">{t("maintenanceRanges.monthly")}</option>
+                  <option value="yearly">{t("maintenanceRanges.yearly")}</option>
+                </select>
+              </FormGroup>
+
+              {/* Días de la semana para frecuencia diaria */}
+              {frequency === 'daily' && (
+                <FormGroup>
+                  <FormLabel required>{t("maintenanceRanges.daysOfWeek")}</FormLabel>
+                  <div className="grid grid-cols-7 gap-2">
+                    {[
+                      { value: 0, label: t("maintenanceRanges.sunday") },
+                      { value: 1, label: t("maintenanceRanges.monday") },
+                      { value: 2, label: t("maintenanceRanges.tuesday") },
+                      { value: 3, label: t("maintenanceRanges.wednesday") },
+                      { value: 4, label: t("maintenanceRanges.thursday") },
+                      { value: 5, label: t("maintenanceRanges.friday") },
+                      { value: 6, label: t("maintenanceRanges.saturday") },
+                    ].map((day) => (
+                      <label key={day.value} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedDaysOfWeek.includes(day.value)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedDaysOfWeek([...selectedDaysOfWeek, day.value]);
+                            } else {
+                              setSelectedDaysOfWeek(selectedDaysOfWeek.filter(d => d !== day.value));
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <span className="text-sm">{day.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </FormGroup>
+              )}
+
+              {/* Selector de mes para frecuencia mensual */}
+              {frequency === 'monthly' && (
+                <FormGroup>
+                  <FormLabel required>{t("maintenanceRanges.month")}</FormLabel>
+                  <button
+                    type="button"
+                    onClick={() => setShowMonthModal(true)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-left focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {selectedMonth && selectedMonthYear 
+                      ? `${t(`maintenanceRanges.${['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'][selectedMonth - 1]}`)} ${selectedMonthYear}`
+                      : t("maintenanceRanges.selectMonth")
+                    }
+                  </button>
+                </FormGroup>
+              )}
+
+              {/* Selector de año para frecuencia anual */}
+              {frequency === 'yearly' && (
+                <FormGroup>
+                  <FormLabel required>{t("maintenanceRanges.year")}</FormLabel>
+                  <button
+                    type="button"
+                    onClick={() => setShowYearModal(true)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-left focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    {selectedYear ? selectedYear : t("maintenanceRanges.selectYear")}
+                  </button>
+                </FormGroup>
+              )}
+            </>
+          )}
+
+          <FormGroup>
             <FormLabel>{t("maintenanceRanges.operations")}</FormLabel>
             <MultiSelect
               options={(operations || []).map((op) => ({
@@ -429,12 +825,18 @@ export default function MaintenanceRangesPage() {
                 setShowModal(false);
                 setEditingRange(null);
                 setSelectedOperations([]);
+                setMaintenanceType('');
+                setFrequency('');
+                setSelectedDaysOfWeek([]);
+                setSelectedYear(null);
+                setSelectedMonth(null);
+                setSelectedMonthYear(null);
                 reset();
               }}
             >
               {t("common.cancel")}
             </FormButton>
-            <FormButton type="submit" disabled={isSubmitting}>
+            <FormButton type="submit" disabled={isSubmitting} onClick={() => console.log(errors)}>
               {isSubmitting
                 ? t("common.saving")
                 : editingRange
@@ -462,6 +864,33 @@ export default function MaintenanceRangesPage() {
               }
             : undefined
         }
+      />
+
+      {/* Year Selector Modal */}
+      <YearSelectorModal
+        isOpen={showYearModal}
+        onClose={() => setShowYearModal(false)}
+        onSelectYear={handleYearSelect}
+        selectedYear={selectedYear || undefined}
+      />
+
+      {/* Month Selector Modal */}
+      <MonthSelectorModal
+        isOpen={showMonthModal}
+        onClose={() => setShowMonthModal(false)}
+        onSelectMonth={handleMonthSelect}
+        selectedMonth={selectedMonth || undefined}
+        selectedYear={selectedMonthYear || undefined}
+      />
+
+      {/* Bulk Delete Modal */}
+      <BulkDeleteModal
+        isOpen={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        onConfirm={handleBulkDelete}
+        selectedCount={selectedRanges.length}
+        itemType={t("maintenanceRanges.title")}
+        isDeleting={isBulkDeleting}
       />
     </div>
   );

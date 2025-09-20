@@ -8,6 +8,7 @@ import { Plus, Wrench } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
+import BulkDeleteModal from "@/components/BulkDeleteModal";
 import {
   Form,
   FormGroup,
@@ -47,6 +48,9 @@ export default function OperationsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [selectedOperations, setSelectedOperations] = useState<Operation[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
   const {
     register,
@@ -195,6 +199,48 @@ export default function OperationsPage() {
     setCurrentPage(page);
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedOperations.length === 0) return;
+
+    try {
+      setIsBulkDeleting(true);
+      const response = await fetch('/api/operations/bulk-delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ids: selectedOperations.map(operation => operation._id)
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(result.message);
+        await fetchOperations(currentPage);
+        setSelectedOperations([]);
+        setShowBulkDeleteModal(false);
+      } else {
+        const error = await response.json();
+        if (error.error === 'Cannot delete operations that are being used in maintenance ranges') {
+          const rangeNames = error.details?.maintenanceRanges || '';
+          toast.error(
+            `${t("operations.operationInUse")} ${
+              rangeNames ? `(${rangeNames})` : ""
+            }`
+          );
+        } else {
+          toast.error(error.error || t("operations.operationError"));
+        }
+      }
+    } catch (error) {
+      console.error("Error bulk deleting operations:", error);
+      toast.error(t("operations.operationError"));
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const columns = [
     {
       key: "name" as keyof Operation,
@@ -329,6 +375,13 @@ export default function OperationsPage() {
             columns={columns}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onBulkDelete={(items) => {
+              setSelectedOperations(items);
+              setShowBulkDeleteModal(true);
+            }}
+            enableBulkDelete={true}
+            selectedItems={selectedOperations}
+            onSelectionChange={setSelectedOperations}
           />
         </div>
       </div>
@@ -438,6 +491,16 @@ export default function OperationsPage() {
               }
             : undefined
         }
+      />
+
+      {/* Bulk Delete Modal */}
+      <BulkDeleteModal
+        isOpen={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        onConfirm={handleBulkDelete}
+        selectedCount={selectedOperations.length}
+        itemType={t("operations.title")}
+        isDeleting={isBulkDeleting}
       />
     </div>
   );

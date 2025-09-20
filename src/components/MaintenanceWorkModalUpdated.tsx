@@ -620,64 +620,66 @@ export default function MaintenanceWorkModalUpdated({
             </p>
           </div>
 
-          {/* Operations Summary */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
-              <Wrench className="h-5 w-5 mr-2" />
-              {t("workOrders.operationsPerformed")}
-            </h3>
-            <div className="space-y-4">
-              {workOrder.machines.map((machine) => {
-                const machineOperations = operations.filter((op) =>
-                  machine.operations?.includes(op._id)
-                );
-                return (
-                  <div key={machine.machineId} className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                    <h4 className="font-medium text-gray-900 dark:text-white mb-3">
-                      {t("workOrders.machine")} {machine.machineId}
-                    </h4>
-                    <div className="space-y-2">
-                      {machineOperations.map((operation) => {
-                        const filledOp = filledOperations.find(
-                          (op) => op.operationId === operation._id && op.machineId === machine.machineId
-                        );
-                        return (
-                          <div key={operation._id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h5 className="font-medium text-gray-900 dark:text-white">{operation.name}</h5>
-                                {operation.description && (
-                                  <p className="text-sm text-gray-600 dark:text-gray-400">{operation.description}</p>
-                                )}
+          {/* Operations Summary - Only for preventive maintenance */}
+          {workOrder.type === "preventive" && (
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+                <Wrench className="h-5 w-5 mr-2" />
+                {t("workOrders.operationsPerformed")}
+              </h3>
+              <div className="space-y-4">
+                {workOrder.machines.map((machine) => {
+                  const machineOperations = operations.filter((op) =>
+                    machine.operations?.includes(op._id)
+                  );
+                  return (
+                    <div key={machine.machineId} className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                      <h4 className="font-medium text-gray-900 dark:text-white mb-3">
+                        {t("workOrders.machine")} {machine.machineId}
+                      </h4>
+                      <div className="space-y-2">
+                        {machineOperations.map((operation) => {
+                          const filledOp = filledOperations.find(
+                            (op) => op.operationId === operation._id && op.machineId === machine.machineId
+                          );
+                          return (
+                            <div key={operation._id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h5 className="font-medium text-gray-900 dark:text-white">{operation.name}</h5>
+                                  {operation.description && (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">{operation.description}</p>
+                                  )}
+                                </div>
+                                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                  {t("workOrders.completed")}
+                                </span>
                               </div>
-                              <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                                {t("workOrders.completed")}
-                              </span>
-                            </div>
-                            {filledOp && (
-                              <div className="mt-2">
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                  <strong>{t("workOrders.value")}:</strong> {filledOp.value?.toString()}
-                                </p>
-                                {filledOp.description && (
+                              {filledOp && (
+                                <div className="mt-2">
                                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    <strong>Descripción:</strong> {filledOp.description}
+                                    <strong>{t("workOrders.value")}:</strong> {filledOp.value?.toString()}
                                   </p>
-                                )}
-                                <p className="text-xs text-gray-500 dark:text-gray-500">
-                                  {t("workOrders.completed")} el: {formatDateTime(filledOp.filledAt)}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                                  {filledOp.description && (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                      <strong>Descripción:</strong> {filledOp.description}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                                    {t("workOrders.completed")} el: {formatDateTime(filledOp.filledAt)}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Labor Summary */}
           <div>
@@ -849,64 +851,66 @@ export default function MaintenanceWorkModalUpdated({
             </p>
           </div>
 
-          {/* Operations Summary - Read Only */}
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
-              <Wrench className="h-5 w-5 mr-2" />
-              {t("workOrders.operationsPerformed")}
-            </h3>
-            <div className="space-y-4">
-              {workOrder.machines.map((machine) => {
-                const machineOperations = operations.filter((op) =>
-                  machine.operations?.includes(op._id)
-                );
-                return (
-                  <div key={machine.machineId} className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
-                    <h4 className="font-medium text-gray-900 dark:text-white mb-3">
-                      {t("workOrders.machine")} {machine.machineId}
-                    </h4>
-                    <div className="space-y-2">
-                      {machineOperations.map((operation) => {
-                        const filledOp = filledOperations.find(
-                          (op) => op.operationId === operation._id && op.machineId === machine.machineId
-                        );
-                        return (
-                          <div key={operation._id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <h5 className="font-medium text-gray-900 dark:text-white">{operation.name}</h5>
-                                {operation.description && (
-                                  <p className="text-sm text-gray-600 dark:text-gray-400">{operation.description}</p>
-                                )}
+          {/* Operations Summary - Read Only - Only for preventive maintenance */}
+          {workOrder.type === "preventive" && (
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
+                <Wrench className="h-5 w-5 mr-2" />
+                {t("workOrders.operationsPerformed")}
+              </h3>
+              <div className="space-y-4">
+                {workOrder.machines.map((machine) => {
+                  const machineOperations = operations.filter((op) =>
+                    machine.operations?.includes(op._id)
+                  );
+                  return (
+                    <div key={machine.machineId} className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg">
+                      <h4 className="font-medium text-gray-900 dark:text-white mb-3">
+                        {t("workOrders.machine")} {machine.machineId}
+                      </h4>
+                      <div className="space-y-2">
+                        {machineOperations.map((operation) => {
+                          const filledOp = filledOperations.find(
+                            (op) => op.operationId === operation._id && op.machineId === machine.machineId
+                          );
+                          return (
+                            <div key={operation._id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <h5 className="font-medium text-gray-900 dark:text-white">{operation.name}</h5>
+                                  {operation.description && (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">{operation.description}</p>
+                                  )}
+                                </div>
+                                <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
+                                  {t("workOrders.completed")}
+                                </span>
                               </div>
-                              <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                                {t("workOrders.completed")}
-                              </span>
-                            </div>
-                            {filledOp && (
-                              <div className="mt-2">
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                  <strong>{t("workOrders.value")}:</strong> {filledOp.value?.toString()}
-                                </p>
-                                {filledOp.description && (
+                              {filledOp && (
+                                <div className="mt-2">
                                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                                    <strong>Descripción:</strong> {filledOp.description}
+                                    <strong>{t("workOrders.value")}:</strong> {filledOp.value?.toString()}
                                   </p>
-                                )}
-                                <p className="text-xs text-gray-500 dark:text-gray-500">
-                                  {t("workOrders.completed")} el: {formatDateTime(filledOp.filledAt)}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                                  {filledOp.description && (
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                                      <strong>Descripción:</strong> {filledOp.description}
+                                    </p>
+                                  )}
+                                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                                    {t("workOrders.completed")} el: {formatDateTime(filledOp.filledAt)}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Labor Summary - Read Only */}
           <div>
@@ -1234,7 +1238,7 @@ export default function MaintenanceWorkModalUpdated({
               {t("workOrders.fillOperations")}
             </h3>
 
-          {workOrder.machines.length === 0 ? (
+            {workOrder.machines.length === 0 ? (
             <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
               <p className="text-sm text-yellow-800 dark:text-yellow-200">
                 {t("workOrders.noOperationsToFill")}
@@ -1257,11 +1261,33 @@ export default function MaintenanceWorkModalUpdated({
                         Machine {machine.machineId}
                       </h4>
                       <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {machineOperations.length} operations
+                        {workOrder.type === "preventive" 
+                          ? `${machineOperations.length} operations`
+                          : t("workOrders.correctiveMaintenance")
+                        }
                       </span>
                     </div>
 
-                    {machineOperations.length === 0 ? (
+                    {workOrder.type === "corrective" ? (
+                      <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Wrench className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                          <h5 className="font-medium text-orange-900 dark:text-orange-100">
+                            {t("workOrders.correctiveMaintenance")}
+                          </h5>
+                        </div>
+                        <p className="text-sm text-orange-800 dark:text-orange-200">
+                          {t("workOrders.correctiveMaintenanceDescription")}
+                        </p>
+                        {machine.maintenanceDescription && (
+                          <div className="mt-3 p-3 bg-white dark:bg-gray-800 rounded border">
+                            <p className="text-sm text-gray-700 dark:text-gray-300">
+                              <strong>{t("workOrders.description")}:</strong> {machine.maintenanceDescription}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ) : machineOperations.length === 0 ? (
                       <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
                         <p className="text-sm text-yellow-800 dark:text-yellow-200">
                           {t("workOrders.noOperationsAssigned")}
@@ -1383,118 +1409,118 @@ export default function MaintenanceWorkModalUpdated({
                             </div>
                           );
                         })}
-
-                        {/* Images Section */}
-                        <div>
-                          <div className="flex items-center justify-between mb-4">
-                            <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-                              <Camera className="h-5 w-5 mr-2" />
-                              {t("workOrders.workOrderImages")}
-                            </h3>
-                          </div>
-
-                          {/* Image Upload Component */}
-                          <div className="mb-6">
-                            <ImageUpload
-                               onImageUpload={(image) =>
-                                handleImageUpload(image, machine.machineId)
-                              }
-                              disabled={(workOrder.status as string) === "completed"}
-                              multiple={true}
-                              maxFiles={5}
-                              className="w-full"
-                            />
-                          </div>
-
-                          {/* Uploaded Images - Work Order Level Only */}
-                          {(() => {
-                            const machineImages = images.filter(
-                              (img) => img.machineId === machine.machineId
-                            );
-                            return machineImages.length === 0 ? (
-                              <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                                <p className="text-sm text-gray-600 dark:text-gray-400">
-                                  {t("workOrders.noImagesUploaded")}
-                                </p>
-                              </div>
-                            ) : (
-                              <div className="space-y-4">
-                                <div className="text-sm text-gray-600 dark:text-gray-400">
-                                  {t("workOrders.showingImagesCount", {
-                                    count: machineImages.length,
-                                  })}
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                  {machineImages.map((image, index) => {
-                                    const globalIndex = images.findIndex(
-                                      (img) =>
-                                        img.url === image.url && !img.machineId
-                                    );
-                                    console.log(
-                                      `Rendering work order image ${index}:`,
-                                      image
-                                    );
-                                    return (
-                                      <div
-                                        key={index}
-                                        className="relative group bg-white dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600"
-                                      >
-                        <Image
-                          src={image.url}
-                          alt={image.filename}
-                          width={300}
-                          height={192}
-                          className="w-full h-48 object-cover"
-                          onError={(e) => {
-                            console.error(
-                              "Image load error:",
-                              e
-                            );
-                            console.error(
-                              "Failed URL:",
-                              image.url
-                            );
-                          }}
-                          onLoad={() => {
-                            console.log(
-                              "Image loaded successfully:",
-                              image.url
-                            );
-                          }}
-                        />
-                                        <div className="absolute top-2 right-2 ">
-                                          <FormButton
-                                            type="button"
-                                            variant="danger"
-                                            onClick={() =>
-                                              handleRemoveImage(globalIndex)
-                                            }
-                                            className="p-2"
-                                            disabled={
-                                              (workOrder.status as string) === "completed"
-                                            }
-                                          >
-                                            <Trash2 className="h-4 w-4" />
-                                          </FormButton>
-                                        </div>
-                                        <div className="mt-2">
-                                          <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                                            {image.filename}
-                                          </p>
-                                          <p className="text-xs text-gray-500 dark:text-gray-500">
-                                            {formatDateTime(image.uploadedAt)}
-                                          </p>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })()}
-                        </div>
                       </div>
                     )}
+
+                    {/* Images Section */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
+                          <Camera className="h-5 w-5 mr-2" />
+                          {t("workOrders.workOrderImages")}
+                        </h3>
+                      </div>
+
+                      {/* Image Upload Component */}
+                      <div className="mb-6">
+                        <ImageUpload
+                           onImageUpload={(image) =>
+                            handleImageUpload(image, machine.machineId)
+                          }
+                          disabled={(workOrder.status as string) === "completed"}
+                          multiple={true}
+                          maxFiles={5}
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Uploaded Images - Machine Level */}
+                      {(() => {
+                        const machineImages = images.filter(
+                          (img) => img.machineId === machine.machineId
+                        );
+                        return machineImages.length === 0 ? (
+                          <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {t("workOrders.noImagesUploaded")}
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="text-sm text-gray-600 dark:text-gray-400">
+                              {t("workOrders.showingImagesCount", {
+                                count: machineImages.length,
+                              })}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {machineImages.map((image, index) => {
+                                const globalIndex = images.findIndex(
+                                  (img) =>
+                                    img.url === image.url && img.machineId === machine.machineId
+                                );
+                                console.log(
+                                  `Rendering machine image ${index}:`,
+                                  image
+                                );
+                                return (
+                                  <div
+                                    key={index}
+                                    className="relative group bg-white dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600"
+                                  >
+                                    <Image
+                                      src={image.url}
+                                      alt={image.filename}
+                                      width={300}
+                                      height={192}
+                                      className="w-full h-48 object-cover"
+                                      onError={(e) => {
+                                        console.error(
+                                          "Image load error:",
+                                          e
+                                        );
+                                        console.error(
+                                          "Failed URL:",
+                                          image.url
+                                        );
+                                      }}
+                                      onLoad={() => {
+                                        console.log(
+                                          "Image loaded successfully:",
+                                          image.url
+                                        );
+                                      }}
+                                    />
+                                    <div className="absolute top-2 right-2 ">
+                                      <FormButton
+                                        type="button"
+                                        variant="danger"
+                                        onClick={() =>
+                                          handleRemoveImage(globalIndex)
+                                        }
+                                        className="p-2"
+                                        disabled={
+                                          (workOrder.status as string) === "completed"
+                                        }
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </FormButton>
+                                    </div>
+                                    <div className="mt-2">
+                                      <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                                        {image.filename}
+                                      </p>
+                                      <p className="text-xs text-gray-500 dark:text-gray-500">
+                                        {formatDateTime(image.uploadedAt)}
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
                 );
               })}

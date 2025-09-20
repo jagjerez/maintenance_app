@@ -10,6 +10,7 @@ import DataTable from "@/components/DataTable";
 import MaintenanceWorkModalUpdated from "@/components/MaintenanceWorkModalUpdated";
 import WorkOrderFormModal from "@/components/WorkOrderFormModal";
 import WorkOrderDeleteModal from "@/components/WorkOrderDeleteModal";
+import BulkDeleteModal from "@/components/BulkDeleteModal";
 import {
   IFilledOperation,
   ILabor,
@@ -39,6 +40,7 @@ interface Machine {
   maintenanceRanges?: Array<{
     _id: string;
     name: string;
+    type: 'preventive' | 'corrective';
     operations: IOperation[];
   }>;
 }
@@ -75,6 +77,7 @@ interface PopulatedMaintenanceRange {
   _id: string;
   name: string;
   description: string;
+  type: 'preventive' | 'corrective';
   operations: PopulatedOperation[];
   companyId: string;
   createdAt: string;
@@ -182,6 +185,9 @@ export default function WorkOrdersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedWorkOrders, setSelectedWorkOrders] = useState<WorkOrder[]>([]);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   // Fetch work orders with pagination
   const fetchWorkOrders = useCallback(
     async (page = 1) => {
@@ -475,6 +481,39 @@ export default function WorkOrdersPage() {
     setCurrentPage(page);
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedWorkOrders.length === 0) return;
+
+    try {
+      setIsBulkDeleting(true);
+      const response = await fetch('/api/work-orders/bulk-delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ids: selectedWorkOrders.map(workOrder => workOrder._id)
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        toast.success(result.message);
+        await fetchWorkOrders(currentPage);
+        setSelectedWorkOrders([]);
+        setShowBulkDeleteModal(false);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || t("workOrders.workOrderError"));
+      }
+    } catch (error) {
+      console.error("Error bulk deleting work orders:", error);
+      toast.error(t("workOrders.workOrderError"));
+    } finally {
+      setIsBulkDeleting(false);
+    }
+  };
+
   const columns = [
     {
       key: "customCode" as keyof WorkOrder,
@@ -681,6 +720,13 @@ export default function WorkOrdersPage() {
               columns={columns}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onBulkDelete={(items) => {
+                setSelectedWorkOrders(items);
+                setShowBulkDeleteModal(true);
+              }}
+              enableBulkDelete={true}
+              selectedItems={selectedWorkOrders}
+              onSelectionChange={setSelectedWorkOrders}
               onMaintenance={(workOrder: WorkOrder) => {
                 const workOrderForModal: WorkOrderForModal = {
                   ...workOrder,
@@ -752,6 +798,16 @@ export default function WorkOrdersPage() {
           operations={operations}
         />
       )}
+
+      {/* Bulk Delete Modal */}
+      <BulkDeleteModal
+        isOpen={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        onConfirm={handleBulkDelete}
+        selectedCount={selectedWorkOrders.length}
+        itemType={t("workOrders.title")}
+        isDeleting={isBulkDeleting}
+      />
     </div>
   );
 }
