@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ChevronRight, ChevronDown, MapPin, Wrench, Plus, Edit, Trash2, Folder, FolderOpen } from 'lucide-react';
+import { ChevronRight, ChevronDown, MapPin, Wrench, Plus, Edit, Trash2, Folder, FolderOpen, Building, Factory, Warehouse, Home, Store, Truck, Building2, Landmark } from 'lucide-react';
 import { useTranslations } from '@/hooks/useTranslations';
 import { FormButton } from './Form';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -28,6 +28,7 @@ interface LocationNode {
   _id: string;
   name: string;
   description?: string;
+  icon?: string;
   path: string;
   level: number;
   isLeaf: boolean;
@@ -48,6 +49,20 @@ interface LocationTreeViewProps {
   showMachines?: boolean; // New prop to control machine display
   preventFormSubmit?: boolean; // New prop to prevent form submission
 }
+
+const iconMap = {
+  'building': Building,
+  'building2': Building2,
+  'home': Home,
+  'factory': Factory,
+  'warehouse': Warehouse,
+  'store': Store,
+  'landmark': Landmark,
+  'wrench': Wrench,
+  'folder': Folder,
+  'map-pin': MapPin,
+  'truck': Truck,
+};
 
 export default function LocationTreeView({
   onLocationClick,
@@ -71,6 +86,14 @@ export default function LocationTreeView({
     isOpen: boolean;
     location: LocationNode | null;
   }>({ isOpen: false, location: null });
+
+  const getIconComponent = (iconName?: string) => {
+    if (!iconName || !iconMap[iconName as keyof typeof iconMap]) {
+      return null;
+    }
+    const IconComponent = iconMap[iconName as keyof typeof iconMap];
+    return <IconComponent className="w-4 h-4" />;
+  };
 
   // Load location tree
   useEffect(() => {
@@ -232,10 +255,12 @@ export default function LocationTreeView({
                       }
                     }}
                   >
-                    {isExpanded ? (
-                      <FolderOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    ) : (
-                      <Folder className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                    {getIconComponent(node.icon) || (
+                      isExpanded ? (
+                        <FolderOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      ) : (
+                        <Folder className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                      )
                     )}
                     <span className="text-sm font-medium text-gray-900 dark:text-white">
                       {node.name}

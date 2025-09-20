@@ -22,7 +22,8 @@ const validRoutes = [
   '/auth/signin',
   '/auth/signup',
   '/page-wrong',
-  '/locations'
+  '/locations',
+  '/integration'
 ];
 
 // Check if a path is a valid route
@@ -97,7 +98,8 @@ export default async function middleware(request: NextRequest) {
     '/operations',
     '/work-orders',
     '/settings',
-    '/locations'
+    '/locations',
+    '/integration'
   ];
 
   // Check if this is a protected route

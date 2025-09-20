@@ -20,6 +20,7 @@ import {
   Menu,
   X,
   MapPin,
+  Database,
 } from "lucide-react";
 
 const getNavigation = (t: (key: string) => string) => [
@@ -30,6 +31,7 @@ const getNavigation = (t: (key: string) => string) => [
   { name: t('navigation.maintenanceRanges'), href: "/maintenance-ranges", icon: List },
   { name: t('navigation.operations'), href: "/operations", icon: Cog },
   { name: t('navigation.locations'), href: "/locations", icon: MapPin },
+  { name: t('navigation.integration'), href: "/integration", icon: Database, isAdmin: true },
   { name: t('navigation.settings'), href: "/settings", icon: Settings },
 ];
 
@@ -127,31 +129,44 @@ export default function Navigation() {
             <LanguageSelector />
           </div>
           
-          {navigation.map((item) => {
+          {navigation.map((item, index) => {
             // Extract the path without locale (e.g., /en/dashboard -> /dashboard)
             const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}/, '') || '/';
             const isActive = pathWithoutLocale === item.href;
+            const isAdminItem = item.isAdmin;
+            const prevItem = navigation[index - 1];
+            const showSeparator = isAdminItem && prevItem && !prevItem.isAdmin;
+            
             return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  "block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors transform",
-                  mobileMenuOpen ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
-                  isActive
-                    ? "bg-gray-200 dark:bg-gray-700 border-blue-500 text-gray-900 dark:text-white"
-                    : "border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300"
+              <div key={item.name}>
+                {showSeparator && (
+                  <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 my-2">
+                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      {t('navigation.adminTools')}
+                    </div>
+                  </div>
                 )}
-                style={{
-                  transitionDelay: mobileMenuOpen ? `${navigation.indexOf(item) * 50}ms` : '0ms'
-                }}
-              >
-                <div className="flex items-center">
-                  <item.icon className="h-4 w-4 mr-3" />
-                  {item.name}
-                </div>
-              </Link>
+                <Link
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "block pl-3 pr-4 py-2 border-l-4 text-base font-medium transition-colors transform",
+                    mobileMenuOpen ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0",
+                    isActive
+                      ? "bg-gray-200 dark:bg-gray-700 border-blue-500 text-gray-900 dark:text-white"
+                      : "border-transparent text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-300",
+                    isAdminItem && "ml-2"
+                  )}
+                  style={{
+                    transitionDelay: mobileMenuOpen ? `${index * 50}ms` : '0ms'
+                  }}
+                >
+                  <div className="flex items-center">
+                    <item.icon className="h-4 w-4 mr-3" />
+                    {item.name}
+                  </div>
+                </Link>
+              </div>
             );
           })}
         </div>

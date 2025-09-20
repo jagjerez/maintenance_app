@@ -503,6 +503,7 @@
     "deleteLocation": "Delete Location",
     "locationName": "Location Name",
     "description": "Description",
+    "icon": "Icône",
     "path": "Chemin",
     "level": "Niveau",
     "parentLocation": "Parent Location",

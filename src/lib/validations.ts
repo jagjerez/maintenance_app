@@ -256,6 +256,7 @@ export const filledOperationUpdateSchema = filledOperationSchema.partial();
 export const locationSchema = z.object({
   name: z.string().min(1, 'Location name is required').max(100, 'Location name too long'),
   description: z.string().max(500, 'Description too long').optional(),
+  icon: z.string().max(50, 'Icon identifier too long').optional(),
   parentId: z.string().nullable().optional().transform(val => val === '' ? null : val),
 });
 

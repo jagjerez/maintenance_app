@@ -19,6 +19,7 @@
     "@vercel/blob": "^1.1.1",
     "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
+    "csv-parser": "^3.2.0",
     "lucide-react": "^0.544.0",
     "mongoose": "^8.18.1",
     "next": "15.5.3",
@@ -30,6 +31,7 @@
     "react-hook-form": "^7.62.0",
     "react-hot-toast": "^2.6.0",
     "tailwind-merge": "^3.3.1",
+    "xlsx": "^0.18.5",
     "zod": "^4.1.8"
   },
   "devDependencies": {

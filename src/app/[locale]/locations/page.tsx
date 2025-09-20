@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "@/hooks/useTranslations";
-import { Plus, MapPin, Folder } from "lucide-react";
+import { Plus, MapPin, Folder, Building, Factory, Warehouse, Home, Store, Truck, Wrench, Building2, Landmark, MapPinIcon, FactoryIcon } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
@@ -25,6 +25,25 @@ import { locationSchema } from "@/lib/validations";
 import LocationTreeView from "@/components/LocationTreeView";
 
 const ITEMS_PER_PAGE = 10;
+
+const iconOptions = [
+  { value: '', label: 'No Icon', icon: null },
+  // Building category
+  { value: 'building', label: 'Building', icon: Building },
+  { value: 'building2', label: 'Building Complex', icon: Building2 },
+  { value: 'home', label: 'House/Home', icon: Home },
+  // Company category
+  { value: 'factory', label: 'Factory', icon: Factory },
+  { value: 'warehouse', label: 'Warehouse', icon: Warehouse },
+  { value: 'store', label: 'Store/Shop', icon: Store },
+  { value: 'landmark', label: 'Company Landmark', icon: Landmark },
+  // Structure category
+  { value: 'wrench', label: 'Workshop/Station', icon: Wrench },
+  { value: 'folder', label: 'Department/Section', icon: Folder },
+  // Physical Location category
+  { value: 'map-pin', label: 'Physical Location', icon: MapPin },
+  { value: 'truck', label: 'Loading/Transport Area', icon: Truck },
+];
 
 interface Machine {
   _id: string;
@@ -47,6 +66,7 @@ interface Location {
   _id: string;
   name: string;
   description?: string;
+  icon?: string;
   path: string;
   level: number;
   isLeaf: boolean;
@@ -138,6 +158,7 @@ export default function LocationsPage() {
   const onSubmit = async (data: {
     name: string;
     description?: string;
+    icon?: string;
     parentId?: string | null;
   }) => {
     try {
@@ -181,6 +202,7 @@ export default function LocationsPage() {
     reset({
       name: location.name,
       description: location.description || "",
+      icon: location.icon || "",
       parentId: location.parentId || "",
     });
     setShowModal(true);
@@ -268,10 +290,23 @@ export default function LocationsPage() {
     }
   };
 
+  const getIconComponent = (iconName?: string) => {
+    const option = iconOptions.find(opt => opt.value === iconName);
+    if (!option || !option.icon) return null;
+    const IconComponent = option.icon;
+    return <IconComponent className="w-4 h-4" />;
+  };
+
   const columns = [
     {
       key: "name" as keyof Location,
       label: t("locations.locationName"),
+      render: (value: unknown, item: Location) => (
+        <div className="flex items-center space-x-2">
+          {getIconComponent(item.icon)}
+          <span>{value as string}</span>
+        </div>
+      ),
     },
     {
       key: "description" as keyof Location,
@@ -301,6 +336,7 @@ export default function LocationsPage() {
     reset({
       name: "",
       description: "",
+      icon: "",
       parentId: parentLocation?._id || "",
     });
     setShowModal(true);
@@ -499,6 +535,20 @@ export default function LocationsPage() {
               placeholder={t("placeholders.locationDescription")}
               rows={3}
             />
+          </FormGroup>
+
+          <FormGroup>
+            <FormLabel>{t("locations.icon")}</FormLabel>
+            <FormSelect
+              {...register("icon")}
+              error={errors.icon?.message}
+            >
+              {iconOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </FormSelect>
           </FormGroup>
 
           <FormGroup>

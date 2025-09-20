@@ -1,0 +1,9 @@
+name,description,icon,parentId
+"Plant A","Main production facility","factory",
+"Building A","Main building structure","building","Plant A"
+"Building B","Secondary building","building2","Plant A"
+"Production Line 1","Production line 1","wrench","Building A"
+"Production Line 2","Production line 2","wrench","Building A"
+"Warehouse Section","Storage and logistics area","warehouse","Building B"
+"Office Area","Administrative offices","landmark","Building A"
+"Loading Dock","Transport and loading area","truck","Plant A"

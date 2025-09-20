@@ -7,6 +7,7 @@ import './MaintenanceRange';
 import './Operation';
 import './WorkOrder';
 import './Location';
+import './IntegrationJob';
 
 // Re-export all models for convenience
 export { default as User } from './User';
@@ -17,3 +18,4 @@ export { default as MaintenanceRange } from './MaintenanceRange';
 export { default as Operation } from './Operation';
 export { default as WorkOrder } from './WorkOrder';
 export { default as Location } from './Location';
+export { default as IntegrationJob } from './IntegrationJob';

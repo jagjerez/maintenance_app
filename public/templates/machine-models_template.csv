@@ -1,0 +1,4 @@
+name,manufacturer,brand,year,properties
+"Model X1","Manufacturer A","Brand X",2023,"{""power"":""100kW"",""weight"":""500kg""}"
+"Model Y2","Manufacturer B","Brand Y",2022,"{""power"":""150kW"",""weight"":""750kg""}"
+"Model Z3","Manufacturer C","Brand Z",2024,"{""power"":""200kW"",""weight"":""1000kg""}"

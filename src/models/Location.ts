@@ -4,6 +4,7 @@ export interface ILocation {
   _id: string;
   name: string;
   description?: string;
+  icon?: string; // Icon identifier (e.g., "building", "factory", "warehouse")
   parentId?: string;
   path: string; // Full path from root (e.g., "/Plant A/Line 1/Station 1")
   level: number; // Depth level in the tree (0 for root)
@@ -26,6 +27,11 @@ const LocationSchema = new Schema({
     type: String,
     trim: true,
     maxlength: [500, 'Description too long'],
+  },
+  icon: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'Icon identifier too long'],
   },
   parentId: {
     type: Schema.Types.ObjectId,
