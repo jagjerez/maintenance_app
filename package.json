@@ -4,12 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:with-cron": "concurrently \"next dev --turbopack\" \"node scripts/start-local-cron.js\"",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
     "init-db": "node scripts/init-db.js",
     "update-locales": "node scripts/update-locales.js",
-    "add-language": "node scripts/add-language.js"
+    "add-language": "node scripts/add-language.js",
+    "cron:start": "node scripts/start-local-cron.js",
+    "cron:status": "curl http://localhost:3000/api/cron/local",
+    "cron:process": "curl -X POST http://localhost:3000/api/cron/local -d '{\"action\":\"process\"}'",
+    "update-templates": "node scripts/update-templates.js"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.10.0",
@@ -41,8 +46,10 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^9.1.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.3",
+    "node-fetch": "^2.7.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

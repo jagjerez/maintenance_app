@@ -4,6 +4,7 @@ import connectDB from '@/lib/db';
 import { MachineModel } from '@/models';
 import { machineModelCreateSchema } from '@/lib/validations';
 import { authOptions } from '@/lib/auth';
+import crypto from 'crypto';
 
 export async function GET(request: NextRequest) {
   try {
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
     const dataWithCompany = {
       ...validatedData,
       companyId: session.user.companyId,
+      internalCode: crypto.randomUUID()
     };
     
     const machineModel = new MachineModel(dataWithCompany);

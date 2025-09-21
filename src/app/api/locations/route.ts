@@ -44,10 +44,13 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
+    const rootOnly = searchParams.get('rootOnly') === 'true';
 
     const query: Record<string, unknown> = { companyId: session.user.companyId };
 
-    if (parentId) {
+    if (rootOnly) {
+      query.parentId = { $exists: false };
+    } else if (parentId) {
       query.parentId = parentId;
     }
 
@@ -145,6 +148,7 @@ export async function POST(request: NextRequest) {
       name: dataWithCompany.name,
       parentId: dataWithCompany.parentId || { $exists: false },
       companyId: session.user.companyId,
+      internalCode: crypto.randomUUID()
     });
 
     if (existingLocation) {

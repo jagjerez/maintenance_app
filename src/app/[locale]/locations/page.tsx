@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "@/hooks/useTranslations";
-import { Plus, MapPin, Folder, Building, Factory, Warehouse, Home, Store, Truck, Wrench, Building2, Landmark, MapPinIcon, FactoryIcon } from "lucide-react";
+import { Plus, MapPin, Folder, Building, Factory, Warehouse, Home, Store, Truck, Wrench, Building2, Landmark } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
 import { ConfirmationModal } from "@/components/ConfirmationModal";

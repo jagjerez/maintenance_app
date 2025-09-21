@@ -1,4 +1,4 @@
-import XLSX from 'xlsx';
+import * as XLSX from 'xlsx';
 import csv from 'csv-parser';
 import { Readable } from 'stream';
 import { connectDB } from './db';
@@ -9,6 +9,7 @@ export interface ProcessingResult {
   processedRows: number;
   successRows: number;
   errorRows: number;
+  limitedRows: number; // Number of rows that were not processed due to limit
   errors: Array<{
     row: number;
     field: string;
@@ -17,16 +18,26 @@ export interface ProcessingResult {
   }>;
 }
 
+export interface FileRowData {
+  [key: string]: string | number | undefined;
+}
+
 export class FileProcessor {
   private jobId: string;
   private type: string;
   private companyId: string;
+  private static readonly MAX_ROWS_PER_PROCESSING = 100;
+
+  private safeTrim(value: string | number | undefined): string {
+    return value ? String(value).trim() : '';
+  }
 
   constructor(jobId: string, type: string, companyId: string) {
     this.jobId = jobId;
     this.type = type;
     this.companyId = companyId;
   }
+
 
   async processFile(fileUrl: string): Promise<ProcessingResult> {
     try {
@@ -42,7 +53,7 @@ export class FileProcessor {
       const fileBuffer = await response.arrayBuffer();
       const fileExtension = fileUrl.split('.').pop()?.toLowerCase();
 
-      let data: any[] = [];
+      let data: FileRowData[] = [];
 
       if (fileExtension === 'csv') {
         data = await this.parseCSV(fileBuffer);
@@ -66,9 +77,9 @@ export class FileProcessor {
     }
   }
 
-  private async parseCSV(fileBuffer: ArrayBuffer): Promise<any[]> {
+  private async parseCSV(fileBuffer: ArrayBuffer): Promise<FileRowData[]> {
     return new Promise((resolve, reject) => {
-      const data: any[] = [];
+      const data: FileRowData[] = [];
       const stream = Readable.from(Buffer.from(fileBuffer));
       
       stream
@@ -79,36 +90,43 @@ export class FileProcessor {
     });
   }
 
-  private async parseExcel(fileBuffer: ArrayBuffer): Promise<any[]> {
+  private async parseExcel(fileBuffer: ArrayBuffer): Promise<FileRowData[]> {
     const workbook = XLSX.read(fileBuffer, { type: 'array' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     return XLSX.utils.sheet_to_json(worksheet);
   }
 
-  private async processData(data: any[]): Promise<ProcessingResult> {
+  private async processData(data: FileRowData[]): Promise<ProcessingResult> {
+    const totalRows = data.length;
+    const limitedRows = Math.max(0, totalRows - FileProcessor.MAX_ROWS_PER_PROCESSING);
+    const rowsToProcess = Math.min(totalRows, FileProcessor.MAX_ROWS_PER_PROCESSING);
+    
     const result: ProcessingResult = {
-      totalRows: data.length,
+      totalRows,
       processedRows: 0,
       successRows: 0,
       errorRows: 0,
+      limitedRows,
       errors: [],
     };
 
-    for (let i = 0; i < data.length; i++) {
+    // Process only the first MAX_ROWS_PER_PROCESSING rows
+    for (let i = 0; i < rowsToProcess; i++) {
       const row = data[i];
       const rowNumber = i + 1;
 
       try {
         await this.processRow(row, rowNumber);
         result.successRows++;
-      } catch (error: any) {
+      } catch (error: unknown) {
         result.errorRows++;
+        const errorObj = error as { field?: string; value?: string; message?: string };
         result.errors.push({
           row: rowNumber,
-          field: error.field || 'unknown',
-          value: error.value || '',
-          message: error.message || 'Unknown error',
+          field: errorObj.field || 'unknown',
+          value: errorObj.value || '',
+          message: errorObj.message || 'Unknown error',
         });
       }
 
@@ -123,7 +141,7 @@ export class FileProcessor {
     return result;
   }
 
-  private async processRow(row: any, rowNumber: number): Promise<void> {
+  private async processRow(row: FileRowData, rowNumber: number): Promise<void> {
     switch (this.type) {
       case 'locations':
         await this.processLocationRow(row, rowNumber);
@@ -145,38 +163,80 @@ export class FileProcessor {
     }
   }
 
-  private async processLocationRow(row: any, rowNumber: number): Promise<void> {
-    const { name, description, icon, parentId } = row;
+  private async processLocationRow(row: FileRowData, _rowNumber: number): Promise<void> {
+    const { internalCode, name, description, icon, parentInternalCode } = row;
 
     if (!name) {
       throw { field: 'name', value: name, message: 'Name is required' };
     }
 
-    // Find parent location if parentId is provided
-    let parentLocationId = null;
-    if (parentId && parentId.trim()) {
-      const parentLocation = await Location.findOne({ 
-        name: parentId.trim(), 
+    // Check if this is an update (has internalCode) or create
+    if (internalCode && this.safeTrim(internalCode)) {
+      // Update existing location
+      let existingLocation = await Location.findOne({ 
+        internalCode: this.safeTrim(internalCode), 
         companyId: this.companyId 
       });
-      if (parentLocation) {
-        parentLocationId = parentLocation._id;
+      
+      // Find parent location if parentInternalCode is provided
+      let parentLocationId = null;
+      if (parentInternalCode && this.safeTrim(parentInternalCode)) {
+        const parentLocation = await Location.findOne({ 
+          internalCode: this.safeTrim(parentInternalCode), 
+          companyId: this.companyId 
+        });
+        if (parentLocation) {
+          parentLocationId = parentLocation._id;
+        }
       }
+
+      if (!existingLocation) {
+        existingLocation = new Location({
+          internalCode: this.safeTrim(internalCode) || undefined, // Will be auto-generated if not provided
+          name: this.safeTrim(name),
+          description: this.safeTrim(description) || '',
+          icon: this.safeTrim(icon) || undefined,
+          parentId: parentLocationId,
+          companyId: this.companyId,
+        });
+      } else {
+        // Update the location
+        existingLocation.name = this.safeTrim(name);
+        existingLocation.description = this.safeTrim(description) || '';
+        existingLocation.icon = this.safeTrim(icon) || undefined;
+        existingLocation.parentId = parentLocationId || undefined;
+      }
+      
+      await existingLocation.save();
+    } else {
+      // Create new location
+      // Find parent location if parentInternalCode is provided
+      let parentLocationId = null;
+      if (parentInternalCode && this.safeTrim(parentInternalCode)) {
+        const parentLocation = await Location.findOne({ 
+          internalCode: this.safeTrim(parentInternalCode), 
+          companyId: this.companyId 
+        });
+        if (parentLocation) {
+          parentLocationId = parentLocation._id;
+        }
+      }
+
+      const location = new Location({
+        internalCode: this.safeTrim(internalCode) || undefined, // Will be auto-generated if not provided
+        name: this.safeTrim(name),
+        description: this.safeTrim(description) || '',
+        icon: this.safeTrim(icon) || undefined,
+        parentId: parentLocationId,
+        companyId: this.companyId,
+      });
+
+      await location.save();
     }
-
-    const location = new Location({
-      name: name.trim(),
-      description: description?.trim() || '',
-      icon: icon?.trim() || undefined,
-      parentId: parentLocationId,
-      companyId: this.companyId,
-    });
-
-    await location.save();
   }
 
-  private async processMachineModelRow(row: any, rowNumber: number): Promise<void> {
-    const { name, manufacturer, brand, year, properties } = row;
+  private async processMachineModelRow(row: FileRowData, _rowNumber: number): Promise<void> {
+    const { internalCode, name, manufacturer, brand, year, properties } = row;
 
     if (!name) {
       throw { field: 'name', value: name, message: 'Name is required' };
@@ -194,77 +254,125 @@ export class FileProcessor {
     let propertiesMap = new Map();
     if (properties) {
       try {
-        const parsedProperties = JSON.parse(properties);
+        const parsedProperties = JSON.parse(String(properties));
         propertiesMap = new Map(Object.entries(parsedProperties));
-      } catch (error) {
+      } catch (_error) {
         throw { field: 'properties', value: properties, message: 'Invalid JSON format' };
       }
     }
 
-    const machineModel = new MachineModel({
-      name: name.trim(),
-      manufacturer: manufacturer.trim(),
-      brand: brand.trim(),
-      year: Number(year),
-      properties: propertiesMap,
-      companyId: this.companyId,
-    });
+    // Check if this is an update (has internalCode) or create
+    if (internalCode && this.safeTrim(internalCode)) {
+      // Update existing machine model
+      const existingModel = await MachineModel.findOne({ 
+        internalCode: this.safeTrim(internalCode), 
+        companyId: this.companyId 
+      });
+      
+      if (!existingModel) {
+        throw { field: 'internalCode', value: internalCode, message: 'Machine model with this internal code not found' };
+      }
 
-    await machineModel.save();
+      // Update the machine model
+      existingModel.name = this.safeTrim(name);
+      existingModel.manufacturer = this.safeTrim(manufacturer);
+      existingModel.brand = this.safeTrim(brand);
+      existingModel.year = Number(year);
+      existingModel.properties = propertiesMap;
+      
+      await existingModel.save();
+    } else {
+      // Create new machine model
+      const machineModel = new MachineModel({
+        internalCode: this.safeTrim(internalCode) || undefined, // Will be auto-generated if not provided
+        name: this.safeTrim(name),
+        manufacturer: this.safeTrim(manufacturer),
+        brand: this.safeTrim(brand),
+        year: Number(year),
+        properties: propertiesMap,
+        companyId: this.companyId,
+      });
+
+      await machineModel.save();
+    }
   }
 
-  private async processMachineRow(row: any, rowNumber: number): Promise<void> {
-    const { model, location, description, properties } = row;
+  private async processMachineRow(row: FileRowData, _rowNumber: number): Promise<void> {
+    const { internalCode, modelInternalCode, locationInternalCode, description, properties } = row;
 
-    if (!model) {
-      throw { field: 'model', value: model, message: 'Model is required' };
+    if (!modelInternalCode) {
+      throw { field: 'modelInternalCode', value: modelInternalCode, message: 'Model internal code is required' };
     }
-    if (!location) {
-      throw { field: 'location', value: location, message: 'Location is required' };
+    if (!locationInternalCode) {
+      throw { field: 'locationInternalCode', value: locationInternalCode, message: 'Location internal code is required' };
     }
 
-    // Find model by name
+    // Find model by internal code
     const machineModel = await MachineModel.findOne({ 
-      name: model.trim(), 
+      internalCode: this.safeTrim(modelInternalCode), 
       companyId: this.companyId 
     });
     if (!machineModel) {
-      throw { field: 'model', value: model, message: 'Machine model not found' };
+      throw { field: 'modelInternalCode', value: modelInternalCode, message: 'Machine model not found' };
     }
 
-    // Find location by path
+    // Find location by internal code
     const locationRecord = await Location.findOne({ 
-      path: location.trim(), 
+      internalCode: this.safeTrim(locationInternalCode), 
       companyId: this.companyId 
     });
     if (!locationRecord) {
-      throw { field: 'location', value: location, message: 'Location not found' };
+      throw { field: 'locationInternalCode', value: locationInternalCode, message: 'Location not found' };
     }
 
     let propertiesMap = new Map();
     if (properties) {
       try {
-        const parsedProperties = JSON.parse(properties);
+        const parsedProperties = JSON.parse(String(properties));
         propertiesMap = new Map(Object.entries(parsedProperties));
-      } catch (error) {
+      } catch (_error) {
         throw { field: 'properties', value: properties, message: 'Invalid JSON format' };
       }
     }
 
-    const machine = new Machine({
-      model: machineModel._id,
-      location: location.trim(),
-      locationId: locationRecord._id,
-      description: description?.trim() || '',
-      properties: propertiesMap,
-      companyId: this.companyId,
-    });
+    // Check if this is an update (has internalCode) or create
+    if (internalCode && this.safeTrim(internalCode)) {
+      // Update existing machine
+      const existingMachine = await Machine.findOne({ 
+        internalCode: this.safeTrim(internalCode), 
+        companyId: this.companyId 
+      });
+      
+      if (!existingMachine) {
+        throw { field: 'internalCode', value: internalCode, message: 'Machine with this internal code not found' };
+      }
 
-    await machine.save();
+      // Update the machine
+      existingMachine.model = machineModel._id;
+      existingMachine.location = locationRecord.path;
+      existingMachine.locationId = locationRecord._id;
+      existingMachine.description = this.safeTrim(description) || '';
+      existingMachine.properties = propertiesMap;
+      
+      await existingMachine.save();
+    } else {
+      // Create new machine
+      const machine = new Machine({
+        internalCode: this.safeTrim(internalCode) || undefined, // Will be auto-generated if not provided
+        model: machineModel._id,
+        location: locationRecord.path,
+        locationId: locationRecord._id,
+        description: this.safeTrim(description) || '',
+        properties: propertiesMap,
+        companyId: this.companyId,
+      });
+
+      await machine.save();
+    }
   }
 
-  private async processMaintenanceRangeRow(row: any, rowNumber: number): Promise<void> {
-    const { name, description, type, frequency, startDate, startTime, daysOfWeek } = row;
+  private async processMaintenanceRangeRow(row: FileRowData, _rowNumber: number): Promise<void> {
+    const { internalCode, name, description, type, frequency, startDate, startTime, daysOfWeek } = row;
 
     if (!name) {
       throw { field: 'name', value: name, message: 'Name is required' };
@@ -272,35 +380,61 @@ export class FileProcessor {
     if (!description) {
       throw { field: 'description', value: description, message: 'Description is required' };
     }
-    if (!type || !['preventive', 'corrective'].includes(type)) {
+    if (!type || !['preventive', 'corrective'].includes(String(type))) {
       throw { field: 'type', value: type, message: 'Type must be preventive or corrective' };
     }
 
     let parsedDaysOfWeek: number[] = [];
-    if (daysOfWeek && daysOfWeek.trim()) {
+    if (daysOfWeek && this.safeTrim(daysOfWeek)) {
       try {
-        parsedDaysOfWeek = daysOfWeek.split(',').map((d: string) => parseInt(d.trim()));
-      } catch (error) {
+        parsedDaysOfWeek = String(daysOfWeek).split(',').map((d: string) => parseInt(d.trim()));
+      } catch (_error) {
         throw { field: 'daysOfWeek', value: daysOfWeek, message: 'Invalid days of week format' };
       }
     }
 
-    const maintenanceRange = new MaintenanceRange({
-      name: name.trim(),
-      description: description.trim(),
-      type,
-      frequency: frequency?.trim() || undefined,
-      startDate: startDate ? new Date(startDate) : undefined,
-      startTime: startTime?.trim() || undefined,
-      daysOfWeek: parsedDaysOfWeek.length > 0 ? parsedDaysOfWeek : undefined,
-      companyId: this.companyId,
-    });
+    // Check if this is an update (has internalCode) or create
+    if (internalCode && this.safeTrim(internalCode)) {
+      // Update existing maintenance range
+      const existingRange = await MaintenanceRange.findOne({ 
+        internalCode: this.safeTrim(internalCode), 
+        companyId: this.companyId 
+      });
+      
+      if (!existingRange) {
+        throw { field: 'internalCode', value: internalCode, message: 'Maintenance range with this internal code not found' };
+      }
 
-    await maintenanceRange.save();
+      // Update the maintenance range
+      existingRange.name = this.safeTrim(name);
+      existingRange.description = this.safeTrim(description);
+      existingRange.type = type;
+      existingRange.frequency = this.safeTrim(frequency) || undefined;
+      existingRange.startDate = startDate ? new Date(startDate) : undefined;
+      existingRange.startTime = this.safeTrim(startTime) || undefined;
+      existingRange.daysOfWeek = parsedDaysOfWeek.length > 0 ? parsedDaysOfWeek : undefined;
+      
+      await existingRange.save();
+    } else {
+      // Create new maintenance range
+      const maintenanceRange = new MaintenanceRange({
+        internalCode: this.safeTrim(internalCode) || undefined, // Will be auto-generated if not provided
+        name: this.safeTrim(name),
+        description: this.safeTrim(description),
+        type,
+        frequency: this.safeTrim(frequency) || undefined,
+        startDate: startDate ? new Date(startDate) : undefined,
+        startTime: this.safeTrim(startTime) || undefined,
+        daysOfWeek: parsedDaysOfWeek.length > 0 ? parsedDaysOfWeek : undefined,
+        companyId: this.companyId,
+      });
+
+      await maintenanceRange.save();
+    }
   }
 
-  private async processOperationRow(row: any, rowNumber: number): Promise<void> {
-    const { name, description, type } = row;
+  private async processOperationRow(row: FileRowData, _rowNumber: number): Promise<void> {
+    const { internalCode, name, description, type } = row;
 
     if (!name) {
       throw { field: 'name', value: name, message: 'Name is required' };
@@ -308,18 +442,40 @@ export class FileProcessor {
     if (!description) {
       throw { field: 'description', value: description, message: 'Description is required' };
     }
-    if (!type || !['text', 'date', 'time', 'datetime', 'boolean', 'number'].includes(type)) {
+    if (!type || !['text', 'date', 'time', 'datetime', 'boolean', 'number'].includes(String(type))) {
       throw { field: 'type', value: type, message: 'Type must be one of: text, date, time, datetime, boolean, number' };
     }
 
-    const operation = new Operation({
-      name: name.trim(),
-      description: description.trim(),
-      type,
-      companyId: this.companyId,
-    });
+    // Check if this is an update (has internalCode) or create
+    if (internalCode && this.safeTrim(internalCode)) {
+      // Update existing operation
+      const existingOperation = await Operation.findOne({ 
+        internalCode: this.safeTrim(internalCode), 
+        companyId: this.companyId 
+      });
+      
+      if (!existingOperation) {
+        throw { field: 'internalCode', value: internalCode, message: 'Operation with this internal code not found' };
+      }
 
-    await operation.save();
+      // Update the operation
+      existingOperation.name = this.safeTrim(name);
+      existingOperation.description = this.safeTrim(description);
+      existingOperation.type = type as "number" | "boolean" | "text" | "date" | "time" | "datetime";
+      
+      await existingOperation.save();
+    } else {
+      // Create new operation
+      const operation = new Operation({
+        internalCode: this.safeTrim(internalCode) || undefined, // Will be auto-generated if not provided
+        name: this.safeTrim(name),
+        description: this.safeTrim(description),
+        type,
+        companyId: this.companyId,
+      });
+
+      await operation.save();
+    }
   }
 
   private async updateJobStatus(status: string): Promise<void> {
@@ -337,6 +493,7 @@ export class FileProcessor {
       processedRows: result.processedRows,
       successRows: result.successRows,
       errorRows: result.errorRows,
+      limitedRows: result.limitedRows,
       errors: result.errors,
     });
   }
@@ -349,6 +506,7 @@ export class FileProcessor {
       processedRows: result.processedRows,
       successRows: result.successRows,
       errorRows: result.errorRows,
+      limitedRows: result.limitedRows,
       errors: result.errors,
       completedAt: new Date(),
     });

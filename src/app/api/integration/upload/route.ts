@@ -4,7 +4,6 @@ import { authOptions } from '@/lib/auth';
 import { IntegrationJob } from '@/models';
 import { connectDB } from '@/lib/db';
 import { put } from '@vercel/blob';
-import { FileProcessor } from '@/lib/fileProcessor';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,18 +14,18 @@ export async function POST(request: NextRequest) {
     }
 
     const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const files = formData.getAll('files') as File[];
     const type = formData.get('type') as string;
 
-    if (!file || !type) {
+    if (!files || files.length === 0 || !type) {
       return NextResponse.json(
-        { error: 'File and type are required' },
+        { error: 'Files and type are required' },
         { status: 400 }
       );
     }
 
     // Validate file type
-    const allowedTypes = ['locations', 'machine-models', 'machines', 'maintenance-ranges'];
+    const allowedTypes = ['locations', 'machine-models', 'machines', 'maintenance-ranges', 'operations'];
     if (!allowedTypes.includes(type)) {
       return NextResponse.json(
         { error: 'Invalid type' },
@@ -34,72 +33,61 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file extension
+    // Validate file extensions
     const allowedExtensions = ['.csv', '.xlsx', '.xls'];
-    const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-    if (!allowedExtensions.includes(fileExtension)) {
-      return NextResponse.json(
-        { error: 'Invalid file type. Only CSV and Excel files are allowed.' },
-        { status: 400 }
-      );
+    for (const file of files) {
+      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+      if (!allowedExtensions.includes(fileExtension)) {
+        return NextResponse.json(
+          { error: `Invalid file type for ${file.name}. Only CSV and Excel files are allowed.` },
+          { status: 400 }
+        );
+      }
     }
 
     await connectDB();
 
-    // Upload file to Vercel Blob
-    const blob = await put(file.name, file, {
-      access: 'public',
-    });
+    const jobIds: string[] = [];
 
-    // Create integration job record
-    const job = new IntegrationJob({
-      companyId: session.user.companyId,
-      type,
-      status: 'pending',
-      fileName: file.name,
-      fileUrl: blob.url,
-      fileSize: file.size,
-      totalRows: 0,
-      processedRows: 0,
-      successRows: 0,
-      errorRows: 0,
-      errors: [],
-    });
+    // Process each file - only create jobs, don't process them
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Upload file to Vercel Blob
+      const blob = await put(`${Date.now()}-${file.name}`, file, {
+        access: 'public',
+        addRandomSuffix: true, // Generate unique filename to avoid conflicts
+      });
 
-    await job.save();
+      // Create integration job record
+      const job = new IntegrationJob({
+        companyId: session.user.companyId,
+        type,
+        status: 'pending',
+        fileName: file.name,
+        fileUrl: blob.url,
+        fileSize: file.size,
+        totalRows: 0,
+        processedRows: 0,
+        successRows: 0,
+        errorRows: 0,
+        limitedRows: 0,
+        errors: [],
+      });
 
-    // Start processing in background
-    processFileInBackground(job._id.toString(), type, session.user.companyId, blob.url);
+      await job.save();
+      jobIds.push(job._id.toString());
+    }
 
     return NextResponse.json({ 
-      message: 'File uploaded successfully',
-      jobId: job._id 
+      message: `${files.length} file(s) uploaded successfully`,
+      jobIds 
     });
   } catch (error) {
-    console.error('Error uploading file:', error);
+    console.error('Error uploading files:', error);
     return NextResponse.json(
-      { error: 'Failed to upload file' },
+      { error: 'Failed to upload files' },
       { status: 500 }
     );
-  }
-}
-
-// Background processing function
-async function processFileInBackground(jobId: string, type: string, companyId: string, fileUrl: string) {
-  try {
-    const processor = new FileProcessor(jobId, type, companyId);
-    await processor.processFile(fileUrl);
-  } catch (error) {
-    console.error('Error processing file in background:', error);
-    // Update job status to failed
-    try {
-      await connectDB();
-      await IntegrationJob.findByIdAndUpdate(jobId, { 
-        status: 'failed',
-        completedAt: new Date()
-      });
-    } catch (updateError) {
-      console.error('Error updating job status to failed:', updateError);
-    }
   }
 }

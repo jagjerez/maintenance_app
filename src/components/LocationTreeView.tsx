@@ -34,6 +34,10 @@ interface LocationNode {
   isLeaf: boolean;
   machines: Machine[];
   children: LocationNode[];
+  childrenLoaded?: boolean; // Track if children have been loaded
+  isLoadingChildren?: boolean; // Track loading state
+  childrenCount?: number; // Number of children available
+  hasChildren?: boolean; // Boolean flag for easy checking
 }
 
 interface LocationTreeViewProps {
@@ -87,6 +91,44 @@ export default function LocationTreeView({
     location: LocationNode | null;
   }>({ isOpen: false, location: null });
 
+  // Function to load children for a specific location
+  const loadChildren = async (locationId: string) => {
+    try {
+      const response = await fetch(`/api/locations/${locationId}/children`);
+      if (response.ok) {
+        const children = await response.json();
+        return children;
+      } else {
+        console.error('Error loading children:', response.statusText);
+        return [];
+      }
+    } catch (error) {
+      console.error('Error loading children:', error);
+      return [];
+    }
+  };
+
+  // Function to update tree with loaded children
+  const updateTreeWithChildren = (tree: LocationNode[], parentId: string, children: LocationNode[]): LocationNode[] => {
+    return tree.map(node => {
+      if (node._id === parentId) {
+        return {
+          ...node,
+          children: children,
+          childrenLoaded: true,
+          isLoadingChildren: false,
+          isLeaf: children.length === 0
+        };
+      } else if (node.children && node.children.length > 0) {
+        return {
+          ...node,
+          children: updateTreeWithChildren(node.children, parentId, children)
+        };
+      }
+      return node;
+    });
+  };
+
   const getIconComponent = (iconName?: string) => {
     if (!iconName || !iconMap[iconName as keyof typeof iconMap]) {
       return null;
@@ -104,10 +146,7 @@ export default function LocationTreeView({
         if (response.ok) {
           const data = await response.json();
           setTree(data);
-          // Auto-expand first level
-          if (data.length > 0) {
-            setExpandedNodes(new Set(data.map((node: LocationNode) => node._id)));
-          }
+          // Don't auto-expand - let user control expansion
         }
       } catch (error) {
         console.error('Error loading location tree:', error);
@@ -119,7 +158,38 @@ export default function LocationTreeView({
     loadTree();
   }, [refreshTrigger]); // Add refreshTrigger as dependency
 
-  const toggleExpanded = (nodeId: string) => {
+  const toggleExpanded = async (nodeId: string) => {
+    const isCurrentlyExpanded = expandedNodes.has(nodeId);
+    
+    if (!isCurrentlyExpanded) {
+      // Expanding - check if we need to load children
+      const findNode = (nodes: LocationNode[], id: string): LocationNode | null => {
+        for (const node of nodes) {
+          if (node._id === id) return node;
+          if (node.children) {
+            const found = findNode(node.children, id);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      const node = findNode(tree, nodeId);
+      if (node && node.hasChildren && !node.childrenLoaded && !node.isLoadingChildren) {
+        // Mark as loading
+        setTree(prevTree => 
+          updateTreeWithChildren(prevTree, nodeId, [])
+            .map(n => n._id === nodeId ? { ...n, isLoadingChildren: true } : n)
+        );
+
+        // Load children
+        const children = await loadChildren(nodeId);
+        
+        // Update tree with loaded children
+        setTree(prevTree => updateTreeWithChildren(prevTree, nodeId, children));
+      }
+    }
+
     setExpandedNodes(prev => {
       const newSet = new Set(prev);
       if (newSet.has(nodeId)) {
@@ -206,13 +276,17 @@ export default function LocationTreeView({
     const isSelected = selectedLocationId === node._id;
     const hasChildren = node.children && node.children.length > 0;
     const hasMachines = showMachines && node.machines && node.machines.length > 0;
+    const isLoadingChildren = node.isLoadingChildren;
+    
+    // Can expand if has children (loaded or available) or has machines
+    const canExpand = hasChildren || hasMachines || node.hasChildren;
 
     return (
       <div key={node._id} className="select-none">
         {/* Mobile Card Layout */}
         <div className="block  mt-2">
           <div
-            className={`bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3 mb-2 hover:bg-gray-100 dark:hover:bg-gray-600 min-h-[44px] touch-manipulation ${
+            className={`bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3 mb-2 hover:bg-gray-100 dark:hover:bg-gray-600 min-h-[44px] touch-manipulation transition-colors ${
               isSelected ? 'bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700' : ''
             }`}
             style={{ marginLeft: `${level * 12}px` }}
@@ -227,14 +301,29 @@ export default function LocationTreeView({
                       e.stopPropagation();
                       toggleExpanded(node._id);
                     }}
-                    className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded min-h-[32px] touch-manipulation"
-                    disabled={!hasChildren && !hasMachines}
+                    className={`p-1 rounded min-h-[32px] touch-manipulation transition-colors ${
+                      canExpand && !isLoadingChildren
+                        ? 'hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer'
+                        : 'cursor-default opacity-50'
+                    }`}
+                    disabled={!canExpand || isLoadingChildren}
+                    title={
+                      isLoadingChildren
+                        ? 'Loading children...'
+                        : canExpand
+                        ? isExpanded
+                          ? 'Click to collapse'
+                          : 'Click to expand and load children'
+                        : 'No children to load'
+                    }
                   >
-                    {hasChildren || hasMachines ? (
+                    {isLoadingChildren ? (
+                      <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+                    ) : canExpand ? (
                       isExpanded ? (
-                        <ChevronDown className="h-4 w-4" />
+                        <ChevronDown className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                       ) : (
-                        <ChevronRight className="h-4 w-4" />
+                        <ChevronRight className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                       )
                     ) : (
                       <div className="w-4 h-4" />
@@ -249,15 +338,11 @@ export default function LocationTreeView({
                       if (onLocationClick) {
                         onLocationClick(node);
                       }
-                      // Always toggle expansion for locations with children or machines
-                      if (hasChildren || hasMachines) {
-                        toggleExpanded(node._id);
-                      }
                     }}
                   >
                     {getIconComponent(node.icon) || (
                       isExpanded ? (
-                        <FolderOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        <FolderOpen className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                       ) : (
                         <Folder className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                       )
@@ -268,13 +353,24 @@ export default function LocationTreeView({
                   </div>
                 </div>
                 
-                {/* Machine count */}
-                {hasMachines && (
-                  <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                    <Wrench className="h-3 w-3 mr-1" />
-                    <span>{node.machines.length}</span>
-                  </div>
-                )}
+                {/* Counts - Simplified */}
+                <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
+                  {/* Children count - Simple indicator */}
+                  {node.hasChildren && (
+                    <div className="flex items-center">
+                      <Folder className="h-3 w-3 mr-1" />
+                      <span>{node.childrenCount || 0}</span>
+                    </div>
+                  )}
+                  
+                  {/* Machine count */}
+                  {hasMachines && (
+                    <div className="flex items-center">
+                      <Wrench className="h-3 w-3 mr-1" />
+                      <span>{node.machines.length}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Description */}
@@ -283,6 +379,7 @@ export default function LocationTreeView({
                   {node.description}
                 </div>
               )}
+
 
               {/* Actions */}
               {showActions && (
@@ -363,9 +460,18 @@ export default function LocationTreeView({
         )}
 
         {/* Children */}
-        {isExpanded && hasChildren && (
+        {isExpanded && (
           <div>
-            {node.children.map((child) => renderLocationNode(child, level + 1))}
+            {isLoadingChildren ? (
+              <div className="ml-6 p-2 text-sm text-gray-500 dark:text-gray-400">
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+                  <span>Loading children...</span>
+                </div>
+              </div>
+            ) : hasChildren ? (
+              node.children.map((child) => renderLocationNode(child, level + 1))
+            ) : null}
           </div>
         )}
       </div>

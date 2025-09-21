@@ -1,7 +1,9 @@
 import mongoose, { Schema } from 'mongoose';
+import { randomUUID } from 'crypto';
 
 export interface ILocation {
   _id: string;
+  internalCode: string; // GUID for Excel/CSV relationships
   name: string;
   description?: string;
   icon?: string; // Icon identifier (e.g., "building", "factory", "warehouse")
@@ -17,6 +19,13 @@ export interface ILocation {
 }
 
 const LocationSchema = new Schema({
+  internalCode: {
+    type: String,
+    required: [true, 'Internal code is required'],
+    unique: true,
+    trim: true,
+    maxlength: [36, 'Internal code too long'],
+  },
   name: {
     type: String,
     required: [true, 'Location name is required'],
@@ -66,6 +75,7 @@ const LocationSchema = new Schema({
 });
 
 // Indexes for better query performance
+LocationSchema.index({ internalCode: 1 });
 LocationSchema.index({ companyId: 1 });
 LocationSchema.index({ parentId: 1 });
 LocationSchema.index({ path: 1 });
@@ -92,8 +102,13 @@ LocationSchema.virtual('machinesCount', {
 LocationSchema.set('toJSON', { virtuals: true });
 LocationSchema.set('toObject', { virtuals: true });
 
-// Pre-validate middleware to clean parentId
+// Pre-validate middleware to generate internalCode and clean parentId
 LocationSchema.pre('validate', function(next) {
+  // Generate internalCode if not provided
+  if (!this.internalCode) {
+    this.internalCode = randomUUID();
+  }
+  
   // Clean parentId first - convert empty string or undefined to null
   if (!this.parentId || this.parentId.toString() === '') {
     (this as unknown as { parentId: null }).parentId = null;

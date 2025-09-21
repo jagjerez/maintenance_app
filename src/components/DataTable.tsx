@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "@/hooks/useTranslations";
 import { Edit, Trash2, Wrench, Check } from "lucide-react";
@@ -41,6 +41,17 @@ export default function DataTable<T extends { _id: string }>({
   const { t } = useTranslations();
   const [isSelectAll, setIsSelectAll] = useState(false);
 
+  // Sincronizar el estado isSelectAll cuando cambien selectedItems o data
+  useEffect(() => {
+    if (selectedItems.length === 0) {
+      setIsSelectAll(false);
+    } else if (selectedItems.length === data.length && data.length > 0) {
+      setIsSelectAll(true);
+    } else {
+      setIsSelectAll(false);
+    }
+  }, [selectedItems, data]);
+
   const handleSelectAll = () => {
     if (isSelectAll) {
       onSelectionChange?.([]);
@@ -62,7 +73,7 @@ export default function DataTable<T extends { _id: string }>({
     }
     
     onSelectionChange?.(newSelection);
-    setIsSelectAll(newSelection.length === data.length);
+    // El estado isSelectAll se actualizará automáticamente por el useEffect
   };
 
   const isItemSelected = (item: T) => {
@@ -157,6 +168,24 @@ export default function DataTable<T extends { _id: string }>({
 
   return (
     <div className={cn("", className)}>
+      {/* Select all button */}
+      {enableBulkDelete && data.length > 0 && (
+        <div className="mb-4 flex items-center justify-between">
+          <button
+            onClick={handleSelectAll}
+            className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            <Check className="h-4 w-4 mr-2" />
+            {isSelectAll ? t("common.deselectAll") : t("common.selectAll")}
+          </button>
+          {selectedItems.length > 0 && (
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {selectedItems.length} {t("common.selected")}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Bulk actions header */}
       {enableBulkDelete && selectedItems.length > 0 && (
         <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">

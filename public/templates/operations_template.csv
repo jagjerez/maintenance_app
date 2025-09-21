@@ -1,8 +1,8 @@
-name,description,type
-"Temperature Check","Measure and record temperature","number"
-"Pressure Reading","Check pressure levels","number"
-"Visual Inspection","Perform visual inspection","text"
-"Maintenance Date","Date when maintenance was performed","date"
-"Start Time","Time when operation started","time"
-"Completion Status","Whether operation was completed","boolean"
-"Notes","Additional notes and observations","text"
+internalCode,name,description,type
+"TEMP_CHECK","Temperature Check","Measure and record temperature","number"
+"PRESSURE_READ","Pressure Reading","Check pressure levels","number"
+"VISUAL_INSP","Visual Inspection","Perform visual inspection","text"
+"MAINT_DATE","Maintenance Date","Date when maintenance was performed","date"
+"START_TIME","Start Time","Time when operation started","time"
+"COMPLETION","Completion Status","Whether operation was completed","boolean"
+"NOTES","Notes","Additional notes and observations","text"

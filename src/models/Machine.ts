@@ -1,7 +1,9 @@
 import mongoose, { Schema } from 'mongoose';
+import { randomUUID } from 'crypto';
 
 export interface IMachine {
   _id: string;
+  internalCode: string; // GUID for Excel/CSV relationships
   model: string;
   location: string;
   locationId?: string;
@@ -15,6 +17,13 @@ export interface IMachine {
 }
 
 const MachineSchema = new Schema({
+  internalCode: {
+    type: String,
+    required: [true, 'Internal code is required'],
+    unique: true,
+    trim: true,
+    maxlength: [36, 'Internal code too long'],
+  },
   model: {
     type: Schema.Types.ObjectId,
     ref: 'MachineModel',
@@ -56,7 +65,17 @@ const MachineSchema = new Schema({
   timestamps: true,
 });
 
+// Pre-validate middleware to generate internalCode
+MachineSchema.pre('validate', function(next) {
+  // Generate internalCode if not provided
+  if (!this.internalCode) {
+    this.internalCode = randomUUID();
+  }
+  next();
+});
+
 // Index for better query performance
+MachineSchema.index({ internalCode: 1 });
 MachineSchema.index({ model: 1 });
 MachineSchema.index({ location: 1 });
 MachineSchema.index({ companyId: 1 });

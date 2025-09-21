@@ -37,6 +37,7 @@ interface MachineModel {
 
 interface Operation {
   _id: string;
+  internalCode: string;
   name: string;
   description: string;
   type: "text" | "date" | "time" | "datetime" | "boolean" | "number";

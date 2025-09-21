@@ -27,6 +27,51 @@ export default function IntegrationPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [uploading, setUploading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<FileList | null>(null);
+  const [queueStatus, setQueueStatus] = useState<{
+    pendingJobs: number;
+    processingJobs: number;
+    completedJobs: number;
+    failedJobs: number;
+    nextJobToProcess?: {
+      id: string;
+      fileName: string;
+      type: string;
+      createdAt: Date;
+    };
+  } | null>(null);
+  const [queueStats, setQueueStats] = useState<{
+    totalJobs: number;
+    successRate: number;
+    averageProcessingTime: number;
+    jobsByType: Record<string, number>;
+    jobsByStatus: Record<string, number>;
+  } | null>(null);
+  const [diagnosticInfo, setDiagnosticInfo] = useState<{
+    stuckJobs: Array<{
+      id: string;
+      fileName: string;
+      type: string;
+      status: string;
+      createdAt: Date;
+      updatedAt: Date;
+      stuckForMinutes: number;
+    }>;
+    jobsByStatus: Record<string, number>;
+    recentJobs: Array<{
+      id: string;
+      fileName: string;
+      status: string;
+      createdAt: Date;
+      updatedAt: Date;
+    }>;
+  } | null>(null);
+  const [showDiagnostic, setShowDiagnostic] = useState(false);
+  const [localCronStatus, setLocalCronStatus] = useState<{
+    isActive: boolean;
+    message: string;
+  } | null>(null);
+  const [isLocal, setIsLocal] = useState(false);
 
   const types = [
     { value: 'locations', label: 'Locations', icon: '🏢' },
@@ -39,15 +84,45 @@ export default function IntegrationPage() {
   const { register, handleSubmit, formState: { errors, isSubmitting }, reset, watch } = useForm({
     defaultValues: {
       type: '',
-      file: null as FileList | null
+      files: null as FileList | null
     }
   });
 
   const selectedType = watch('type');
+  const watchedFiles = watch('files');
 
   useEffect(() => {
     fetchJobs(currentPage);
+    fetchQueueStatus();
+    fetchQueueStats();
+    
+    // Check if running locally
+    setIsLocal(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    
+    // Check local cron status if running locally
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      fetchLocalCronStatus();
+    }
   }, [currentPage]);
+
+  // Poll queue status every 5 seconds when there are pending or processing jobs
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if ((queueStatus?.processingJobs ?? 0) > 0 || (queueStatus?.pendingJobs ?? 0) > 0) {
+        fetchQueueStatus();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [queueStatus]);
+
+  useEffect(() => {
+    if (watchedFiles && watchedFiles.length > 0) {
+      setSelectedFiles(watchedFiles);
+    } else {
+      setSelectedFiles(null);
+    }
+  }, [watchedFiles]);
 
   const fetchJobs = async (page = 1) => {
     try {
@@ -69,6 +144,123 @@ export default function IntegrationPage() {
     }
   };
 
+  const fetchQueueStatus = async () => {
+    try {
+      const response = await fetch('/api/integration/queue');
+      if (response.ok) {
+        const data = await response.json();
+        setQueueStatus(data);
+      }
+    } catch (error) {
+      console.error('Error fetching queue status:', error);
+    }
+  };
+
+  const fetchQueueStats = async () => {
+    try {
+      const response = await fetch('/api/integration/stats?days=7');
+      if (response.ok) {
+        const data = await response.json();
+        setQueueStats(data);
+      }
+    } catch (error) {
+      console.error('Error fetching queue stats:', error);
+    }
+  };
+
+  const fetchDiagnosticInfo = async () => {
+    try {
+      const response = await fetch('/api/integration/diagnose');
+      if (response.ok) {
+        const data = await response.json();
+        setDiagnosticInfo(data);
+      }
+    } catch (error) {
+      console.error('Error fetching diagnostic info:', error);
+    }
+  };
+
+  const resetStuckJobs = async () => {
+    try {
+      const response = await fetch('/api/integration/reset-stuck-jobs', {
+        method: 'POST'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message);
+        fetchDiagnosticInfo();
+        fetchJobs(currentPage);
+        fetchQueueStatus();
+      } else {
+        toast.error('Error resetting stuck jobs');
+      }
+    } catch (error) {
+      console.error('Error resetting stuck jobs:', error);
+      toast.error('Error resetting stuck jobs');
+    }
+  };
+
+  const testCron = async () => {
+    try {
+      const response = await fetch('/api/cron/test', {
+        method: 'POST'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        toast.success('Cron test executed successfully');
+        console.log('Cron test result:', data);
+        fetchJobs(currentPage);
+        fetchQueueStatus();
+      } else {
+        const error = await response.json();
+        toast.error(`Cron test failed: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error testing cron:', error);
+      toast.error('Error testing cron');
+    }
+  };
+
+  const fetchLocalCronStatus = async () => {
+    try {
+      const response = await fetch('/api/cron/local');
+      if (response.ok) {
+        const data = await response.json();
+        setLocalCronStatus(data);
+      }
+    } catch (error) {
+      console.error('Error fetching local cron status:', error);
+    }
+  };
+
+  const controlLocalCron = async (action: 'start' | 'stop' | 'process') => {
+    try {
+      const response = await fetch('/api/cron/local', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ action })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        toast.success(data.message);
+        fetchLocalCronStatus();
+        if (action === 'process') {
+          fetchJobs(currentPage);
+          fetchQueueStatus();
+        }
+      } else {
+        const error = await response.json();
+        toast.error(`Local cron ${action} failed: ${error.error}`);
+      }
+    } catch (error) {
+      console.error(`Error ${action}ing local cron:`, error);
+      toast.error(`Error ${action}ing local cron`);
+    }
+  };
+
   const downloadTemplate = (type: string, format: 'csv' | 'xlsx') => {
     const link = document.createElement('a');
     link.href = `/templates/${type}_template.${format}`;
@@ -78,15 +270,19 @@ export default function IntegrationPage() {
     document.body.removeChild(link);
   };
 
-  const onSubmit = async (data: { type: string; file: FileList | null }) => {
-    if (!data.file || !data.file[0] || !data.type) {
-      toast.error('Please select a file and type');
+  const onSubmit = async (data: { type: string; files: FileList | null }) => {
+    if (!data.files || !data.files[0] || !data.type) {
+      toast.error('Please select at least one file and type');
       return;
     }
 
     setUploading(true);
     const formData = new FormData();
-    formData.append('file', data.file[0]);
+    
+    // Add all files
+    for (let i = 0; i < data.files.length; i++) {
+      formData.append('files', data.files[i]);
+    }
     formData.append('type', data.type);
 
     try {
@@ -96,17 +292,18 @@ export default function IntegrationPage() {
       });
 
       if (response.ok) {
+        const result = await response.json();
         setShowUploadModal(false);
         reset();
         fetchJobs(currentPage);
-        toast.success('File uploaded successfully');
+        toast.success(`${result.jobIds.length} file(s) uploaded successfully`);
       } else {
         const error = await response.json();
-        toast.error(error.message || 'Error uploading file');
+        toast.error(error.message || 'Error uploading files');
       }
     } catch (error) {
-      console.error('Error uploading file:', error);
-      toast.error('Error uploading file');
+      console.error('Error uploading files:', error);
+      toast.error('Error uploading files');
     } finally {
       setUploading(false);
     }
@@ -208,6 +405,11 @@ export default function IntegrationPage() {
         <div>
           <div className="text-sm text-gray-900 dark:text-white">
             {item.processedRows} / {item.totalRows} rows
+            {item.limitedRows > 0 && (
+              <span className="text-orange-600 dark:text-orange-400 ml-1">
+                ({item.limitedRows} limited)
+              </span>
+            )}
           </div>
           {item.totalRows > 0 && (
             <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mt-1">
@@ -215,6 +417,11 @@ export default function IntegrationPage() {
                 className="bg-blue-600 h-2 rounded-full"
                 style={{ width: `${(item.processedRows / item.totalRows) * 100}%` }}
               ></div>
+            </div>
+          )}
+          {item.limitedRows > 0 && (
+            <div className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+              Only first 100 rows processed
             </div>
           )}
         </div>
@@ -308,13 +515,32 @@ export default function IntegrationPage() {
               {t('description')}
             </p>
           </div>
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            {t('uploadFile')}
-          </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => {
+                setShowDiagnostic(true);
+                fetchDiagnosticInfo();
+              }}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Diagnose
+            </button>
+            <button
+              onClick={testCron}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <Clock className="h-4 w-4 mr-2" />
+              Test Cron
+            </button>
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              {t('uploadFile')}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -327,7 +553,162 @@ export default function IntegrationPage() {
             {jobs.length !== 1 ? "s" : ""}
           </span>
         </div>
+        
+        {/* Queue Status Indicator */}
+        {queueStatus && ((queueStatus.processingJobs ?? 0) > 0 || (queueStatus.pendingJobs ?? 0) > 0) && (
+          <div className="flex items-center space-x-4 text-sm">
+            {(queueStatus.processingJobs ?? 0) > 0 && (
+              <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400">
+                <Clock className="w-4 h-4 animate-spin" />
+                <span>Processing {queueStatus.processingJobs} file(s)...</span>
+              </div>
+            )}
+            {(queueStatus.pendingJobs ?? 0) > 0 && (
+              <div className="flex items-center space-x-2 text-yellow-600 dark:text-yellow-400">
+                <Clock className="w-4 h-4" />
+                <span>{queueStatus.pendingJobs} file(s) in queue</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Local Cron Status (only in development) */}
+        {isLocal && localCronStatus && (
+          <div className="flex items-center space-x-4 text-sm">
+            <div className={`flex items-center space-x-2 ${localCronStatus.isActive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+              <div className={`w-2 h-2 rounded-full ${localCronStatus.isActive ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span>{localCronStatus.message}</span>
+            </div>
+            <div className="flex space-x-2">
+              {!localCronStatus.isActive ? (
+                <button
+                  onClick={() => controlLocalCron('start')}
+                  className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700"
+                >
+                  Start Cron
+                </button>
+              ) : (
+                <button
+                  onClick={() => controlLocalCron('stop')}
+                  className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  Stop Cron
+                </button>
+              )}
+              <button
+                onClick={() => controlLocalCron('process')}
+                className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700"
+              >
+                Process Now
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Queue Statistics Panel */}
+      {queueStats && (
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Total Jobs */}
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Database className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('totalJobs')}</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  {queueStats.totalJobs}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Success Rate */}
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('successRate')}</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  {queueStats.successRate.toFixed(1)}%
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Average Processing Time */}
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <Clock className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('avgProcessingTime')}</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  {queueStats.averageProcessingTime > 0 
+                    ? `${queueStats.averageProcessingTime.toFixed(1)}s`
+                    : 'N/A'
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Current Queue Status */}
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                {(queueStatus?.processingJobs ?? 0) > 0 ? (
+                  <Clock className="h-8 w-8 text-blue-600 dark:text-blue-400 animate-spin" />
+                ) : (queueStatus?.pendingJobs ?? 0) > 0 ? (
+                  <Clock className="h-8 w-8 text-yellow-600 dark:text-yellow-400" />
+                ) : (
+                  <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+                )}
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">{t('queueStatus')}</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">
+                  {(queueStatus?.processingJobs ?? 0) > 0 
+                    ? `${queueStatus?.processingJobs} processing`
+                    : (queueStatus?.pendingJobs ?? 0) > 0 
+                    ? `${queueStatus?.pendingJobs} pending`
+                    : t('idle')
+                  }
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Jobs by Type Chart */}
+      {queueStats && queueStats.jobsByType && Object.keys(queueStats.jobsByType).length > 0 && (
+        <div className="mb-6 bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            {t('jobsByType')}
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            {Object.entries(queueStats.jobsByType).map(([type, count]) => {
+              const typeInfo = types.find(t => t.value === type);
+              return (
+                <div key={type} className="text-center">
+                  <div className="text-2xl mb-2">{typeInfo?.icon || '📄'}</div>
+                  <div className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    {typeInfo?.label || type}
+                  </div>
+                  <div className="text-xl font-semibold text-gray-900 dark:text-white">
+                    {count}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
@@ -384,15 +765,41 @@ export default function IntegrationPage() {
           </FormGroup>
 
           <FormGroup>
-            <FormLabel required>{t('file')}</FormLabel>
+            <FormLabel required>{t('files')}</FormLabel>
             <input
               type="file"
               accept=".csv,.xlsx,.xls"
-              {...register('file', { required: 'File is required' })}
+              multiple
+              {...register('files', { required: 'At least one file is required' })}
               className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             />
-            {errors.file && (
-              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.file.message}</p>
+            {errors.files && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.files.message}</p>
+            )}
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              You can select multiple files. They will be processed in order.
+            </p>
+            
+            {/* Selected Files Preview */}
+            {selectedFiles && selectedFiles.length > 0 && (
+              <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  Selected Files ({selectedFiles.length}):
+                </h4>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {Array.from(selectedFiles).map((file, index) => (
+                    <div key={index} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center">
+                        <FileText className="w-4 h-4 text-gray-400 mr-2" />
+                        <span className="text-gray-900 dark:text-white">{file.name}</span>
+                      </div>
+                      <div className="text-gray-500 dark:text-gray-400">
+                        {(file.size / 1024).toFixed(1)} KB
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
           </FormGroup>
 
@@ -421,12 +828,53 @@ export default function IntegrationPage() {
             </FormGroup>
           )}
 
+          {/* Processing Limit Warning */}
+          <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md p-4">
+            <div className="flex">
+              <AlertCircle className="h-5 w-5 text-orange-400 mr-2 mt-0.5" />
+              <div className="text-sm text-orange-800 dark:text-orange-200">
+                <p className="font-medium">Processing Limit</p>
+                <p className="mt-1">
+                  Only the first 100 rows will be processed per file upload. 
+                  If your file contains more than 100 rows, the remaining rows will be skipped.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* ID Format Guide */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-4">
+            <div className="flex">
+              <FileText className="h-5 w-5 text-blue-400 mr-2 mt-0.5" />
+              <div className="text-sm text-blue-800 dark:text-blue-200">
+                <p className="font-medium">ID Format Guide</p>
+                <p className="mt-1">
+                  For updating existing records, use valid MongoDB ObjectIds (24 characters). 
+                  For creating new records, leave the _id column empty.
+                </p>
+                <a 
+                  href="/templates/ID_FORMAT_GUIDE.md" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:underline mt-1 inline-block"
+                >
+                  View detailed ID format guide →
+                </a>
+              </div>
+            </div>
+          </div>
+
           <FormButton
             type="submit"
             disabled={isSubmitting || uploading}
             className="w-full"
           >
-            {uploading ? t('uploading') : t('uploadFile')}
+            {uploading 
+              ? t('uploading') 
+              : selectedFiles && selectedFiles.length > 0 
+                ? `${t('uploadFile')} (${selectedFiles.length} files)`
+                : t('uploadFile')
+            }
           </FormButton>
         </Form>
       </Modal>
@@ -450,6 +898,103 @@ export default function IntegrationPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </Modal>
+      )}
+
+      {/* Diagnostic Modal */}
+      {showDiagnostic && (
+        <Modal
+          isOpen={showDiagnostic}
+          onClose={() => setShowDiagnostic(false)}
+          title="Integration Jobs Diagnostic"
+          size="xl"
+        >
+          <div className="space-y-6">
+            {/* Stuck Jobs */}
+            {diagnosticInfo?.stuckJobs && diagnosticInfo.stuckJobs.length > 0 && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-lg font-medium text-red-800 dark:text-red-200">
+                    Stuck Jobs ({diagnosticInfo.stuckJobs.length})
+                  </h3>
+                  <button
+                    onClick={resetStuckJobs}
+                    className="px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700"
+                  >
+                    Reset to Pending
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {diagnosticInfo.stuckJobs.map((job) => (
+                    <div key={job.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border">
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">{job.fileName}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {job.type} • Stuck for {job.stuckForMinutes} minutes
+                        </div>
+                      </div>
+                      <div className="text-sm text-red-600 dark:text-red-400">
+                        {job.status}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Jobs by Status */}
+            {diagnosticInfo?.jobsByStatus && (
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
+                  Jobs by Status
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {Object.entries(diagnosticInfo.jobsByStatus).map(([status, count]) => (
+                    <div key={status} className="text-center">
+                      <div className="text-2xl font-bold text-gray-900 dark:text-white">{count}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400 capitalize">{status}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Recent Jobs */}
+            {diagnosticInfo?.recentJobs && (
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-3">
+                  Recent Jobs
+                </h3>
+                <div className="space-y-2 max-h-64 overflow-y-auto">
+                  {diagnosticInfo.recentJobs.map((job) => (
+                    <div key={job.id} className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border">
+                      <div>
+                        <div className="font-medium text-gray-900 dark:text-white">{job.fileName}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {new Date(job.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                      <div className={`text-sm px-2 py-1 rounded ${
+                        job.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                        job.status === 'processing' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                        job.status === 'pending' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200' :
+                        'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                      }`}>
+                        {job.status}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(!diagnosticInfo?.stuckJobs || diagnosticInfo.stuckJobs.length === 0) && 
+             (!diagnosticInfo?.jobsByStatus || Object.keys(diagnosticInfo.jobsByStatus).length === 0) && (
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
+                No diagnostic information available
+              </div>
+            )}
           </div>
         </Modal>
       )}

@@ -1,4 +1,4 @@
-model,location,description,properties
-"Model X1","Plant A/Line 1/Station 1","Main production machine","{""serialNumber"":""MX1001"",""installationDate"":""2023-01-15""}"
-"Model Y2","Plant A/Line 1/Station 2","Secondary machine","{""serialNumber"":""MY2002"",""installationDate"":""2023-02-20""}"
-"Model Z3","Plant A/Line 2/Station 3","Backup machine","{""serialNumber"":""MZ3003"",""installationDate"":""2023-03-10""}"
+internalCode,modelInternalCode,locationInternalCode,description,properties
+"","MODEL_X1","PLANT_A","Main production machine","{"serialNumber":"MX1001","installationDate":"2023-01-15"}"
+"","MODEL_Y2","BUILDING_A","Secondary machine","{"serialNumber":"MY2002","installationDate":"2023-02-20"}"
+"","MODEL_Z3","BUILDING_B","Backup machine","{"serialNumber":"MZ3003","installationDate":"2023-03-10"}"

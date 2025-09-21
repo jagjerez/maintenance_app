@@ -6,7 +6,7 @@ import { connectDB } from '@/lib/db';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,8 +17,9 @@ export async function GET(
 
     await connectDB();
 
+    const { id } = await params;
     const job = await IntegrationJob.findOne({
-      _id: params.id,
+      _id: id,
       companyId: session.user.companyId,
     });
 

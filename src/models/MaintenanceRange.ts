@@ -1,7 +1,9 @@
 import mongoose, { Schema } from 'mongoose';
+import { randomUUID } from 'crypto';
 
 export interface IMaintenanceRange {
   _id: string;
+  internalCode: string; // GUID for Excel/CSV relationships
   name: string;
   description: string;
   type: 'preventive' | 'corrective';
@@ -17,6 +19,13 @@ export interface IMaintenanceRange {
 }
 
 const MaintenanceRangeSchema = new Schema({
+  internalCode: {
+    type: String,
+    required: [true, 'Internal code is required'],
+    unique: true,
+    trim: true,
+    maxlength: [36, 'Internal code too long'],
+  },
   name: {
     type: String,
     required: [true, 'Name is required'],
@@ -68,7 +77,17 @@ const MaintenanceRangeSchema = new Schema({
   timestamps: true,
 });
 
+// Pre-validate middleware to generate internalCode
+MaintenanceRangeSchema.pre('validate', function(next) {
+  // Generate internalCode if not provided
+  if (!this.internalCode) {
+    this.internalCode = randomUUID();
+  }
+  next();
+});
+
 // Index for better query performance
+MaintenanceRangeSchema.index({ internalCode: 1 });
 MaintenanceRangeSchema.index({ name: 1 });
 MaintenanceRangeSchema.index({ companyId: 1 });
 

@@ -43,6 +43,8 @@
     "remove": "Remove",
     "filledAt": "Filled at",
     "selected": "selected",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
     "clearSelection": "Clear Selection",
     "deleteSelected": "Delete Selected",
     "deleting": "Deleting..."
@@ -54,6 +56,7 @@
     "dataType": "Data Type",
     "selectDataType": "Select data type...",
     "file": "File",
+    "files": "Files",
     "downloadTemplate": "Download template:",
     "csvTemplate": "CSV Template",
     "excelTemplate": "Excel Template",
@@ -73,7 +76,13 @@
     "pending": "Pending",
     "processing": "Processing",
     "completed": "Completed",
-    "failed": "Failed"
+    "failed": "Failed",
+    "totalJobs": "Total Jobs (7d)",
+    "successRate": "Success Rate",
+    "avgProcessingTime": "Avg. Processing Time",
+    "queueStatus": "Queue Status",
+    "jobsByType": "Jobs by Type (Last 7 Days)",
+    "idle": "Idle"
   },
   "navigation": {
     "dashboard": "Dashboard",

@@ -1,6 +1,6 @@
-name,description,type,frequency,startDate,startTime,daysOfWeek
-"Daily Inspection","Daily safety and performance check","preventive","daily",,"08:00","1,2,3,4,5"
-"Weekly Maintenance","Weekly comprehensive maintenance","preventive","weekly","2024-01-01","09:00","1"
-"Monthly Service","Monthly deep service","preventive","monthly","2024-01-01","10:00",
-"Annual Overhaul","Annual complete overhaul","preventive","yearly","2024-01-01","08:00",
-"Emergency Repair","Emergency corrective maintenance","corrective",,,,
+internalCode,name,description,type,frequency,startDate,startTime,daysOfWeek
+"DAILY_INSP","Daily Inspection","Daily safety and performance check","preventive","daily","2024-01-01","08:00","1,2,3,4,5"
+"WEEKLY_MAINT","Weekly Maintenance","Weekly comprehensive maintenance","preventive","weekly","2024-01-01","09:00","1"
+"MONTHLY_SVC","Monthly Service","Monthly deep service","preventive","monthly","2024-01-01","10:00","1"
+"ANNUAL_OVER","Annual Overhaul","Annual complete overhaul","preventive","yearly","2024-01-01","08:00","1"
+"EMERGENCY","Emergency Repair","Emergency corrective maintenance","corrective","on_demand","2024-01-01","00:00",""

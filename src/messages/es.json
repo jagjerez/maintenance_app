@@ -43,6 +43,8 @@
     "remove": "Eliminar",
     "filledAt": "Rellenada el",
     "selected": "seleccionados",
+    "selectAll": "Seleccionar Todos",
+    "deselectAll": "Deseleccionar Todos",
     "clearSelection": "Limpiar Selección",
     "deleteSelected": "Eliminar Seleccionados",
     "deleting": "Eliminando..."
@@ -54,6 +56,7 @@
     "dataType": "Tipo de Datos",
     "selectDataType": "Seleccionar tipo de datos...",
     "file": "Archivo",
+    "files": "Archivos",
     "downloadTemplate": "Descargar plantilla:",
     "csvTemplate": "Plantilla CSV",
     "excelTemplate": "Plantilla Excel",
@@ -73,7 +76,13 @@
     "pending": "Pendiente",
     "processing": "Procesando",
     "completed": "Completado",
-    "failed": "Fallido"
+    "failed": "Fallido",
+    "totalJobs": "Total de Trabajos (7d)",
+    "successRate": "Tasa de Éxito",
+    "avgProcessingTime": "Tiempo Promedio",
+    "queueStatus": "Estado de Cola",
+    "jobsByType": "Trabajos por Tipo (Últimos 7 Días)",
+    "idle": "Inactivo"
   },
   "navigation": {
     "dashboard": "Panel de Control",

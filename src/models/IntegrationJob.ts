@@ -3,7 +3,7 @@ import mongoose, { Schema } from 'mongoose';
 export interface IIntegrationJob {
   _id: string;
   companyId: string;
-  type: 'locations' | 'machine-models' | 'machines' | 'maintenance-ranges';
+  type: 'locations' | 'machine-models' | 'machines' | 'maintenance-ranges' | 'operations';
   status: 'pending' | 'processing' | 'completed' | 'failed';
   fileName: string;
   fileUrl: string; // URL del archivo en Vercel Blob
@@ -12,6 +12,7 @@ export interface IIntegrationJob {
   processedRows: number;
   successRows: number;
   errorRows: number;
+  limitedRows: number; // Number of rows that were not processed due to limit
   errors: Array<{
     row: number;
     field: string;
@@ -33,8 +34,8 @@ const IntegrationJobSchema = new Schema({
     type: String,
     required: [true, 'Type is required'],
     enum: {
-      values: ['locations', 'machine-models', 'machines', 'maintenance-ranges'],
-      message: 'Type must be one of: locations, machine-models, machines, maintenance-ranges',
+      values: ['locations', 'machine-models', 'machines', 'maintenance-ranges', 'operations'],
+      message: 'Type must be one of: locations, machine-models, machines, maintenance-ranges, operations',
     },
   },
   status: {
@@ -79,6 +80,11 @@ const IntegrationJobSchema = new Schema({
     type: Number,
     default: 0,
     min: [0, 'Error rows must be non-negative'],
+  },
+  limitedRows: {
+    type: Number,
+    default: 0,
+    min: [0, 'Limited rows must be non-negative'],
   },
   errors: [{
     row: {
