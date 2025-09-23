@@ -14,6 +14,21 @@ NEXTAUTH_SECRET=your-secret-key-here
 
 # App Configuration
 NODE_ENV=development
+
+# Blob Storage Configuration
+# Set to 'vercel' for production or 'minio' for local development
+BLOB_STORAGE_TYPE=minio
+
+# MinIO Configuration (for local development)
+MINIO_ENDPOINT=localhost
+MINIO_PORT=9000
+MINIO_USE_SSL=false
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET_NAME=maintenance-app
+
+# Vercel Blob Configuration (for production)
+# APP_READ_WRITE_TOKEN=your_vercel_blob_token_here
 ```
 
 ## Instalación
@@ -25,7 +40,17 @@ npm install
 
 2. Configura las variables de entorno en `.env.local`
 
-3. Ejecuta la aplicación:
+3. Para desarrollo local con MinIO:
+```bash
+# Inicia MinIO con Docker Compose
+docker-compose up -d
+
+# Verifica que MinIO esté funcionando
+# Abre http://localhost:9001 en tu navegador
+# Usuario: minioadmin, Contraseña: minioadmin
+```
+
+4. Ejecuta la aplicación:
 ```bash
 npm run dev
 ```

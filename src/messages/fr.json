@@ -47,7 +47,10 @@
     "deselectAll": "Tout Désélectionner",
     "clearSelection": "Effacer la Sélection",
     "deleteSelected": "Supprimer la Sélection",
-    "deleting": "Suppression..."
+    "deleting": "Suppression...",
+    "loadingMore": "Chargement de plus",
+    "loadMore": "Charger Plus",
+    "endOfList": "Fin de la liste"
   },
   "Integration": {
     "title": "Intégration de Données",

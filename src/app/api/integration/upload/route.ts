@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { IntegrationJob } from '@/models';
 import { connectDB } from '@/lib/db';
-import { put } from '@vercel/blob';
+import { uploadBlob } from '@/lib/blobStorage';
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,8 +53,8 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       
-      // Upload file to Vercel Blob
-      const blob = await put(`${Date.now()}-${file.name}`, file, {
+      // Upload file using blob storage service (Vercel Blob or MinIO)
+      const result = await uploadBlob(`${Date.now()}-${file.name}`, file, {
         access: 'public',
         addRandomSuffix: true, // Generate unique filename to avoid conflicts
       });
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
         type,
         status: 'pending',
         fileName: file.name,
-        fileUrl: blob.url,
+        fileUrl: result.url,
         fileSize: file.size,
         totalRows: 0,
         processedRows: 0,

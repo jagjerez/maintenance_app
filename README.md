@@ -17,6 +17,7 @@ Una aplicación completa de gestión de mantenimiento preventivo y correctivo co
 - **UI responsiva** con TailwindCSS
 - **Validación** con Zod en frontend y backend
 - **Notificaciones** con react-hot-toast
+- **Almacenamiento de archivos** con soporte para Vercel Blob (producción) y MinIO (desarrollo)
 
 ## Tecnologías
 
@@ -49,13 +50,31 @@ Para MongoDB Atlas:
 STORAGE_MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/maintenance_app?retryWrites=true&w=majority
 ```
 
-### 3. Ejecutar la aplicación
+### 3. Configurar almacenamiento de archivos
+
+Para desarrollo local con MinIO:
+```bash
+# Iniciar MinIO
+npm run minio:start
+
+# Configurar MinIO
+npm run minio:setup
+```
+
+### 4. Ejecutar la aplicación
 
 ```bash
 npm run dev
 ```
 
 Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+
+### 5. Verificar configuración
+
+Verifica el estado del almacenamiento de archivos:
+```bash
+curl http://localhost:3000/api/blob-storage/health
+```
 
 ## Estructura del Proyecto
 

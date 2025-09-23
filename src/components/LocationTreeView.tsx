@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChevronRight, ChevronDown, MapPin, Wrench, Plus, Edit, Trash2, Folder, FolderOpen, Building, Factory, Warehouse, Home, Store, Truck, Building2, Landmark } from 'lucide-react';
 import { useTranslations } from '@/hooks/useTranslations';
 import { FormButton } from './Form';
@@ -38,6 +38,8 @@ interface LocationNode {
   isLoadingChildren?: boolean; // Track loading state
   childrenCount?: number; // Number of children available
   hasChildren?: boolean; // Boolean flag for easy checking
+  childrenOffset?: number; // Track pagination offset for children
+  hasMoreChildren?: boolean; // Track if there are more children to load
 }
 
 interface LocationTreeViewProps {
@@ -91,38 +93,47 @@ export default function LocationTreeView({
     location: LocationNode | null;
   }>({ isOpen: false, location: null });
 
-  // Function to load children for a specific location
-  const loadChildren = async (locationId: string) => {
+  // Scroll infinite states
+  const [rootOffset, setRootOffset] = useState(0);
+  const [hasMoreRoot, setHasMoreRoot] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Function to load children for a specific location with pagination
+  const loadChildren = async (locationId: string, offset: number = 0, limit: number = 50) => {
     try {
-      const response = await fetch(`/api/locations/${locationId}/children`);
+      const response = await fetch(`/api/locations/${locationId}/children?offset=${offset}&limit=${limit}`);
       if (response.ok) {
-        const children = await response.json();
-        return children;
+        const data = await response.json();
+        return data;
       } else {
         console.error('Error loading children:', response.statusText);
-        return [];
+        return { locations: [], totalItems: 0, hasMore: false };
       }
     } catch (error) {
       console.error('Error loading children:', error);
-      return [];
+      return { locations: [], totalItems: 0, hasMore: false };
     }
   };
 
-  // Function to update tree with loaded children
-  const updateTreeWithChildren = (tree: LocationNode[], parentId: string, children: LocationNode[]): LocationNode[] => {
+  // Function to update tree with loaded children (supports pagination)
+  const updateTreeWithChildren = (tree: LocationNode[], parentId: string, children: LocationNode[], append: boolean = false, hasMore: boolean = false, offset: number = 0): LocationNode[] => {
     return tree.map(node => {
       if (node._id === parentId) {
+        const existingChildren = append && node.children ? node.children : [];
         return {
           ...node,
-          children: children,
+          children: [...existingChildren, ...children],
           childrenLoaded: true,
           isLoadingChildren: false,
-          isLeaf: children.length === 0
+          isLeaf: children.length === 0 && !hasMore,
+          childrenOffset: offset + children.length,
+          hasMoreChildren: hasMore
         };
       } else if (node.children && node.children.length > 0) {
         return {
           ...node,
-          children: updateTreeWithChildren(node.children, parentId, children)
+          children: updateTreeWithChildren(node.children, parentId, children, append, hasMore, offset)
         };
       }
       return node;
@@ -137,15 +148,50 @@ export default function LocationTreeView({
     return <IconComponent className="w-4 h-4" />;
   };
 
-  // Load location tree
+  // Function to load more root locations for infinite scroll
+  const loadMoreRootLocations = useCallback(async () => {
+    if (isLoadingMore || !hasMoreRoot) return;
+
+    try {
+      setIsLoadingMore(true);
+      console.log(`Loading more root locations, offset: ${rootOffset}`);
+      const response = await fetch(`/api/locations/tree?limit=50&offset=${rootOffset}`);
+      if (response.ok) {
+        const data = await response.json();
+        const newLocations = data.locations || data;
+        
+        console.log(`Loaded ${newLocations.length} new locations, hasMore: ${data.hasMore}`);
+        
+        if (newLocations.length > 0) {
+          setTree(prevTree => [...prevTree, ...newLocations]);
+          setRootOffset(prev => prev + newLocations.length);
+          setHasMoreRoot(data.hasMore || false);
+        } else {
+          setHasMoreRoot(false);
+        }
+      } else {
+        console.error('Error loading more root locations:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error loading more root locations:', error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [rootOffset, isLoadingMore, hasMoreRoot]);
+
+  // Load location tree with pagination
   useEffect(() => {
     const loadTree = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/locations/tree');
+        setRootOffset(0);
+        setHasMoreRoot(true);
+        const response = await fetch('/api/locations/tree?limit=50&offset=0');
         if (response.ok) {
           const data = await response.json();
-          setTree(data);
+          setTree(data.locations || data);
+          setRootOffset(data.locations?.length || 0);
+          setHasMoreRoot(data.hasMore || false);
           // Don't auto-expand - let user control expansion
         }
       } catch (error) {
@@ -157,6 +203,75 @@ export default function LocationTreeView({
 
     loadTree();
   }, [refreshTrigger]); // Add refreshTrigger as dependency
+
+  // Infinite scroll effect
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      const isNearBottom = scrollTop + clientHeight >= scrollHeight - 50; // 50px threshold
+      
+      console.log('Scroll debug:', {
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+        isNearBottom,
+        hasMoreRoot,
+        isLoadingMore
+      });
+
+      if (isNearBottom && hasMoreRoot && !isLoadingMore) {
+        console.log('Loading more root locations...');
+        loadMoreRootLocations();
+      }
+    };
+
+    // Add throttling to prevent excessive calls
+    let timeoutId: NodeJS.Timeout;
+    const throttledHandleScroll = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(handleScroll, 100);
+    };
+
+    scrollContainer.addEventListener('scroll', throttledHandleScroll);
+    return () => {
+      scrollContainer.removeEventListener('scroll', throttledHandleScroll);
+      clearTimeout(timeoutId);
+    };
+  }, [loadMoreRootLocations, hasMoreRoot, isLoadingMore]);
+
+  // Function to load more children for pagination
+  const loadMoreChildren = async (nodeId: string) => {
+    const findNode = (nodes: LocationNode[], id: string): LocationNode | null => {
+      for (const node of nodes) {
+        if (node._id === id) return node;
+        if (node.children) {
+          const found = findNode(node.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const node = findNode(tree, nodeId);
+    if (node && node.hasMoreChildren && !node.isLoadingChildren) {
+      // Mark as loading
+      setTree(prevTree => 
+        prevTree.map(n => n._id === nodeId ? { ...n, isLoadingChildren: true } : n)
+      );
+
+      // Load more children
+      const offset = node.childrenOffset || 0;
+      const childrenData = await loadChildren(nodeId, offset, 50);
+      const children = childrenData.locations || childrenData;
+      const hasMore = childrenData.hasMore || false;
+      
+      // Update tree with additional children
+      setTree(prevTree => updateTreeWithChildren(prevTree, nodeId, children, true, hasMore, offset));
+    }
+  };
 
   const toggleExpanded = async (nodeId: string) => {
     const isCurrentlyExpanded = expandedNodes.has(nodeId);
@@ -183,10 +298,13 @@ export default function LocationTreeView({
         );
 
         // Load children
-        const children = await loadChildren(nodeId);
+        const childrenData = await loadChildren(nodeId);
+        const children = childrenData.locations || childrenData;
+        const hasMore = childrenData.hasMore || false;
+        const offset = childrenData.offset || 0;
         
         // Update tree with loaded children
-        setTree(prevTree => updateTreeWithChildren(prevTree, nodeId, children));
+        setTree(prevTree => updateTreeWithChildren(prevTree, nodeId, children, false, hasMore, offset));
       }
     }
 
@@ -470,7 +588,33 @@ export default function LocationTreeView({
                 </div>
               </div>
             ) : hasChildren ? (
-              node.children.map((child) => renderLocationNode(child, level + 1))
+              <>
+                {node.children.map((child) => renderLocationNode(child, level + 1))}
+                {/* Load More Button */}
+                {node.hasMoreChildren && (
+                  <div className="ml-6 p-2">
+                    <FormButton
+                      type="button"
+                      variant="secondary"
+                      onClick={() => loadMoreChildren(node._id)}
+                      disabled={node.isLoadingChildren}
+                      className="px-3 py-1 text-xs min-h-[32px] touch-manipulation"
+                    >
+                      {node.isLoadingChildren ? (
+                        <>
+                          <div className="w-3 h-3 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mr-2" />
+                          Loading more...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-3 w-3 mr-1" />
+                          Load more children ({node.childrenCount! - (node.childrenOffset || 0)} remaining)
+                        </>
+                      )}
+                    </FormButton>
+                  </div>
+                )}
+              </>
             ) : null}
           </div>
         )}
@@ -504,8 +648,43 @@ export default function LocationTreeView({
           </p>
         </div>
       ) : (
-          <div className="overflow-y-auto">
+          <div 
+            ref={scrollContainerRef} 
+            className="overflow-y-auto max-h-auto"
+          >
             {tree.map((node) => renderLocationNode(node))}
+            
+            {/* Load more button */}
+            {hasMoreRoot && !isLoadingMore && (
+              <div className="flex justify-center py-4">
+                <FormButton
+                  type="button"
+                  variant="secondary"
+                  onClick={loadMoreRootLocations}
+                  className="px-4 py-2 text-sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('common.loadMore')} ({rootOffset} loaded)
+                </FormButton>
+              </div>
+            )}
+
+            {/* Infinite scroll loading indicator */}
+            {isLoadingMore && (
+              <div className="flex justify-center items-center py-4">
+                <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mr-2" />
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  {t('common.loadingMore')}...
+                </span>
+              </div>
+            )}
+            
+            {/* End of list indicator */}
+            {!hasMoreRoot && tree.length > 0 && (
+              <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
+                {t('common.endOfList')} ({tree.length} total)
+              </div>
+            )}
           </div>
         )}
       </div>

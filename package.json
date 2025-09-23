@@ -14,7 +14,10 @@
     "cron:start": "node scripts/start-local-cron.js",
     "cron:status": "curl http://localhost:3000/api/cron/local",
     "cron:process": "curl -X POST http://localhost:3000/api/cron/local -d '{\"action\":\"process\"}'",
-    "update-templates": "node scripts/update-templates.js"
+    "update-templates": "node scripts/update-templates.js",
+    "minio:setup": "node scripts/setup-minio.js",
+    "minio:start": "docker-compose up -d",
+    "minio:stop": "docker-compose down"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.10.0",
@@ -25,7 +28,9 @@
     "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
     "csv-parser": "^3.2.0",
+    "dotenv": "^17.2.2",
     "lucide-react": "^0.544.0",
+    "minio": "^8.0.1",
     "mongoose": "^8.18.1",
     "next": "15.5.3",
     "next-auth": "^4.24.11",

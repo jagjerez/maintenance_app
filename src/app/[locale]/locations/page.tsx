@@ -128,15 +128,15 @@ export default function LocationsPage() {
     }
   }, [t, currentPage]);
 
-  // Fetch all locations for parent selection
+  // Fetch all locations for parent selection (optimized - only get root locations for dropdown)
   const fetchAllLocations = useCallback(async () => {
     try {
       const response = await fetch(
-        "/api/locations?includeChildren=true&flat=true"
+        "/api/locations?rootOnly=true&limit=100"
       );
       if (response.ok) {
         const data = await response.json();
-        setParentLocations(data);
+        setParentLocations(data.locations || data);
       } else {
         toast.error(t("locations.locationLoadError"));
       }

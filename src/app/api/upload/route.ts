@@ -1,5 +1,5 @@
-import { put } from '@vercel/blob';
 import { NextRequest, NextResponse } from 'next/server';
+import { uploadBlob } from '@/lib/blobStorage';
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,16 +32,17 @@ export async function POST(request: NextRequest) {
     const fileExtension = file.name.split('.').pop();
     const filename = `work-order-${timestamp}-${randomString}.${fileExtension}`;
 
-    // Upload to Vercel Blob
-    const blob = await put(filename, file, {
+    // Upload using blob storage service (Vercel Blob or MinIO)
+    const result = await uploadBlob(filename, file, {
       access: 'public',
+      addRandomSuffix: false, // We're already generating a unique filename
     });
 
     return NextResponse.json({
-      url: blob.url,
-      filename: filename,
-      size: file.size,
-      type: file.type,
+      url: result.url,
+      filename: result.filename,
+      size: result.size,
+      type: result.type,
     });
 
   } catch (error) {

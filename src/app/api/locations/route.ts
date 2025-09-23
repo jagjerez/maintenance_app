@@ -76,22 +76,19 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // For regular list view, get all locations and flatten them for pagination
-    const allLocations = await Location.find(query)
+    // For regular list view, get locations with pagination at database level
+    const totalItems = await Location.countDocuments(query);
+    const locations = await Location.find(query)
       .populate(populateFields)
       .sort({ name: 1 })
+      .skip(skip)
+      .limit(limit)
       .lean();
 
-    // Flatten the tree structure for list view
-    const flatLocations = flattenLocationTree(allLocations as LocationWithChildren[]);
-    
-    // Apply pagination to flattened results
-    const totalItems = flatLocations.length;
-    const paginatedLocations = flatLocations.slice(skip, skip + limit);
     const totalPages = Math.ceil(totalItems / limit);
 
     return NextResponse.json({
-      locations: paginatedLocations,
+      locations,
       totalItems,
       totalPages,
       currentPage: page,
