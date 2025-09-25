@@ -22,13 +22,26 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
     const skip = (page - 1) * limit;
 
+    // Build search query
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const query: Record<string, any> = { companyId: session.user.companyId };
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { internalCode: { $regex: search, $options: 'i' } }
+      ];
+    }
+
     // Contar total de operaciones
-    const totalItems = await Operation.countDocuments({ companyId: session.user.companyId });
+    const totalItems = await Operation.countDocuments(query);
 
     // Obtener operaciones con paginación
-    const operations = await Operation.find({ companyId: session.user.companyId })
+    const operations = await Operation.find(query)
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);

@@ -449,13 +449,19 @@ export class FileProcessor {
     // Check if this is an update (has internalCode) or create
     if (internalCode && this.safeTrim(internalCode)) {
       // Update existing operation
-      const existingOperation = await Operation.findOne({ 
+      let existingOperation = await Operation.findOne({ 
         internalCode: this.safeTrim(internalCode), 
         companyId: this.companyId 
       });
       
       if (!existingOperation) {
-        throw { field: 'internalCode', value: internalCode, message: 'Operation with this internal code not found' };
+        existingOperation = new Operation({
+          internalCode: this.safeTrim(internalCode) || undefined, // Will be auto-generated if not provided
+          name: this.safeTrim(name),
+          description: this.safeTrim(description),
+          type,
+          companyId: this.companyId,
+        });
       }
 
       // Update the operation

@@ -21,11 +21,27 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
     const skip = (page - 1) * limit;
 
-    const totalItems = await Machine.countDocuments({ companyId: session.user.companyId });
+    // Build search query
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const query: Record<string, any> = { companyId: session.user.companyId };
+    
+    if (search) {
+      query.$or = [
+        { "model.name": { $regex: search, $options: "i" } },
+        { "model.manufacturer": { $regex: search, $options: "i" } },
+        { "model.brand": { $regex: search, $options: "i" } },
+        { location: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
+        { "properties": { $regex: search, $options: "i" } }
+      ];
+    }
 
-    const machines = await Machine.find({ companyId: session.user.companyId })
+    const totalItems = await Machine.countDocuments(query);
+
+    const machines = await Machine.find(query)
       .populate({
         path: 'model',
         match: { companyId: session.user.companyId }

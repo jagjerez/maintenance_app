@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const type = searchParams.get('type');
+    const search = searchParams.get('search') || '';
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
@@ -27,6 +28,19 @@ export async function GET(request: NextRequest) {
     
     if (status) query.status = status;
     if (type) query.type = type;
+    
+    // Add search functionality
+    if (search) {
+      query.$or = [
+        { customCode: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { maintenanceDescription: { $regex: search, $options: 'i' } },
+        { assignedTo: { $regex: search, $options: 'i' } },
+        { notes: { $regex: search, $options: 'i' } },
+        { type: { $regex: search, $options: 'i' } },
+        { status: { $regex: search, $options: 'i' } }
+      ];
+    }
     
     const workOrders = await WorkOrder.find(query)
       .populate({

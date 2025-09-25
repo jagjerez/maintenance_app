@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "@/hooks/useTranslations";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Plus, Wrench } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
@@ -78,6 +79,9 @@ export default function MaintenanceRangesPage() {
   const [selectedRanges, setSelectedRanges] = useState<MaintenanceRange[]>([]);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const debouncedSearchQuery = useDebounce(searchQuery, 500); // 500ms delay
 
   const {
     register,
@@ -91,12 +95,14 @@ export default function MaintenanceRangesPage() {
     },
   });
 
-  // Fetch maintenance ranges with pagination
+  // Fetch maintenance ranges with pagination and search
   const fetchMaintenanceRanges = useCallback(
-    async (page = 1) => {
+    async (page = 1, search = "") => {
       try {
+        setIsSearching(true);
+        const searchParam = search ? `&search=${encodeURIComponent(search)}` : "";
         const response = await fetch(
-          `/api/maintenance-ranges?page=${page}&limit=${ITEMS_PER_PAGE}`
+          `/api/maintenance-ranges?page=${page}&limit=${ITEMS_PER_PAGE}${searchParam}`
         );
         if (response.ok) {
           const data = await response.json();
@@ -116,6 +122,8 @@ export default function MaintenanceRangesPage() {
       } catch (error) {
         console.error("Error fetching maintenance ranges:", error);
         toast.error(t("maintenanceRanges.rangeLoadError"));
+      } finally {
+        setIsSearching(false);
       }
     },
     [t]
@@ -141,13 +149,13 @@ export default function MaintenanceRangesPage() {
     const loadData = async () => {
       setLoading(true);
       await Promise.all([
-        fetchMaintenanceRanges(currentPage),
+        fetchMaintenanceRanges(currentPage, debouncedSearchQuery),
         fetchOperations(),
       ]);
       setLoading(false);
     };
     loadData();
-  }, [currentPage, fetchMaintenanceRanges, fetchOperations]);
+  }, [currentPage, debouncedSearchQuery, fetchMaintenanceRanges, fetchOperations]);
 
   const onSubmit = async (data: { name: string; description: string }) => {
     try {
@@ -228,7 +236,7 @@ export default function MaintenanceRangesPage() {
       });
 
       if (response.ok) {
-        await fetchMaintenanceRanges(currentPage);
+        await fetchMaintenanceRanges(currentPage, debouncedSearchQuery);
         setShowModal(false);
         setEditingRange(null);
         setSelectedOperations([]);
@@ -308,7 +316,7 @@ export default function MaintenanceRangesPage() {
       );
 
       if (response.ok) {
-        await fetchMaintenanceRanges(currentPage);
+        await fetchMaintenanceRanges(currentPage, debouncedSearchQuery);
         toast.success(t("maintenanceRanges.rangeDeleted"));
       } else {
         const errorData = await response.json();
@@ -368,7 +376,7 @@ export default function MaintenanceRangesPage() {
       if (response.ok) {
         const result = await response.json();
         toast.success(result.message);
-        await fetchMaintenanceRanges(currentPage);
+        await fetchMaintenanceRanges(currentPage, debouncedSearchQuery);
         setSelectedRanges([]);
         setShowBulkDeleteModal(false);
       } else {
@@ -597,14 +605,40 @@ export default function MaintenanceRangesPage() {
         </div>
       </div>
 
-      {/* Item Count Indicator */}
-      <div className="mb-6 flex justify-between items-center">
+      {/* Search and Item Count */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div className="flex items-center space-x-2">
           <Wrench className="h-5 w-5 text-gray-500 dark:text-gray-400" />
           <span className="text-sm text-gray-500 dark:text-gray-400">
             {totalItems} {t("maintenanceRanges.title")}
             {totalItems !== 1 ? "s" : ""}
           </span>
+        </div>
+        
+        {/* Search Input */}
+        <div className="flex items-center space-x-2">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder={t("common.search")}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1); // Reset to first page when searching
+              }}
+              className="w-full sm:w-64 px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+          {isSearching && (
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            </div>
+          )}
         </div>
       </div>
 

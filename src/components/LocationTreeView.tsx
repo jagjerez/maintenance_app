@@ -54,6 +54,7 @@ interface LocationTreeViewProps {
   refreshTrigger?: number; // Add this to trigger refresh
   showMachines?: boolean; // New prop to control machine display
   preventFormSubmit?: boolean; // New prop to prevent form submission
+  searchQuery?: string; // New prop for search filtering
 }
 
 const iconMap = {
@@ -82,6 +83,7 @@ export default function LocationTreeView({
   refreshTrigger,
   showMachines = false,
   preventFormSubmit = false,
+  searchQuery = '',
 }: LocationTreeViewProps) {
   const { t } = useTranslations();
   const [tree, setTree] = useState<LocationNode[]>([]);
@@ -389,6 +391,38 @@ export default function LocationTreeView({
     }
   };
 
+  // Filter function for search
+  const filterLocation = (node: LocationNode, query: string): boolean => {
+    if (!query) return true;
+    
+    const searchLower = query.toLowerCase();
+    return (
+      node.name.toLowerCase().includes(searchLower) ||
+      (node.description && node.description.toLowerCase().includes(searchLower)) ||
+      node.path.toLowerCase().includes(searchLower) ||
+      (showMachines && node.machines && node.machines.some(machine => 
+        machine.model.name.toLowerCase().includes(searchLower) ||
+        machine.model.manufacturer.toLowerCase().includes(searchLower) ||
+        machine.model.brand.toLowerCase().includes(searchLower) ||
+        machine.location.toLowerCase().includes(searchLower)
+      ))
+    );
+  };
+
+  // Filter children recursively
+  const filterChildren = (nodes: LocationNode[], query: string): LocationNode[] => {
+    return nodes
+      .map(node => ({
+        ...node,
+        children: node.children ? filterChildren(node.children, query) : []
+      }))
+      .filter(node => {
+        const matchesSelf = filterLocation(node, query);
+        const hasMatchingChildren = node.children && node.children.length > 0;
+        return matchesSelf || hasMatchingChildren;
+      });
+  };
+
   const renderLocationNode = (node: LocationNode, level: number = 0) => {
     const isExpanded = expandedNodes.has(node._id);
     const isSelected = selectedLocationId === node._id;
@@ -652,7 +686,7 @@ export default function LocationTreeView({
             ref={scrollContainerRef} 
             className="overflow-y-auto max-h-auto"
           >
-            {tree.map((node) => renderLocationNode(node))}
+            {filterChildren(tree, searchQuery).map((node) => renderLocationNode(node))}
             
             {/* Load more button */}
             {hasMoreRoot && !isLoadingMore && (

@@ -83,7 +83,7 @@ async function uploadToVercel(
   addRandomSuffix: boolean
 ): Promise<BlobUploadResult> {
   const blob = await vercelPut(filename, file, {
-    access,
+    access: access === 'private' ? 'public' : access, // Vercel blob only supports 'public' access
     addRandomSuffix,
   });
 
@@ -127,9 +127,15 @@ async function uploadToMinio(
   }
 
   // Upload to MinIO
-  await client.putObject(MINIO_BUCKET_NAME, finalFilename, buffer, {
-    'Content-Type': file instanceof File ? file.type : 'application/octet-stream',
-  });
+  await client.putObject(
+    MINIO_BUCKET_NAME, 
+    finalFilename, 
+    buffer, 
+    buffer.length,
+    {
+      'Content-Type': file instanceof File ? file.type : 'application/octet-stream',
+    }
+  );
 
   // Generate public URL (MinIO doesn't have public URLs by default, so we construct one)
   const protocol = MINIO_USE_SSL ? 'https' : 'http';

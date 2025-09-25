@@ -21,11 +21,24 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
     const skip = (page - 1) * limit;
 
-    const totalItems = await MachineModel.countDocuments({ companyId: session.user.companyId });
+    // Build search query
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const query: Record<string, any> = { companyId: session.user.companyId };
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { manufacturer: { $regex: search, $options: 'i' } },
+        { brand: { $regex: search, $options: 'i' } }
+      ];
+    }
 
-    const machineModels = await MachineModel.find({ companyId: session.user.companyId })
+    const totalItems = await MachineModel.countDocuments(query);
+
+    const machineModels = await MachineModel.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
