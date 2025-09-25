@@ -21,11 +21,23 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
+    const search = searchParams.get('search') || '';
     const skip = (page - 1) * limit;
 
-    const totalItems = await MaintenanceRange.countDocuments({ companyId: session.user.companyId });
+    // Build search query
+    let query: any = { companyId: session.user.companyId };
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { type: { $regex: search, $options: 'i' } }
+      ];
+    }
 
-    const maintenanceRanges = await MaintenanceRange.find({ companyId: session.user.companyId })
+    const totalItems = await MaintenanceRange.countDocuments(query);
+
+    const maintenanceRanges = await MaintenanceRange.find(query)
       .populate('operations')
       .sort({ createdAt: -1 })
       .skip(skip)

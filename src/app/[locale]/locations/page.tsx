@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "@/hooks/useTranslations";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Plus, MapPin, Folder, Building, Factory, Warehouse, Home, Store, Truck, Wrench, Building2, Landmark } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
@@ -95,6 +96,9 @@ export default function LocationsPage() {
   const [selectedLocations, setSelectedLocations] = useState<Location[]>([]);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const debouncedSearchQuery = useDebounce(searchQuery, 500); // 500ms delay
 
   const {
     register,
@@ -106,10 +110,12 @@ export default function LocationsPage() {
   });
 
   // Fetch all locations for list view
-  const fetchLocations = useCallback(async () => {
+  const fetchLocations = useCallback(async (page = 1, search = "") => {
     try {
+      setIsSearching(true);
+      const searchParam = search ? `&search=${encodeURIComponent(search)}` : "";
       const response = await fetch(
-        `/api/locations?page=${currentPage}&limit=${ITEMS_PER_PAGE}`
+        `/api/locations?page=${page}&limit=${ITEMS_PER_PAGE}${searchParam}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -125,8 +131,10 @@ export default function LocationsPage() {
     } catch (error) {
       console.error("Error fetching locations:", error);
       toast.error(t("locations.locationLoadError"));
+    } finally {
+      setIsSearching(false);
     }
-  }, [t, currentPage]);
+  }, [t]);
 
   // Fetch all locations for parent selection (optimized - only get root locations for dropdown)
   const fetchAllLocations = useCallback(async () => {
@@ -149,11 +157,11 @@ export default function LocationsPage() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchLocations(), fetchAllLocations()]);
+      await Promise.all([fetchLocations(currentPage, debouncedSearchQuery), fetchAllLocations()]);
       setLoading(false);
     };
     loadData();
-  }, [fetchLocations, fetchAllLocations]);
+  }, [currentPage, debouncedSearchQuery, fetchLocations, fetchAllLocations]);
 
   const onSubmit = async (data: {
     name: string;
@@ -181,7 +189,7 @@ export default function LocationsPage() {
             ? t("locations.locationUpdated")
             : t("locations.locationCreated")
         );
-        await fetchLocations();
+        await fetchLocations(currentPage, debouncedSearchQuery);
         await fetchAllLocations();
         setRefreshTrigger((prev) => prev + 1); // Trigger tree refresh
         setShowModal(false);
@@ -223,7 +231,7 @@ export default function LocationsPage() {
 
       if (response.ok) {
         toast.success(t("locations.locationDeleted"));
-        await fetchLocations();
+        await fetchLocations(currentPage, debouncedSearchQuery);
         await fetchAllLocations();
         setRefreshTrigger((prev) => prev + 1); // Trigger tree refresh
       } else {
@@ -267,7 +275,7 @@ export default function LocationsPage() {
       if (response.ok) {
         const result = await response.json();
         toast.success(result.message);
-        await fetchLocations();
+        await fetchLocations(currentPage, debouncedSearchQuery);
         await fetchAllLocations();
         setRefreshTrigger((prev) => prev + 1);
         setSelectedLocations([]);
@@ -347,6 +355,13 @@ export default function LocationsPage() {
     router.push(`/machines?edit=${machine._id}`);
   };
 
+  // Clear search when switching view modes
+  const handleViewModeChange = (mode: "list" | "tree") => {
+    setViewMode(mode);
+    setSearchQuery(""); // Clear search when switching views
+    setCurrentPage(1); // Reset to first page
+  };
+
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
@@ -413,17 +428,13 @@ export default function LocationsPage() {
       {/* Header with Add Button and View Toggle */}
       <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div className="flex items-center space-x-2">
-          <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            {totalItems} {t("locations.title")}
-            {totalItems !== 1 ? "s" : ""}
-          </span>
+          
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
           {/* View Mode Toggle */}
           <div className="flex rounded-md shadow-sm">
             <button
-              onClick={() => setViewMode("tree")}
+              onClick={() => handleViewModeChange("tree")}
               className={`flex-1 sm:flex-col px-3 py-2 text-sm font-medium rounded-l-md border min-h-[44px] touch-manipulation ${
                 viewMode === "tree"
                   ? "bg-blue-600 text-white border-blue-600"
@@ -433,7 +444,7 @@ export default function LocationsPage() {
               <Folder className="h-4 w-4 mx-auto sm:mx-0" />
             </button>
             <button
-              onClick={() => setViewMode("list")}
+              onClick={() => handleViewModeChange("list")}
               className={`flex-1 sm:flex-none px-3 py-2 text-sm font-medium rounded-r-md border-t border-r border-b min-h-[44px] touch-manipulation ${
                 viewMode === "list"
                   ? "bg-blue-600 text-white border-blue-600"
@@ -454,6 +465,43 @@ export default function LocationsPage() {
         </div>
       </div>
 
+      {/* Search and Item Count */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="flex items-center space-x-2">
+          <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {totalItems} {t("locations.title")}
+            {totalItems !== 1 ? "s" : ""}
+          </span>
+        </div>
+        
+        {/* Search Input - Show in both views */}
+        <div className="flex items-center space-x-2">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder={t("common.search")}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1); // Reset to first page when searching
+              }}
+              className="w-full sm:w-64 px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+          {isSearching && (
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Content */}
       {viewMode === "tree" ? (
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
@@ -466,6 +514,7 @@ export default function LocationsPage() {
               showActions={true}
               showMachines={true}
               refreshTrigger={refreshTrigger}
+              searchQuery={debouncedSearchQuery}
               className=""
             />
           </div>

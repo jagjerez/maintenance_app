@@ -45,8 +45,18 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
     const rootOnly = searchParams.get('rootOnly') === 'true';
+    const search = searchParams.get('search') || '';
 
     const query: Record<string, unknown> = { companyId: session.user.companyId };
+    
+    // Add search functionality
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { path: { $regex: search, $options: 'i' } }
+      ];
+    }
 
     if (rootOnly) {
       query.parentId = { $exists: false };
