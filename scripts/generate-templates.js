@@ -15,25 +15,11 @@ const templates = {
     ['', 'Office Area', 'Administrative offices', 'landmark', 'Building A'],
     ['', 'Loading Dock', 'Transport and loading area', 'truck', 'Plant A']
   ],
-  'machine-models': [
-    ['_id', 'name', 'manufacturer', 'brand', 'year', 'properties'],
-    ['', 'Model X1', 'Manufacturer A', 'Brand X', 2023, '{"power":"100kW","weight":"500kg"}'],
-    ['', 'Model Y2', 'Manufacturer B', 'Brand Y', 2022, '{"power":"150kW","weight":"750kg"}'],
-    ['', 'Model Z3', 'Manufacturer C', 'Brand Z', 2024, '{"power":"200kW","weight":"1000kg"}']
-  ],
   machines: [
-    ['_id', 'model', 'location', 'description', 'properties'],
-    ['', 'Model X1', 'Plant A/Line 1/Station 1', 'Main production machine', '{"serialNumber":"MX1001","installationDate":"2023-01-15"}'],
-    ['', 'Model Y2', 'Plant A/Line 1/Station 2', 'Secondary machine', '{"serialNumber":"MY2002","installationDate":"2023-02-20"}'],
-    ['', 'Model Z3', 'Plant A/Line 2/Station 3', 'Backup machine', '{"serialNumber":"MZ3003","installationDate":"2023-03-10"}']
-  ],
-  'maintenance-ranges': [
-    ['_id', 'name', 'description', 'type', 'frequency', 'startDate', 'startTime', 'daysOfWeek'],
-    ['', 'Daily Inspection', 'Daily safety and performance check', 'preventive', 'daily', '', '08:00', '1,2,3,4,5'],
-    ['', 'Weekly Maintenance', 'Weekly comprehensive maintenance', 'preventive', 'weekly', '2024-01-01', '09:00', '1'],
-    ['', 'Monthly Service', 'Monthly deep service', 'preventive', 'monthly', '2024-01-01', '10:00', ''],
-    ['', 'Annual Overhaul', 'Annual complete overhaul', 'preventive', 'yearly', '2024-01-01', '08:00', ''],
-    ['', 'Emergency Repair', 'Emergency corrective maintenance', 'corrective', '', '', '', '']
+    ['_id', 'name', 'manufacturer', 'brand', 'year', 'locationInternalCode', 'description', 'properties'],
+    ['', 'Production Machine 1', 'Manufacturer A', 'Brand X', 2023, 'PLANT_A', 'Main production machine', '{"serialNumber":"MX1001","installationDate":"2023-01-15"}'],
+    ['', 'Production Machine 2', 'Manufacturer B', 'Brand Y', 2022, 'PLANT_A', 'Secondary machine', '{"serialNumber":"MY2002","installationDate":"2023-02-20"}'],
+    ['', 'Backup Machine', 'Manufacturer C', 'Brand Z', 2024, 'PLANT_A', 'Backup machine', '{"serialNumber":"MZ3003","installationDate":"2023-03-10"}']
   ],
   operations: [
     ['_id', 'name', 'description', 'type'],

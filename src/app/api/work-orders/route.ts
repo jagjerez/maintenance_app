@@ -45,19 +45,7 @@ export async function GET(request: NextRequest) {
     const workOrders = await WorkOrder.find(query)
       .populate({
         path: 'machines.machineId',
-        model: 'Machine',
-        populate: {
-          path: 'model',
-          model: 'MachineModel'
-        }
-      })
-      .populate({
-        path: 'machines.maintenanceRangeIds',
-        model: 'MaintenanceRange',
-        populate: {
-          path: 'operations',
-          model: 'Operation'
-        }
+        model: 'Machine'
       })
       .populate({
         path: 'machines.operations',
@@ -114,27 +102,6 @@ export async function POST(request: NextRequest) {
     };
     
     // Validate maintenance ranges match work order type
-    if (dataWithCompany.type && dataWithCompany.machines && dataWithCompany.machines.length > 0) {
-      const { MaintenanceRange } = await import('@/models');
-      
-      for (const machine of dataWithCompany.machines) {
-        if (machine.maintenanceRangeIds && machine.maintenanceRangeIds.length > 0) {
-          const maintenanceRanges = await MaintenanceRange.find({
-            _id: { $in: machine.maintenanceRangeIds },
-            companyId: session.user.companyId,
-          });
-          
-          // Check that all maintenance ranges match the work order type
-          const invalidRanges = maintenanceRanges.filter(range => range.type !== dataWithCompany.type);
-          if (invalidRanges.length > 0) {
-            return NextResponse.json(
-              { error: `Maintenance range "${invalidRanges[0].name}" type does not match work order type` },
-              { status: 400 }
-            );
-          }
-        }
-      }
-    }
     
     // Convert date strings to Date objects
     const workOrderData = {
@@ -171,14 +138,6 @@ export async function POST(request: NextRequest) {
         populate: {
           path: 'model',
           model: 'MachineModel'
-        }
-      })
-      .populate({
-        path: 'machines.maintenanceRangeIds',
-        model: 'MaintenanceRange',
-        populate: {
-          path: 'operations',
-          model: 'Operation'
         }
       })
       .populate({

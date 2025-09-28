@@ -13,7 +13,6 @@ interface Location {
 
 interface WorkOrderMachine {
   machineId: string;
-  maintenanceRangeIds?: string[]; // Múltiples maintenance ranges
   operations?: string[];
   filledOperations?: IFilledOperation[];
   images?: IWorkOrderImage[];

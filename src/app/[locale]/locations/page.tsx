@@ -55,11 +55,6 @@ interface Machine {
     brand: string;
     year: number;
   };
-  maintenanceRange?: {
-    _id: string;
-    name: string;
-    type: "preventive" | "corrective";
-  };
   location: string;
 }
 

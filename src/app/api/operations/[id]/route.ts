@@ -117,27 +117,6 @@ export async function DELETE(
       );
     }
 
-    // Verificar si la operación está siendo usada en algún maintenance range
-    const maintenanceRangesUsingOperation = await MaintenanceRange.find({
-      operations: id,
-      companyId: session.user.companyId
-    });
-
-    if (maintenanceRangesUsingOperation.length > 0) {
-      return NextResponse.json(
-        { 
-          error: 'Cannot delete operation', 
-          message: 'This operation is being used in one or more maintenance ranges and cannot be deleted',
-          details: {
-            maintenanceRanges: maintenanceRangesUsingOperation.map(range => ({
-              id: range._id,
-              name: range.name
-            }))
-          }
-        },
-        { status: 400 }
-      );
-    }
 
     // Si no está siendo usada, proceder con la eliminación
     await Operation.findByIdAndDelete(id);

@@ -36,7 +36,6 @@ type WorkOrderFormData = {
   properties: Record<string, unknown>;
   machines: Array<{
     machineId: string;
-    maintenanceRangeIds?: string[];
     operations?: string[];
     filledOperations?: Array<{
       operationId: string;
@@ -87,17 +86,10 @@ interface Machine {
     manufacturer: string;
   };
   operations?: IOperation[];
-  maintenanceRanges?: Array<{
-    _id: string;
-    name: string;
-    type: 'preventive' | 'corrective';
-    operations: IOperation[];
-  }>;
 }
 
 interface WorkOrderMachine {
   machineId: string;
-  maintenanceRangeIds?: string[]; // Múltiples maintenance ranges
   operations?: string[];
   filledOperations?: Array<{
     operationId: string;
@@ -124,30 +116,12 @@ interface WorkOrderMachineFromBackend {
     location: string;
     locationId: string;
     description?: string;
-    maintenanceRanges?: string[];
     operations?: string[];
     properties: Record<string, unknown>;
     companyId: string;
     createdAt: string;
     updatedAt: string;
   };
-  maintenanceRangeIds?: (string | {
-    _id: string;
-    name: string;
-    description: string;
-    operations: Array<{
-      _id: string;
-      name: string;
-      description: string;
-      type: string;
-      companyId: string;
-      createdAt: string;
-      updatedAt: string;
-    }>;
-    companyId: string;
-    createdAt: string;
-    updatedAt: string;
-  })[]; // Múltiples maintenance ranges
   operations?: (string | {
     _id: string;
     name: string;
@@ -309,9 +283,6 @@ export default function WorkOrderFormModal({
       // Map machines data to the correct format
       const mappedMachines = (editingWorkOrder.machines || []).map((m) => ({
         machineId: typeof m.machineId === 'string' ? m.machineId : m.machineId._id,
-        maintenanceRangeIds: Array.isArray(m.maintenanceRangeIds) 
-          ? m.maintenanceRangeIds.map(range => typeof range === 'string' ? range : range._id)
-          : [],
         operations: Array.isArray(m.operations) 
           ? m.operations.map(op => typeof op === 'string' ? op : op._id)
           : [],
@@ -385,9 +356,6 @@ export default function WorkOrderFormModal({
         workOrderLocation: editingWorkOrder.workOrderLocation?._id || "",
         machines: (editingWorkOrder.machines || []).map((m) => ({
           machineId: typeof m.machineId === 'string' ? m.machineId : m.machineId._id,
-          maintenanceRangeIds: Array.isArray(m.maintenanceRangeIds) 
-            ? m.maintenanceRangeIds.map(range => typeof range === 'string' ? range : range._id)
-            : [],
           operations: Array.isArray(m.operations) 
             ? m.operations.map(op => typeof op === 'string' ? op : op._id)
             : [],
@@ -419,15 +387,7 @@ export default function WorkOrderFormModal({
         (machine) => machine.locationId === selectedWorkOrderLocation
       );
       
-      // Filter machines based on work order type - only show machines with matching maintenance ranges
-      const filteredMachines = workOrderType ? locationMachines.filter((machine) => {
-        if (!machine.maintenanceRanges || machine.maintenanceRanges.length === 0) {
-          return false; // Don't show machines without maintenance ranges
-        }
-        return machine.maintenanceRanges.some(range => range.type === workOrderType);
-      }) : locationMachines;
-      
-      setAvailableMachines(filteredMachines);
+      setAvailableMachines(locationMachines);
       // Update the workOrderLocation field for validation
       setValue("workOrderLocation", selectedWorkOrderLocation);
       // Clear selected machines when location changes
@@ -448,7 +408,6 @@ export default function WorkOrderFormModal({
         "machines",
         workOrderMachines.map((m) => ({
           machineId: m.machineId,
-          maintenanceRangeIds: m.maintenanceRangeIds || [],
           operations: m.operations || [],
           filledOperations: m.filledOperations || [],
           images: m.images || [],
@@ -502,26 +461,6 @@ export default function WorkOrderFormModal({
     const automaticOperations: string[] = [];
     const operationIds = new Set<string>();
 
-    // Add operations from maintenance ranges of the machine that match the work order type
-    // Solo para preventivo
-    if (machine.maintenanceRanges && workOrderType === "preventive") {
-      machine.maintenanceRanges
-        .filter((range) => range.type === workOrderType)
-        .forEach((range) => {
-          if (range.operations) {
-            range.operations.forEach((operation) => {
-              if (
-                operation &&
-                operation._id &&
-                !operationIds.has(operation._id)
-              ) {
-                operationIds.add(operation._id);
-                automaticOperations.push(operation._id);
-              }
-            });
-          }
-        });
-    }
 
     // Add operations directly from machine (solo para preventivo)
     if (machine.operations && workOrderType === "preventive") {
@@ -535,10 +474,6 @@ export default function WorkOrderFormModal({
 
     const newWorkOrderMachine: WorkOrderMachine = {
       machineId,
-      maintenanceRangeIds:
-        machine.maintenanceRanges
-          ?.filter((range) => range.type === workOrderType)
-          ?.map((range) => range._id) || [],
       operations: workOrderType === "preventive" ? automaticOperations : [],
       filledOperations: [],
       images: [],
@@ -552,7 +487,6 @@ export default function WorkOrderFormModal({
       "machines",
       updatedMachines.map((m) => ({
         machineId: m.machineId,
-        maintenanceRangeIds: m.maintenanceRangeIds || [],
         operations: m.operations || [],
         filledOperations: m.filledOperations || [],
         images: m.images || [],
@@ -572,7 +506,6 @@ export default function WorkOrderFormModal({
       "machines",
       updatedMachines.map((m) => ({
         machineId: m.machineId,
-        maintenanceRangeIds: m.maintenanceRangeIds || [],
         operations: m.operations || [],
         filledOperations: m.filledOperations || [],
         images: m.images || [],
@@ -592,7 +525,6 @@ export default function WorkOrderFormModal({
       "machines",
       updatedMachines.map((m) => ({
         machineId: m.machineId,
-        maintenanceRangeIds: m.maintenanceRangeIds || [],
         operations: m.operations || [],
         filledOperations: m.filledOperations || [],
         images: m.images || [],
@@ -617,7 +549,6 @@ export default function WorkOrderFormModal({
       "machines",
       updatedMachines.map((m) => ({
         machineId: m.machineId,
-        maintenanceRangeIds: m.maintenanceRangeIds || [],
         operations: m.operations || [],
         filledOperations: m.filledOperations || [],
         images: m.images || [],
@@ -1030,93 +961,6 @@ export default function WorkOrderFormModal({
                       </button>
                     </div>
 
-                    {/* Maintenance Ranges Information - Only for preventive */}
-                    {workOrderType === "preventive" &&
-                      (() => {
-                        const machine = machines.find(
-                          (m) => m._id === workOrderMachine.machineId
-                        );
-                        if (
-                          !machine ||
-                          !machine.maintenanceRanges ||
-                          machine.maintenanceRanges.length === 0
-                        ) {
-                          return (
-                            <div className="mb-4">
-                              <FormLabel>
-                                {t("workOrders.maintenanceRange")}
-                              </FormLabel>
-                              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                                <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                                  No maintenance ranges configured for this
-                                  machine.
-                                </p>
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div className="mb-4">
-                            <FormLabel>
-                              {t("workOrders.maintenanceRange")}
-                            </FormLabel>
-                            <div className="space-y-3">
-                              {machine.maintenanceRanges
-                                .filter((range) => range.type === workOrderType)
-                                .map((range) => (
-                                <div
-                                  key={range._id}
-                                  className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800"
-                                >
-                                  <div className="flex items-center justify-between mb-2">
-                                    <h4 className="font-medium text-blue-900 dark:text-blue-100">
-                                      {range.name}
-                                    </h4>
-                                    <span className="text-xs text-blue-600 dark:text-blue-400">
-                                      {workOrderType === "preventive" 
-                                        ? `${range.operations?.length || 0} operations`
-                                        : t("workOrders.correctiveMaintenance")
-                                      }
-                                    </span>
-                                  </div>
-                                  {/* Solo mostrar operaciones para preventivo */}
-                                  {workOrderType === "preventive" && range.operations &&
-                                    range.operations.length > 0 && (
-                                      <div className="space-y-1">
-                                        <p className="text-xs font-medium text-blue-800 dark:text-blue-200">
-                                          Operations:
-                                        </p>
-                                        <div className="space-y-1">
-                                          {range.operations.map((operation) => (
-                                            <div
-                                              key={operation._id}
-                                              className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border"
-                                            >
-                                              <div>
-                                                <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                                  {operation.name}
-                                                </span>
-                                                {operation.description && (
-                                                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                    {operation.description}
-                                                  </p>
-                                                )}
-                                              </div>
-                                              <span className="text-xs text-gray-500 dark:text-gray-400">
-                                                {operation.type}
-                                              </span>
-                                            </div>
-                                          ))}
-                                        </div>
-                                      </div>
-                                    )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()}
 
                     {/* Maintenance Description - Only for corrective */}
                     {workOrderType === "corrective" && (
@@ -1140,26 +984,6 @@ export default function WorkOrderFormModal({
                         const automaticOperations: IOperation[] = [];
                         const operationIds = new Set<string>();
 
-                        // Add operations from maintenance ranges of the machine that match the work order type
-                        // Solo para preventivo
-                        if (machine.maintenanceRanges && workOrderType === "preventive") {
-                          machine.maintenanceRanges
-                            .filter((range) => range.type === workOrderType)
-                            .forEach((range) => {
-                              if (range.operations) {
-                                range.operations.forEach((operation) => {
-                                  if (
-                                    operation &&
-                                    operation._id &&
-                                    !operationIds.has(operation._id)
-                                  ) {
-                                    operationIds.add(operation._id);
-                                    automaticOperations.push(operation);
-                                  }
-                                });
-                              }
-                            });
-                        }
 
                         // Add operations directly from machine
                         if (machine.operations) {
@@ -1295,14 +1119,7 @@ export default function WorkOrderFormModal({
                                       machine.operations?.some(
                                         (op) => op._id === operation._id
                                       );
-                                    const isFromRange =
-                                      machine.maintenanceRanges?.some((range) =>
-                                        range.operations?.some(
-                                          (op) => op._id === operation._id
-                                        )
-                                      );
-
-                                    return !isFromMachine && !isFromRange;
+                                    return !isFromMachine;
                                   });
 
                                 // Only show if there are additional operations available
@@ -1332,17 +1149,7 @@ export default function WorkOrderFormModal({
                                               machine.operations?.some(
                                                 (op) => op._id === opId
                                               );
-                                            const isFromRange =
-                                              machine.maintenanceRanges?.some(
-                                                (range) =>
-                                                  range.operations?.some(
-                                                    (op) => op._id === opId
-                                                  )
-                                              );
-
-                                            return (
-                                              !isFromMachine && !isFromRange
-                                            );
+                                            return !isFromMachine;
                                           }
                                         ) || []
                                       }
@@ -1350,34 +1157,6 @@ export default function WorkOrderFormModal({
                                         const machineOperations: string[] = [];
                                         const operationIds = new Set<string>();
 
-                                        // Add operations from maintenance ranges of the machine that match the work order type
-                                        // Solo para preventivo
-                                        if (machine.maintenanceRanges && workOrderType === "preventive") {
-                                          machine.maintenanceRanges
-                                            .filter((range) => range.type === workOrderType)
-                                            .forEach((range) => {
-                                              if (range.operations) {
-                                                range.operations.forEach(
-                                                  (operation) => {
-                                                    if (
-                                                      operation &&
-                                                      operation._id &&
-                                                      !operationIds.has(
-                                                        operation._id
-                                                      )
-                                                    ) {
-                                                      operationIds.add(
-                                                        operation._id
-                                                      );
-                                                      machineOperations.push(
-                                                        operation._id
-                                                      );
-                                                    }
-                                                  }
-                                                );
-                                              }
-                                            });
-                                        }
 
                                         // Add operations directly from machine
                                         if (machine.operations) {

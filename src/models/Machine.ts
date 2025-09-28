@@ -4,11 +4,13 @@ import { randomUUID } from 'crypto';
 export interface IMachine {
   _id: string;
   internalCode: string; // GUID for Excel/CSV relationships
-  model: string;
+  name: string;
+  manufacturer: string;
+  brand: string;
+  year: number;
   location: string;
   locationId?: string;
   description?: string;
-  maintenanceRanges?: string[];
   operations?: string[];
   properties: Map<string, unknown>;
   companyId: string;
@@ -24,10 +26,26 @@ const MachineSchema = new Schema({
     trim: true,
     maxlength: [36, 'Internal code too long'],
   },
-  model: {
-    type: Schema.Types.ObjectId,
-    ref: 'MachineModel',
-    required: [true, 'Machine model is required'],
+  name: {
+    type: String,
+    required: [true, 'Machine name is required'],
+    trim: true,
+  },
+  manufacturer: {
+    type: String,
+    required: [true, 'Manufacturer is required'],
+    trim: true,
+  },
+  brand: {
+    type: String,
+    required: [true, 'Brand is required'],
+    trim: true,
+  },
+  year: {
+    type: Number,
+    required: [true, 'Year is required'],
+    min: [1900, 'Year must be after 1900'],
+    max: [new Date().getFullYear() + 1, 'Year cannot be in the future'],
   },
   location: {
     type: String,
@@ -43,10 +61,6 @@ const MachineSchema = new Schema({
     trim: true,
     maxlength: [500, 'Description cannot exceed 500 characters'],
   },
-  maintenanceRanges: [{
-    type: Schema.Types.ObjectId,
-    ref: 'MaintenanceRange',
-  }],
   operations: [{
     type: Schema.Types.ObjectId,
     ref: 'Operation',
@@ -76,7 +90,8 @@ MachineSchema.pre('validate', function(next) {
 
 // Index for better query performance
 MachineSchema.index({ internalCode: 1 });
-MachineSchema.index({ model: 1 });
+MachineSchema.index({ name: 1, manufacturer: 1, brand: 1 });
+MachineSchema.index({ year: 1 });
 MachineSchema.index({ location: 1 });
 MachineSchema.index({ companyId: 1 });
 

@@ -16,11 +16,6 @@ interface Machine {
     brand: string;
     year: number;
   };
-  maintenanceRanges?: {
-    _id: string;
-    name: string;
-    type: 'preventive' | 'corrective';
-  }[];
   location: string;
 }
 
@@ -593,16 +588,6 @@ export default function LocationTreeView({
                       <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
                         {machine.model.manufacturer} {machine.model.brand} ({machine.model.year})
                       </div>
-                      {machine.maintenanceRanges && machine.maintenanceRanges.length > 0 && (
-                        <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                          {machine.maintenanceRanges.map((range, index) => (
-                            <span key={range._id}>
-                              {range.name} - {range.type}
-                              {index < machine.maintenanceRanges!.length - 1 && ', '}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>

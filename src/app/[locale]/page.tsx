@@ -51,8 +51,6 @@ interface Stats {
   inProgressWorkOrders: number;
   completedWorkOrders: number;
   totalMachines: number;
-  totalModels: number;
-  totalMaintenanceRanges: number;
   totalOperations: number;
 }
 
@@ -67,8 +65,6 @@ export default function Dashboard() {
     inProgressWorkOrders: 0,
     completedWorkOrders: 0,
     totalMachines: 0,
-    totalModels: 0,
-    totalMaintenanceRanges: 0,
     totalOperations: 0,
   });
   const [loading, setLoading] = useState(true);
@@ -87,18 +83,14 @@ export default function Dashboard() {
       setWorkOrders(workOrdersData.workOrders?.slice(0, 5) || []); // Show only latest 5
 
       // Fetch stats
-      const [machinesRes, modelsRes, rangesRes, operationsRes] =
+      const [machinesRes, operationsRes] =
         await Promise.all([
           fetch("/api/machines"),
-          fetch("/api/machine-models"),
-          fetch("/api/maintenance-ranges"),
           fetch("/api/operations"),
         ]);
 
-      const [machines, models, ranges, operations] = await Promise.all([
+      const [machines, operations] = await Promise.all([
         machinesRes.json(),
-        modelsRes.json(),
-        rangesRes.json(),
         operationsRes.json(),
       ]);
 
@@ -119,10 +111,8 @@ export default function Dashboard() {
         pendingWorkOrders,
         inProgressWorkOrders,
         completedWorkOrders,
-        totalMachines: machines.length,
-        totalModels: models.length,
-        totalMaintenanceRanges: ranges.length,
-        totalOperations: operations.length,
+        totalMachines: machines.totalItems,
+        totalOperations: operations.totalItems,
       });
     } catch (error) {
       console.error(t("errors.fetchDashboardDataError"), error);
@@ -332,22 +322,6 @@ export default function Dashboard() {
                 </dt>
                 <dd className="text-lg font-semibold text-gray-900 dark:text-white">
                   {stats.totalMachines}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {t("machineModels.title")}
-                </dt>
-                <dd className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {stats.totalModels}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                  {t("maintenanceRanges.title")}
-                </dt>
-                <dd className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {stats.totalMaintenanceRanges}
                 </dd>
               </div>
               <div>

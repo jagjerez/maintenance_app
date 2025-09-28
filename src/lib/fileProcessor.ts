@@ -2,7 +2,7 @@ import * as XLSX from 'xlsx';
 import csv from 'csv-parser';
 import { Readable } from 'stream';
 import { connectDB } from './db';
-import { IntegrationJob, Location, MachineModel, Machine, MaintenanceRange, Operation } from '@/models';
+import { IntegrationJob, Location, Machine, Operation } from '@/models';
 
 export interface ProcessingResult {
   totalRows: number;
@@ -146,14 +146,8 @@ export class FileProcessor {
       case 'locations':
         await this.processLocationRow(row, rowNumber);
         break;
-      case 'machine-models':
-        await this.processMachineModelRow(row, rowNumber);
-        break;
       case 'machines':
         await this.processMachineRow(row, rowNumber);
-        break;
-      case 'maintenance-ranges':
-        await this.processMaintenanceRangeRow(row, rowNumber);
         break;
       case 'operations':
         await this.processOperationRow(row, rowNumber);
@@ -235,11 +229,12 @@ export class FileProcessor {
     }
   }
 
-  private async processMachineModelRow(row: FileRowData, _rowNumber: number): Promise<void> {
-    const { internalCode, name, manufacturer, brand, year, properties } = row;
+
+  private async processMachineRow(row: FileRowData, _rowNumber: number): Promise<void> {
+    const { internalCode, name, manufacturer, brand, year, locationInternalCode, description, properties } = row;
 
     if (!name) {
-      throw { field: 'name', value: name, message: 'Name is required' };
+      throw { field: 'name', value: name, message: 'Machine name is required' };
     }
     if (!manufacturer) {
       throw { field: 'manufacturer', value: manufacturer, message: 'Manufacturer is required' };
@@ -250,70 +245,8 @@ export class FileProcessor {
     if (!year || isNaN(Number(year))) {
       throw { field: 'year', value: year, message: 'Valid year is required' };
     }
-
-    let propertiesMap = new Map();
-    if (properties) {
-      try {
-        const parsedProperties = JSON.parse(String(properties));
-        propertiesMap = new Map(Object.entries(parsedProperties));
-      } catch (_error) {
-        throw { field: 'properties', value: properties, message: 'Invalid JSON format' };
-      }
-    }
-
-    // Check if this is an update (has internalCode) or create
-    if (internalCode && this.safeTrim(internalCode)) {
-      // Update existing machine model
-      const existingModel = await MachineModel.findOne({ 
-        internalCode: this.safeTrim(internalCode), 
-        companyId: this.companyId 
-      });
-      
-      if (!existingModel) {
-        throw { field: 'internalCode', value: internalCode, message: 'Machine model with this internal code not found' };
-      }
-
-      // Update the machine model
-      existingModel.name = this.safeTrim(name);
-      existingModel.manufacturer = this.safeTrim(manufacturer);
-      existingModel.brand = this.safeTrim(brand);
-      existingModel.year = Number(year);
-      existingModel.properties = propertiesMap;
-      
-      await existingModel.save();
-    } else {
-      // Create new machine model
-      const machineModel = new MachineModel({
-        internalCode: this.safeTrim(internalCode) || undefined, // Will be auto-generated if not provided
-        name: this.safeTrim(name),
-        manufacturer: this.safeTrim(manufacturer),
-        brand: this.safeTrim(brand),
-        year: Number(year),
-        properties: propertiesMap,
-        companyId: this.companyId,
-      });
-
-      await machineModel.save();
-    }
-  }
-
-  private async processMachineRow(row: FileRowData, _rowNumber: number): Promise<void> {
-    const { internalCode, modelInternalCode, locationInternalCode, description, properties } = row;
-
-    if (!modelInternalCode) {
-      throw { field: 'modelInternalCode', value: modelInternalCode, message: 'Model internal code is required' };
-    }
     if (!locationInternalCode) {
       throw { field: 'locationInternalCode', value: locationInternalCode, message: 'Location internal code is required' };
-    }
-
-    // Find model by internal code
-    const machineModel = await MachineModel.findOne({ 
-      internalCode: this.safeTrim(modelInternalCode), 
-      companyId: this.companyId 
-    });
-    if (!machineModel) {
-      throw { field: 'modelInternalCode', value: modelInternalCode, message: 'Machine model not found' };
     }
 
     // Find location by internal code
@@ -348,10 +281,13 @@ export class FileProcessor {
       }
 
       // Update the machine
-      existingMachine.model = machineModel._id;
-      existingMachine.location = locationRecord.path;
+      existingMachine.name = this.safeTrim(name);
+      existingMachine.manufacturer = this.safeTrim(manufacturer);
+      existingMachine.brand = this.safeTrim(brand);
+      existingMachine.year = Number(year);
+      existingMachine.location = locationRecord.name;
       existingMachine.locationId = locationRecord._id;
-      existingMachine.description = this.safeTrim(description) || '';
+      existingMachine.description = this.safeTrim(description) || undefined;
       existingMachine.properties = propertiesMap;
       
       await existingMachine.save();
@@ -359,10 +295,13 @@ export class FileProcessor {
       // Create new machine
       const machine = new Machine({
         internalCode: this.safeTrim(internalCode) || undefined, // Will be auto-generated if not provided
-        model: machineModel._id,
-        location: locationRecord.path,
+        name: this.safeTrim(name),
+        manufacturer: this.safeTrim(manufacturer),
+        brand: this.safeTrim(brand),
+        year: Number(year),
+        location: locationRecord.name,
         locationId: locationRecord._id,
-        description: this.safeTrim(description) || '',
+        description: this.safeTrim(description) || undefined,
         properties: propertiesMap,
         companyId: this.companyId,
       });
@@ -371,67 +310,6 @@ export class FileProcessor {
     }
   }
 
-  private async processMaintenanceRangeRow(row: FileRowData, _rowNumber: number): Promise<void> {
-    const { internalCode, name, description, type, frequency, startDate, startTime, daysOfWeek } = row;
-
-    if (!name) {
-      throw { field: 'name', value: name, message: 'Name is required' };
-    }
-    if (!description) {
-      throw { field: 'description', value: description, message: 'Description is required' };
-    }
-    if (!type || !['preventive', 'corrective'].includes(String(type))) {
-      throw { field: 'type', value: type, message: 'Type must be preventive or corrective' };
-    }
-
-    let parsedDaysOfWeek: number[] = [];
-    if (daysOfWeek && this.safeTrim(daysOfWeek)) {
-      try {
-        parsedDaysOfWeek = String(daysOfWeek).split(',').map((d: string) => parseInt(d.trim()));
-      } catch (_error) {
-        throw { field: 'daysOfWeek', value: daysOfWeek, message: 'Invalid days of week format' };
-      }
-    }
-
-    // Check if this is an update (has internalCode) or create
-    if (internalCode && this.safeTrim(internalCode)) {
-      // Update existing maintenance range
-      const existingRange = await MaintenanceRange.findOne({ 
-        internalCode: this.safeTrim(internalCode), 
-        companyId: this.companyId 
-      });
-      
-      if (!existingRange) {
-        throw { field: 'internalCode', value: internalCode, message: 'Maintenance range with this internal code not found' };
-      }
-
-      // Update the maintenance range
-      existingRange.name = this.safeTrim(name);
-      existingRange.description = this.safeTrim(description);
-      existingRange.type = type;
-      existingRange.frequency = this.safeTrim(frequency) || undefined;
-      existingRange.startDate = startDate ? new Date(startDate) : undefined;
-      existingRange.startTime = this.safeTrim(startTime) || undefined;
-      existingRange.daysOfWeek = parsedDaysOfWeek.length > 0 ? parsedDaysOfWeek : undefined;
-      
-      await existingRange.save();
-    } else {
-      // Create new maintenance range
-      const maintenanceRange = new MaintenanceRange({
-        internalCode: this.safeTrim(internalCode) || undefined, // Will be auto-generated if not provided
-        name: this.safeTrim(name),
-        description: this.safeTrim(description),
-        type,
-        frequency: this.safeTrim(frequency) || undefined,
-        startDate: startDate ? new Date(startDate) : undefined,
-        startTime: this.safeTrim(startTime) || undefined,
-        daysOfWeek: parsedDaysOfWeek.length > 0 ? parsedDaysOfWeek : undefined,
-        companyId: this.companyId,
-      });
-
-      await maintenanceRange.save();
-    }
-  }
 
   private async processOperationRow(row: FileRowData, _rowNumber: number): Promise<void> {
     const { internalCode, name, description, type } = row;

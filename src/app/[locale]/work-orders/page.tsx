@@ -38,12 +38,6 @@ interface Machine {
     manufacturer: string;
   };
   operations?: IOperation[];
-  maintenanceRanges?: Array<{
-    _id: string;
-    name: string;
-    type: 'preventive' | 'corrective';
-    operations: IOperation[];
-  }>;
 }
 
 // Interfaces for backend data structure
@@ -56,7 +50,6 @@ interface PopulatedMachine {
   location: string;
   locationId: string;
   description?: string;
-  maintenanceRanges?: string[];
   operations?: string[];
   properties: Record<string, unknown>;
   companyId: string;
@@ -87,7 +80,6 @@ interface PopulatedMaintenanceRange {
 
 interface WorkOrderMachine {
   machineId: string | PopulatedMachine;
-  maintenanceRangeIds?: (string | PopulatedMaintenanceRange)[];
   operations?: (string | PopulatedOperation)[];
   filledOperations?: IFilledOperation[];
   images?: IWorkOrderImage[];
@@ -119,7 +111,6 @@ interface WorkOrder {
 // Interface for modals that expect the old structure with location
 interface WorkOrderMachineForModal {
   machineId: string;
-  maintenanceRangeIds?: string[];
   operations?: string[];
   filledOperations?: IFilledOperation[];
   images?: IWorkOrderImage[];
@@ -355,9 +346,6 @@ export default function WorkOrdersPage() {
       machines: Array.isArray(workOrder.machines)
         ? workOrder.machines.map((workOrderMachine) => ({
             machineId: extractMachineId(workOrderMachine.machineId),
-            maintenanceRangeIds: workOrderMachine.maintenanceRangeIds 
-              ? extractMaintenanceRangeIds(workOrderMachine.maintenanceRangeIds)
-              : [],
             operations: workOrderMachine.operations 
               ? extractOperationIds(workOrderMachine.operations)
               : [],
@@ -380,9 +368,6 @@ export default function WorkOrdersPage() {
       machines: Array.isArray(workOrder.machines)
         ? workOrder.machines.map((workOrderMachine) => ({
             machineId: extractMachineId(workOrderMachine.machineId),
-            maintenanceRangeIds: workOrderMachine.maintenanceRangeIds 
-              ? extractMaintenanceRangeIds(workOrderMachine.maintenanceRangeIds)
-              : [],
             operations: workOrderMachine.operations 
               ? extractOperationIds(workOrderMachine.operations)
               : [],
@@ -769,9 +754,6 @@ export default function WorkOrdersPage() {
                   machines: Array.isArray(workOrder.machines)
                     ? workOrder.machines.map((workOrderMachine: WorkOrderMachine) => ({
                         machineId: extractMachineId(workOrderMachine.machineId),
-                        maintenanceRangeIds: workOrderMachine.maintenanceRangeIds 
-                          ? extractMaintenanceRangeIds(workOrderMachine.maintenanceRangeIds)
-                          : [],
                         operations: workOrderMachine.operations 
                           ? extractOperationIds(workOrderMachine.operations)
                           : [],

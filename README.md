@@ -82,15 +82,11 @@ curl http://localhost:3000/api/blob-storage/health
 src/
 ├── app/                    # App Router de Next.js
 │   ├── api/               # API Routes
-│   │   ├── machine-models/
 │   │   ├── machines/
 │   │   ├── operations/
-│   │   ├── maintenance-ranges/
 │   │   └── work-orders/
 │   ├── work-orders/       # Páginas de órdenes de trabajo
 │   ├── machines/          # Páginas de máquinas
-│   ├── machine-models/    # Páginas de modelos
-│   ├── maintenance-ranges/# Páginas de gamas
 │   ├── operations/        # Páginas de operaciones
 │   └── page.tsx          # Dashboard principal
 ├── components/            # Componentes reutilizables
@@ -104,10 +100,8 @@ src/
 │   ├── validations.ts   # Esquemas de validación Zod
 │   └── utils.ts         # Utilidades generales
 └── models/              # Modelos de Mongoose
-    ├── MachineModel.ts
     ├── Machine.ts
     ├── Operation.ts
-    ├── MaintenanceRange.ts
     └── WorkOrder.ts
 ```
 

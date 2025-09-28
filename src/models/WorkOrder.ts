@@ -52,7 +52,6 @@ export interface IClientSignatureData {
 
 export interface IWorkOrderMachine {
   machineId: string;
-  maintenanceRangeIds?: string[]; // Solo para preventivo - múltiples maintenance ranges
   operations?: string[]; // Solo para preventivo
   filledOperations?: IFilledOperation[]; // Solo para preventivo
   images?: IWorkOrderImage[]; // Solo para preventivo
@@ -96,10 +95,6 @@ const WorkOrderSchema = new Schema({
       ref: 'Machine',
       required: true,
     },
-    maintenanceRangeIds: [{
-      type: Schema.Types.ObjectId,
-      ref: 'MaintenanceRange',
-    }],
     operations: [{
       type: Schema.Types.ObjectId,
       ref: 'Operation',

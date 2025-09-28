@@ -17,30 +17,12 @@ const templates = {
       ['DOCK', 'Loading Dock', 'Transport and loading area', 'truck', 'PLANT_A']
     ]
   },
-  'machine-models': {
-    headers: ['internalCode', 'name', 'manufacturer', 'brand', 'year', 'properties'],
-    data: [
-      ['MODEL_X1', 'Model X1', 'Manufacturer A', 'Brand X', 2023, '{"power":"100kW","weight":"500kg"}'],
-      ['MODEL_Y2', 'Model Y2', 'Manufacturer B', 'Brand Y', 2022, '{"power":"150kW","weight":"750kg"}'],
-      ['MODEL_Z3', 'Model Z3', 'Manufacturer C', 'Brand Z', 2024, '{"power":"200kW","weight":"1000kg"}']
-    ]
-  },
   machines: {
-    headers: ['internalCode', 'modelInternalCode', 'locationInternalCode', 'description', 'properties'],
+    headers: ['internalCode', 'name', 'manufacturer', 'brand', 'year', 'locationInternalCode', 'description', 'properties'],
     data: [
-      ['', 'MODEL_X1', 'PLANT_A', 'Main production machine', '{"serialNumber":"MX1001","installationDate":"2023-01-15"}'],
-      ['', 'MODEL_Y2', 'BUILDING_A', 'Secondary machine', '{"serialNumber":"MY2002","installationDate":"2023-02-20"}'],
-      ['', 'MODEL_Z3', 'BUILDING_B', 'Backup machine', '{"serialNumber":"MZ3003","installationDate":"2023-03-10"}']
-    ]
-  },
-  'maintenance-ranges': {
-    headers: ['internalCode', 'name', 'description', 'type', 'frequency', 'startDate', 'startTime', 'daysOfWeek'],
-    data: [
-      ['DAILY_INSP', 'Daily Inspection', 'Daily safety and performance check', 'preventive', 'daily', '2024-01-01', '08:00', '1,2,3,4,5'],
-      ['WEEKLY_MAINT', 'Weekly Maintenance', 'Weekly comprehensive maintenance', 'preventive', 'weekly', '2024-01-01', '09:00', '1'],
-      ['MONTHLY_SVC', 'Monthly Service', 'Monthly deep service', 'preventive', 'monthly', '2024-01-01', '10:00', '1'],
-      ['ANNUAL_OVER', 'Annual Overhaul', 'Annual complete overhaul', 'preventive', 'yearly', '2024-01-01', '08:00', '1'],
-      ['EMERGENCY', 'Emergency Repair', 'Emergency corrective maintenance', 'corrective', 'on_demand', '2024-01-01', '00:00', '']
+      ['', 'Production Machine 1', 'Manufacturer A', 'Brand X', 2023, 'PLANT_A', 'Main production machine', '{"serialNumber":"MX1001","installationDate":"2023-01-15"}'],
+      ['', 'Production Machine 2', 'Manufacturer B', 'Brand Y', 2022, 'BUILDING_A', 'Secondary machine', '{"serialNumber":"MY2002","installationDate":"2023-02-20"}'],
+      ['', 'Backup Machine', 'Manufacturer C', 'Brand Z', 2024, 'BUILDING_B', 'Backup machine', '{"serialNumber":"MZ3003","installationDate":"2023-03-10"}']
     ]
   },
   operations: {

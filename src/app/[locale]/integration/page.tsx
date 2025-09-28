@@ -75,7 +75,6 @@ export default function IntegrationPage() {
 
   const types = [
     { value: 'locations', label: 'Locations', icon: '🏢' },
-    { value: 'machine-models', label: 'Machine Models', icon: '⚙️' },
     { value: 'machines', label: 'Machines', icon: '🔧' },
     { value: 'maintenance-ranges', label: 'Maintenance Ranges', icon: '📋' },
     { value: 'operations', label: 'Operations', icon: '⚡' },

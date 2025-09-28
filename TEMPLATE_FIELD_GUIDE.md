@@ -24,62 +24,27 @@ internalCode,name,description,icon,parentInternalCode
 "BUILDING_A","Building A","Main building structure","building","PLANT_A"
 ```
 
-### 2. Machine Models Template
-
-**File**: `machine-models_template.csv` / `machine-models_template.xlsx`
-
-**Fields**:
-- `internalCode` (string, optional): Unique identifier for the machine model. If empty, will be auto-generated.
-- `name` (string, required): Model name
-- `manufacturer` (string, required): Manufacturer name
-- `brand` (string, required): Brand name
-- `year` (number, required): Manufacturing year
-- `properties` (JSON string, optional): Additional properties as JSON object
-
-**Example**:
-```csv
-internalCode,name,manufacturer,brand,year,properties
-"MODEL_X1","Model X1","Manufacturer A","Brand X",2023,"{""power"":""100kW"",""weight"":""500kg""}"
-```
-
-### 3. Machines Template
+### 2. Machines Template
 
 **File**: `machines_template.csv` / `machines_template.xlsx`
 
 **Fields**:
 - `internalCode` (string, optional): Unique identifier for the machine. If empty, will be auto-generated.
-- `modelInternalCode` (string, required): Internal code of the machine model (must exist)
+- `name` (string, required): Machine name
+- `manufacturer` (string, required): Manufacturer name
+- `brand` (string, required): Brand name
+- `year` (number, required): Manufacturing year
 - `locationInternalCode` (string, required): Internal code of the location (must exist)
 - `description` (string, optional): Machine description
 - `properties` (JSON string, optional): Additional properties as JSON object
 
 **Example**:
 ```csv
-internalCode,modelInternalCode,locationInternalCode,description,properties
-"","MODEL_X1","PLANT_A","Main production machine","{""serialNumber"":""MX1001""}"
+internalCode,name,manufacturer,brand,year,locationInternalCode,description,properties
+"","Production Machine 1","Manufacturer A","Brand X",2023,"PLANT_A","Main production machine","{""serialNumber"":""MX1001"",""installationDate"":""2023-01-15""}"
 ```
 
-### 4. Maintenance Ranges Template
-
-**File**: `maintenance-ranges_template.csv` / `maintenance-ranges_template.xlsx`
-
-**Fields**:
-- `internalCode` (string, optional): Unique identifier for the maintenance range. If empty, will be auto-generated.
-- `name` (string, required): Maintenance range name
-- `description` (string, required): Maintenance range description
-- `type` (string, required): Must be "preventive" or "corrective"
-- `frequency` (string, required): Frequency of maintenance (daily, weekly, monthly, yearly, on_demand)
-- `startDate` (date, required): Start date in YYYY-MM-DD format
-- `startTime` (time, required): Start time in HH:MM format
-- `daysOfWeek` (string, optional): Comma-separated days of week (1=Monday, 7=Sunday)
-
-**Example**:
-```csv
-internalCode,name,description,type,frequency,startDate,startTime,daysOfWeek
-"DAILY_INSP","Daily Inspection","Daily safety check","preventive","daily","2024-01-01","08:00","1,2,3,4,5"
-```
-
-### 5. Operations Template
+### 3. Operations Template
 
 **File**: `operations_template.csv` / `operations_template.xlsx`
 
@@ -102,12 +67,10 @@ internalCode,name,description,type
 - **Locations**: `name`
 - **Machine Models**: `name`, `manufacturer`, `brand`, `year`
 - **Machines**: `modelInternalCode`, `locationInternalCode`
-- **Maintenance Ranges**: `name`, `description`, `type`, `frequency`, `startDate`, `startTime`
 - **Operations**: `name`, `description`, `type`
 
 ### Field Validation
 - **Year**: Must be a valid number
-- **Type (Maintenance)**: Must be "preventive" or "corrective"
 - **Type (Operations)**: Must be "text", "date", "time", "datetime", "boolean", or "number"
 - **JSON Properties**: Must be valid JSON format
 - **Dates**: Must be in YYYY-MM-DD format
@@ -132,8 +95,6 @@ internalCode,name,description,type
 ### Issue: "Type must be one of: text, date, time, datetime, boolean, number"
 **Solution**: Use only the allowed operation types
 
-### Issue: "Type must be preventive or corrective"
-**Solution**: Use only "preventive" or "corrective" for maintenance ranges
 
 ## Template Generation
 

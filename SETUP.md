@@ -79,10 +79,8 @@ npm run dev
 
 - **Company**: Información de la empresa y configuración de tema
 - **User**: Usuarios con roles y pertenencia a empresa
-- **MachineModel**: Modelos de máquinas
 - **Machine**: Máquinas individuales
 - **Operation**: Operaciones de mantenimiento
-- **MaintenanceRange**: Gamas de mantenimiento (conjunto de operaciones)
 - **WorkOrder**: Órdenes de trabajo
 
 Todas las entidades están asociadas a una empresa (companyId) para garantizar el aislamiento de datos.

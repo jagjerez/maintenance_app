@@ -47,7 +47,6 @@ import { IOperation } from "@/models/Operation";
 // Interfaces for the updated modal
 interface WorkOrderMachineForModal {
   machineId: string;
-  maintenanceRangeIds?: string[];
   operations?: string[];
   filledOperations?: IFilledOperation[];
   images?: IWorkOrderImage[];

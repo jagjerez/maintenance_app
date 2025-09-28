@@ -26,19 +26,7 @@ export async function GET(
     })
       .populate({
         path: 'machines.machine',
-        model: 'Machine',
-        populate: {
-          path: 'model',
-          model: 'MachineModel'
-        }
-      })
-      .populate({
-        path: 'machines.maintenanceRangeIds',
-        model: 'MaintenanceRange',
-        populate: {
-          path: 'operations',
-          model: 'Operation'
-        }
+        model: 'Machine'
       })
       .populate({
         path: 'machines.operations',
@@ -94,27 +82,6 @@ export async function PUT(
     const { id } = await params;
     
     // Validate maintenance ranges match work order type if type is being updated
-    if (validatedData.type && validatedData.machines && validatedData.machines.length > 0) {
-      const { MaintenanceRange } = await import('@/models');
-      
-      for (const machine of validatedData.machines) {
-        if (machine.maintenanceRangeIds && machine.maintenanceRangeIds.length > 0) {
-          const maintenanceRanges = await MaintenanceRange.find({
-            _id: { $in: machine.maintenanceRangeIds },
-            companyId: session.user.companyId,
-          });
-          
-          // Check that all maintenance ranges match the work order type
-          const invalidRanges = maintenanceRanges.filter(range => range.type !== validatedData.type);
-          if (invalidRanges.length > 0) {
-            return NextResponse.json(
-              { error: `Maintenance range "${invalidRanges[0].name}" type does not match work order type` },
-              { status: 400 }
-            );
-          }
-        }
-      }
-    }
     
     // First, get the current work order to check business rules
     const currentWorkOrder = await WorkOrder.findOne({ 
@@ -292,14 +259,6 @@ export async function PUT(
         populate: {
           path: 'model',
           model: 'MachineModel'
-        }
-      })
-      .populate({
-        path: 'machines.maintenanceRangeIds',
-        model: 'MaintenanceRange',
-        populate: {
-          path: 'operations',
-          model: 'Operation'
         }
       })
       .populate({

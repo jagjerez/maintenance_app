@@ -80,18 +80,6 @@ export async function PUT(
       .populate({
         path: 'machines.machineId',
         model: 'Machine',
-        populate: {
-          path: 'model',
-          model: 'MachineModel'
-        }
-      })
-      .populate({
-        path: 'machines.maintenanceRangeIds',
-        model: 'MaintenanceRange',
-        populate: {
-          path: 'operations',
-          model: 'Operation'
-        }
       })
       .populate({
         path: 'machines.operations',
@@ -178,18 +166,6 @@ export async function DELETE(
       .populate({
         path: 'machines.machineId',
         model: 'Machine',
-        populate: {
-          path: 'model',
-          model: 'MachineModel'
-        }
-      })
-      .populate({
-        path: 'machines.maintenanceRangeIds',
-        model: 'MaintenanceRange',
-        populate: {
-          path: 'operations',
-          model: 'Operation'
-        }
       })
       .populate({
         path: 'machines.operations',

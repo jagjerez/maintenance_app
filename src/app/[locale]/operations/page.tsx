@@ -176,23 +176,7 @@ export default function OperationsPage() {
       } else {
         const errorData = await response.json();
 
-        if (
-          response.status === 400 &&
-          errorData.message?.includes("maintenance ranges")
-        ) {
-          // Mostrar error específico cuando la operación está siendo usada
-          const maintenanceRanges = errorData.details?.maintenanceRanges || [];
-          const rangeNames = maintenanceRanges
-            .map((range: { name: string }) => range.name)
-            .join(", ");
-          toast.error(
-            `${t("operations.operationInUse")} ${
-              rangeNames ? `(${rangeNames})` : ""
-            }`
-          );
-        } else {
-          toast.error(t("operations.operationError"));
-        }
+        toast.error(t("operations.operationError"));
       }
     } catch (error) {
       console.error("Error deleting operation:", error);
@@ -230,16 +214,7 @@ export default function OperationsPage() {
         setShowBulkDeleteModal(false);
       } else {
         const error = await response.json();
-        if (error.error === 'Cannot delete operations that are being used in maintenance ranges') {
-          const rangeNames = error.details?.maintenanceRanges || '';
-          toast.error(
-            `${t("operations.operationInUse")} ${
-              rangeNames ? `(${rangeNames})` : ""
-            }`
-          );
-        } else {
-          toast.error(error.error || t("operations.operationError"));
-        }
+        toast.error(error.error || t("operations.operationError"));
       }
     } catch (error) {
       console.error("Error bulk deleting operations:", error);

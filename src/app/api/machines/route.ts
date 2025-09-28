@@ -47,15 +47,6 @@ export async function GET(request: NextRequest) {
         match: { companyId: session.user.companyId }
       })
       .populate({
-        path: 'maintenanceRanges',
-        match: { companyId: session.user.companyId },
-        populate: {
-          path: 'operations',
-          model: 'Operation',
-          match: { companyId: session.user.companyId }
-        }
-      })
-      .populate({
         path: 'operations',
         match: { companyId: session.user.companyId }
       })
@@ -104,33 +95,6 @@ export async function POST(request: NextRequest) {
       dataWithCompany.locationId = undefined;
     }
     
-    // Validate maintenance ranges have only one type
-    if (dataWithCompany.maintenanceRanges && dataWithCompany.maintenanceRanges.length > 0) {
-      const { MaintenanceRange } = await import('@/models');
-      const maintenanceRanges = await MaintenanceRange.find({
-        _id: { $in: dataWithCompany.maintenanceRanges },
-        companyId: session.user.companyId,
-      });
-      
-      // Check that all maintenance ranges have the same type
-      const types = maintenanceRanges.map(range => range.type);
-      const uniqueTypes = [...new Set(types)];
-      
-      if (uniqueTypes.length > 1) {
-        return NextResponse.json(
-          { error: 'duplicateMaintenanceRangeType' },
-          { status: 400 }
-        );
-      }
-      
-      // For corrective maintenance ranges, ensure no operations are provided
-      if (uniqueTypes.length === 1 && uniqueTypes[0] === 'corrective' && dataWithCompany.operations && dataWithCompany.operations.length > 0) {
-        return NextResponse.json(
-          { error: 'correctiveMaintenanceNoOperations' },
-          { status: 400 }
-        );
-      }
-    }
     
     // Validate no duplicate model in same location
     const existingMachine = await Machine.findOne({
@@ -149,21 +113,6 @@ export async function POST(request: NextRequest) {
     
     // For corrective maintenance ranges, ensure no operations are saved
     const machineData = { ...dataWithCompany };
-    if (dataWithCompany.maintenanceRanges && dataWithCompany.maintenanceRanges.length > 0) {
-      const { MaintenanceRange } = await import('@/models');
-      const maintenanceRanges = await MaintenanceRange.find({
-        _id: { $in: dataWithCompany.maintenanceRanges },
-        companyId: session.user.companyId,
-      });
-      
-      const types = maintenanceRanges.map(range => range.type);
-      const uniqueTypes = [...new Set(types)];
-      
-      // If it's corrective, don't save operations
-      if (uniqueTypes.length === 1 && uniqueTypes[0] === 'corrective') {
-        machineData.operations = [];
-      }
-    }
     
     const machine = new Machine(machineData);
     await machine.save();
@@ -172,15 +121,6 @@ export async function POST(request: NextRequest) {
       .populate({
         path: 'model',
         match: { companyId: session.user.companyId }
-      })
-      .populate({
-        path: 'maintenanceRanges',
-        match: { companyId: session.user.companyId },
-        populate: {
-          path: 'operations',
-          model: 'Operation',
-          match: { companyId: session.user.companyId }
-        }
       })
       .populate({
         path: 'operations',

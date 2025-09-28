@@ -53,25 +53,15 @@ export const userSchema = z.object({
   })),
 });
 
-// Machine Model validations
-export const machineModelSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
+// Machine validations
+export const machineSchema = z.object({
+  name: z.string().min(1, 'Machine name is required').max(100, 'Machine name too long'),
   manufacturer: z.string().min(1, 'Manufacturer is required').max(100, 'Manufacturer name too long'),
   brand: z.string().min(1, 'Brand is required').max(100, 'Brand name too long'),
   year: z.number().min(1900, 'Year must be after 1900').max(new Date().getFullYear() + 1, 'Year cannot be in the future'),
-});
-
-export const machineModelCreateSchema = machineModelSchema;
-
-export const machineModelUpdateSchema = machineModelSchema.partial();
-
-// Machine validations
-export const machineSchema = z.object({
-  model: z.string().min(1, 'Machine model is required'),
   location: z.string().min(1, 'Location is required').max(200, 'Location too long'),
   locationId: z.string().optional(),
   description: z.string().max(500, 'Description too long').optional(),
-  maintenanceRanges: z.array(z.string()).optional(),
   operations: z.array(z.string()).optional(),
   properties: z.record(z.string(), z.unknown()).default({}),
 });
@@ -91,51 +81,12 @@ export const operationSchema = z.object({
 export const operationCreateSchema = operationSchema;
 export const operationUpdateSchema = operationSchema.partial();
 
-// Maintenance Range validations
-export const maintenanceRangeSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
-  description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
-  type: z.enum(['preventive', 'corrective'], {
-    message: 'Type must be preventive or corrective',
-  }),
-  operations: z.array(z.string()).default([]),
-  // Planificación para mantenimiento preventivo
-  frequency: z.enum(['daily', 'monthly', 'yearly']).optional(),
-  startDate: z.string().optional(),
-  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:mm)').optional(),
-  daysOfWeek: z.array(z.number().min(0).max(6)).optional(),
-}).refine((data) => {
-  // Si es preventivo, debe tener frecuencia
-  if (data.type === 'preventive' && !data.frequency) {
-    return false;
-  }
-  // Si es correctivo, no debe tener campos de planificación
-  if (data.type === 'corrective' && (data.frequency || data.startDate || data.startTime || data.daysOfWeek)) {
-    return false;
-  }
-  // Si es diario, debe tener días de la semana
-  if (data.frequency === 'daily' && (!data.daysOfWeek || data.daysOfWeek.length === 0)) {
-    return false;
-  }
-  // Si es mensual o anual, debe tener fecha de inicio
-  if ((data.frequency === 'monthly' || data.frequency === 'yearly') && !data.startDate) {
-    return false;
-  }
-  return true;
-}, {
-  message: 'Invalid maintenance range configuration',
-  path: ['type'],
-});
-
-export const maintenanceRangeCreateSchema = maintenanceRangeSchema;
-export const maintenanceRangeUpdateSchema = maintenanceRangeSchema.partial();
 
 // Work Order validations
 export const workOrderSchema = z.object({
   customCode: z.string().optional(),
   machines: z.array(z.object({
     machineId: z.string().min(1, 'Machine ID is required'),
-    maintenanceRangeIds: z.array(z.string()).optional().default([]), // Solo para preventivo - múltiples maintenance ranges
     operations: z.array(z.string()).optional().default([]), // Solo para preventivo
     filledOperations: z.array(z.object({
       operationId: z.string(),
@@ -274,14 +225,10 @@ export const dynamicPropertiesSchema = z.array(dynamicPropertySchema);
 // API Response types
 export type CompanyInput = z.infer<typeof companySchema>;
 export type UserInput = z.infer<typeof userSchema>;
-export type MachineModelInput = z.infer<typeof machineModelSchema>;
-export type MachineModelUpdateInput = z.infer<typeof machineModelUpdateSchema>;
 export type MachineInput = z.infer<typeof machineSchema>;
 export type MachineUpdateInput = z.infer<typeof machineUpdateSchema>;
 export type OperationInput = z.infer<typeof operationSchema>;
 export type OperationUpdateInput = z.infer<typeof operationUpdateSchema>;
-export type MaintenanceRangeInput = z.infer<typeof maintenanceRangeSchema>;
-export type MaintenanceRangeUpdateInput = z.infer<typeof maintenanceRangeUpdateSchema>;
 export type WorkOrderInput = z.infer<typeof workOrderSchema>;
 export type WorkOrderUpdateInput = z.infer<typeof workOrderUpdateSchema>;
 export type LaborInput = z.infer<typeof laborSchema>;

@@ -38,23 +38,6 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Check if any operation is being used in maintenance ranges
-    const { MaintenanceRange } = await import('@/models');
-    const maintenanceRanges = await MaintenanceRange.find({
-      operations: { $in: ids },
-      companyId: session.user.companyId
-    });
-
-    if (maintenanceRanges.length > 0) {
-      const rangeNames = maintenanceRanges.map(range => range.name).join(', ');
-      return NextResponse.json(
-        { 
-          error: 'Cannot delete operations that are being used in maintenance ranges',
-          details: { maintenanceRanges: rangeNames }
-        },
-        { status: 400 }
-      );
-    }
 
     // Delete all operations
     const result = await Operation.deleteMany({

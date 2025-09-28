@@ -55,7 +55,6 @@ export async function GET(
       companyId: session.user.companyId 
     })
       .populate('model')
-      .populate('maintenanceRanges')
       .limit(100) // Limit machines per location
       .lean();
 
