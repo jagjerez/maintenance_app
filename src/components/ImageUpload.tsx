@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { useState, useRef, useCallback } from 'react';
-import { useTranslations } from '@/hooks/useTranslations';
-import { 
-  Image as ImageIcon, 
-  Loader2, 
-  Upload, 
-  X, 
+import { useState, useRef, useCallback } from "react";
+import { useTranslations } from "@/hooks/useTranslations";
+import {
+  Image as ImageIcon,
+  Loader2,
+  Upload,
+  X,
   Camera,
   Plus,
-  CheckCircle
-} from 'lucide-react';
-import { toast } from 'react-hot-toast';
+  CheckCircle,
+} from "lucide-react";
+import { toast } from "react-hot-toast";
 
 interface ImageUploadProps {
   onImageUpload: (image: {
@@ -32,12 +32,12 @@ interface PreviewImage {
   id: string;
 }
 
-export default function ImageUpload({ 
-  onImageUpload, 
-  disabled = false, 
+export default function ImageUpload({
+  onImageUpload,
+  disabled = false,
   multiple = false,
   maxFiles = 10,
-  className = ""
+  className = "",
 }: ImageUploadProps) {
   const { t } = useTranslations();
   const [isUploading, setIsUploading] = useState(false);
@@ -45,79 +45,91 @@ export default function ImageUpload({
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validateFile = useCallback((file: File): string | null => {
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/jpg'];
-    if (!allowedTypes.includes(file.type)) {
-      return t("workOrders.invalidFileType");
-    }
+  const validateFile = useCallback(
+    (file: File): string | null => {
+      // Validate file type
+      const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/gif",
+        "image/webp",
+        "image/jpg",
+      ];
+      if (!allowedTypes.includes(file.type)) {
+        return t("workOrders.invalidFileType");
+      }
 
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      return t("workOrders.fileTooLarge");
-    }
+      // Validate file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        return t("workOrders.fileTooLarge");
+      }
 
-    return null;
-  }, [t]);
+      return null;
+    },
+    [t]
+  );
 
   const createPreview = (file: File): PreviewImage => ({
     file,
     preview: URL.createObjectURL(file),
-    id: Math.random().toString(36).substr(2, 9)
+    id: Math.random().toString(36).substr(2, 9),
   });
 
-  const handleFiles = useCallback((files: FileList) => {
-    if (disabled || isUploading) return;
+  const handleFiles = useCallback(
+    (files: FileList) => {
+      if (disabled || isUploading) return;
 
-    const fileArray = Array.from(files);
-    const validFiles: File[] = [];
-    const errors: string[] = [];
+      const fileArray = Array.from(files);
+      const validFiles: File[] = [];
+      const errors: string[] = [];
 
-    // Validate all files
-    fileArray.forEach(file => {
-      const error = validateFile(file);
-      if (error) {
-        errors.push(`${file.name}: ${error}`);
-      } else {
-        validFiles.push(file);
+      // Validate all files
+      fileArray.forEach((file) => {
+        const error = validateFile(file);
+        if (error) {
+          errors.push(`${file.name}: ${error}`);
+        } else {
+          validFiles.push(file);
+        }
+      });
+
+      // Show validation errors
+      if (errors.length > 0) {
+        errors.forEach((error) => toast.error(error));
       }
-    });
 
-    // Show validation errors
-    if (errors.length > 0) {
-      errors.forEach(error => toast.error(error));
-    }
+      // Check max files limit
+      const totalFiles = previewImages.length + validFiles.length;
+      if (totalFiles > maxFiles) {
+        toast.error(t("workOrders.maxFilesExceeded", { max: maxFiles }));
+        return;
+      }
 
-    // Check max files limit
-    const totalFiles = previewImages.length + validFiles.length;
-    if (totalFiles > maxFiles) {
-      toast.error(t("workOrders.maxFilesExceeded", { max: maxFiles }));
-      return;
-    }
-
-    // Create previews for valid files
-    if (validFiles.length > 0) {
-      const newPreviews = validFiles.map(createPreview);
-      setPreviewImages(prev => [...prev, ...newPreviews]);
-    }
-  }, [disabled, isUploading, previewImages.length, maxFiles, t, validateFile]);
+      // Create previews for valid files
+      if (validFiles.length > 0) {
+        const newPreviews = validFiles.map(createPreview);
+        setPreviewImages((prev) => [...prev, ...newPreviews]);
+      }
+    },
+    [disabled, isUploading, previewImages.length, maxFiles, t, validateFile]
+  );
 
   const handleFileUpload = async (file: File) => {
     setIsUploading(true);
 
     try {
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
+      const response = await fetch("/api/upload", {
+        method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
+        throw new Error(errorData.error || "Upload failed");
       }
 
       const data = await response.json();
@@ -126,14 +138,17 @@ export default function ImageUpload({
         url: data.url,
         filename: data.filename,
         uploadedAt: new Date(),
-        uploadedBy: 'Current User', // TODO: Get from session
+        uploadedBy: "Current User", // TODO: Get from session
       });
 
       toast.success(t("workOrders.imageUploadedSuccessfully"));
-
     } catch (error) {
-      console.error('Error uploading image:', error);
-      toast.error(error instanceof Error ? error.message : t("workOrders.imageUploadError"));
+      console.error("Error uploading image:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t("workOrders.imageUploadError")
+      );
     } finally {
       setIsUploading(false);
     }
@@ -149,17 +164,17 @@ export default function ImageUpload({
       }
       setPreviewImages([]);
     } catch (error) {
-      console.error('Error uploading images:', error);
+      console.error("Error uploading images:", error);
     } finally {
       setIsUploading(false);
     }
   };
 
   const removePreview = (id: string) => {
-    setPreviewImages(prev => {
-      const updated = prev.filter(img => img.id !== id);
+    setPreviewImages((prev) => {
+      const updated = prev.filter((img) => img.id !== id);
       // Clean up object URL to prevent memory leaks
-      const toRemove = prev.find(img => img.id === id);
+      const toRemove = prev.find((img) => img.id === id);
       if (toRemove) {
         URL.revokeObjectURL(toRemove.preview);
       }
@@ -170,9 +185,9 @@ export default function ImageUpload({
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
+    if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
-    } else if (e.type === 'dragleave') {
+    } else if (e.type === "dragleave") {
       setDragActive(false);
     }
   };
@@ -207,7 +222,7 @@ export default function ImageUpload({
     // For mobile devices, this will open the camera
     const input = fileInputRef.current;
     if (input) {
-      input.setAttribute('capture', 'environment');
+      input.setAttribute("capture", "environment");
       input.click();
     }
   };
@@ -218,9 +233,13 @@ export default function ImageUpload({
       <div
         className={`relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
           dragActive
-            ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20 scale-[1.02]'
-            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500'
-        } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50'}`}
+            ? "border-blue-400 bg-blue-50 dark:bg-blue-900/20 scale-[1.02]"
+            : "border-gray-300 dark:border-gray-600 hover:border-gray-400 dark:hover:border-gray-500"
+        } ${
+          disabled
+            ? "opacity-50 cursor-not-allowed"
+            : "cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50"
+        }`}
         onDragEnter={handleDrag}
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
@@ -255,7 +274,7 @@ export default function ImageUpload({
               </div>
             </div>
           )}
-          
+
           <div className="space-y-1">
             <div className="text-sm font-medium text-gray-900 dark:text-white">
               {isUploading ? (
@@ -269,7 +288,7 @@ export default function ImageUpload({
                 </span>
               )}
             </div>
-            
+
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {t("workOrders.orDragAndDrop")}
             </p>
@@ -290,7 +309,7 @@ export default function ImageUpload({
                 <ImageIcon className="h-4 w-4 mr-1 inline" />
                 {t("workOrders.selectFiles")}
               </button>
-              
+
               <button
                 type="button"
                 onClick={(e) => {
@@ -313,7 +332,8 @@ export default function ImageUpload({
             {t("workOrders.supportedFormats")}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {t("workOrders.maxFileSize")} • {t("workOrders.maxFiles", { max: maxFiles })}
+            {t("workOrders.maxFileSize")} •{" "}
+            {t("workOrders.maxFiles", { max: maxFiles })}
           </p>
         </div>
       </div>
@@ -346,10 +366,8 @@ export default function ImageUpload({
                 key={preview.id}
                 className="relative group bg-white dark:bg-gray-800 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-600 shadow-sm"
               >
-                <ImageIcon
-                  className="w-full h-24 object-cover"
-                />
-                
+                <ImageIcon className="w-full h-24 object-cover" />
+
                 {/* Remove button */}
                 <button
                   type="button"

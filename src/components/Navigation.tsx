@@ -12,7 +12,6 @@ import { useTranslations } from "@/hooks/useTranslations";
 import {
   Home,
   Wrench,
-  FileText,
   Cog,
   List,
   Settings,
@@ -24,7 +23,6 @@ import {
 
 const getNavigation = (t: (key: string) => string) => [
   { name: t('navigation.dashboard'), href: "/", icon: Home },
-  { name: t('navigation.workOrders'), href: "/work-orders", icon: FileText },
   { name: t('navigation.machines'), href: "/machines", icon: Wrench },
   { name: t('navigation.operations'), href: "/operations", icon: Cog },
   { name: t('navigation.locations'), href: "/locations", icon: MapPin },

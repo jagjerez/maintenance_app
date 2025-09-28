@@ -30,9 +30,15 @@ export default function BulkDeleteModal({
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-screen items-center justify-center px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} />
+        <div
+          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          onClick={onClose}
+        />
 
-        <span className="hidden sm:inline-block sm:h-screen sm:align-middle" aria-hidden="true">
+        <span
+          className="hidden sm:inline-block sm:h-screen sm:align-middle"
+          aria-hidden="true"
+        >
           &#8203;
         </span>
 
@@ -48,13 +54,12 @@ export default function BulkDeleteModal({
                 </h3>
                 <div className="mt-2">
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    {t("modals.bulkDeleteMessage", { count: selectedCount, itemType })}
+                    {t("modals.bulkDeleteMessage", {
+                      count: selectedCount,
+                      itemType,
+                    })}
                   </p>
-                  {children && (
-                    <div className="mt-3">
-                      {children}
-                    </div>
-                  )}
+                  {children && <div className="mt-3">{children}</div>}
                 </div>
               </div>
             </div>

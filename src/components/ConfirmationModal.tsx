@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import Modal from './Modal';
-import { FormButton } from './Form';
+import Modal from "./Modal";
+import { FormButton } from "./Form";
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -11,7 +11,7 @@ interface ConfirmationModalProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  variant?: 'danger' | 'warning' | 'info';
+  variant?: "danger" | "warning" | "info";
   itemDetails?: {
     name: string;
     description?: string;
@@ -25,28 +25,28 @@ export function ConfirmationModal({
   onConfirm,
   title,
   message,
-  confirmText = 'Confirmar',
-  cancelText = 'Cancelar',
-  variant = 'danger',
+  confirmText = "Confirmar",
+  cancelText = "Cancelar",
+  variant = "danger",
   itemDetails,
   isLoading = false,
 }: ConfirmationModalProps) {
   const getVariantStyles = () => {
     switch (variant) {
-      case 'warning':
+      case "warning":
         return {
-          icon: '⚠️',
-          confirmButtonVariant: 'primary' as const,
+          icon: "⚠️",
+          confirmButtonVariant: "primary" as const,
         };
-      case 'info':
+      case "info":
         return {
-          icon: 'ℹ️',
-          confirmButtonVariant: 'primary' as const,
+          icon: "ℹ️",
+          confirmButtonVariant: "primary" as const,
         };
       default:
         return {
-          icon: '🗑️',
-          confirmButtonVariant: 'danger' as const,
+          icon: "🗑️",
+          confirmButtonVariant: "danger" as const,
         };
     }
   };
@@ -54,19 +54,12 @@ export function ConfirmationModal({
   const { icon, confirmButtonVariant } = getVariantStyles();
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={title}
-      size="sm"
-    >
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
       <div className="space-y-4">
         <div className="flex items-start space-x-3">
           <span className="text-2xl">{icon}</span>
           <div className="flex-1">
-            <p className="text-gray-600 dark:text-gray-300">
-              {message}
-            </p>
+            <p className="text-gray-600 dark:text-gray-300">{message}</p>
             {itemDetails && (
               <div className="mt-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
                 <p className="font-medium text-gray-900 dark:text-white">
@@ -81,7 +74,7 @@ export function ConfirmationModal({
             )}
           </div>
         </div>
-        
+
         <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
           <FormButton
             type="button"
@@ -99,7 +92,7 @@ export function ConfirmationModal({
             disabled={isLoading}
             className="w-full sm:w-auto"
           >
-            {isLoading ? 'Procesando...' : confirmText}
+            {isLoading ? "Procesando..." : confirmText}
           </FormButton>
         </div>
       </div>

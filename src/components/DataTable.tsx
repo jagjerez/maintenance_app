@@ -63,21 +63,25 @@ export default function DataTable<T extends { _id: string }>({
   };
 
   const handleSelectItem = (item: T) => {
-    const isSelected = selectedItems.some(selected => selected._id === item._id);
+    const isSelected = selectedItems.some(
+      (selected) => selected._id === item._id
+    );
     let newSelection: T[];
-    
+
     if (isSelected) {
-      newSelection = selectedItems.filter(selected => selected._id !== item._id);
+      newSelection = selectedItems.filter(
+        (selected) => selected._id !== item._id
+      );
     } else {
       newSelection = [...selectedItems, item];
     }
-    
+
     onSelectionChange?.(newSelection);
     // El estado isSelectAll se actualizará automáticamente por el useEffect
   };
 
   const isItemSelected = (item: T) => {
-    return selectedItems.some(selected => selected._id === item._id);
+    return selectedItems.some((selected) => selected._id === item._id);
   };
 
   if (data.length === 0) {

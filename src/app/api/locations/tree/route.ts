@@ -46,8 +46,6 @@ export async function GET(request: NextRequest) {
       .lean();
 
     // Get children count for each root location - Batch query for better performance
-    console.log('Debug - session.user.companyId:', session.user.companyId);
-    console.log('Debug - rootLocationIds:', rootLocationIds);
     
     const childrenCounts = await Location.aggregate([
       {
@@ -63,8 +61,6 @@ export async function GET(request: NextRequest) {
         }
       }
     ]);
-    
-    console.log('Debug - childrenCounts result:', childrenCounts);
 
     const childrenCountMap = new Map();
     childrenCounts.forEach(item => {

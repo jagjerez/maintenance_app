@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { ReactNode } from 'react';
-import { cn } from '@/lib/utils';
+import { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 interface FormProps {
   children: ReactNode;
@@ -25,37 +25,40 @@ interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
 }
 
-interface FormTextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+interface FormTextareaProps
+  extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   error?: string;
 }
 
-interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
+interface FormSelectProps
+  extends React.SelectHTMLAttributes<HTMLSelectElement> {
   error?: string;
   children: ReactNode;
 }
 
 export function Form({ children, onSubmit, className }: FormProps) {
   return (
-    <form onSubmit={onSubmit} className={cn('space-y-6', className)}>
+    <form onSubmit={onSubmit} className={cn("space-y-6", className)}>
       {children}
     </form>
   );
 }
 
 export function FormGroup({ children, className }: FormGroupProps) {
-  return (
-    <div className={cn('space-y-2', className)}>
-      {children}
-    </div>
-  );
+  return <div className={cn("space-y-2", className)}>{children}</div>;
 }
 
-export function FormLabel({ children, htmlFor, required, className }: FormLabelProps) {
+export function FormLabel({
+  children,
+  htmlFor,
+  required,
+  className,
+}: FormLabelProps) {
   return (
     <label
       htmlFor={htmlFor}
       className={cn(
-        'block text-sm font-medium text-gray-700 dark:text-gray-300',
+        "block text-sm font-medium text-gray-700 dark:text-gray-300",
         required && "after:content-['*'] after:ml-0.5 after:text-red-500",
         className
       )}
@@ -70,8 +73,9 @@ export function FormInput({ error, className, ...props }: FormInputProps) {
     <div>
       <input
         className={cn(
-          'block w-full px-3 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base sm:text-sm min-h-[44px] touch-manipulation',
-          error && 'border-red-300 dark:border-red-500 focus:ring-red-500 focus:border-red-500',
+          "block w-full px-3 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base sm:text-sm min-h-[44px] touch-manipulation",
+          error &&
+            "border-red-300 dark:border-red-500 focus:ring-red-500 focus:border-red-500",
           className
         )}
         {...props}
@@ -83,13 +87,18 @@ export function FormInput({ error, className, ...props }: FormInputProps) {
   );
 }
 
-export function FormTextarea({ error, className, ...props }: FormTextareaProps) {
+export function FormTextarea({
+  error,
+  className,
+  ...props
+}: FormTextareaProps) {
   return (
     <div>
       <textarea
         className={cn(
-          'block w-full px-3 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base sm:text-sm min-h-[44px] touch-manipulation resize-y',
-          error && 'border-red-300 dark:border-red-500 focus:ring-red-500 focus:border-red-500',
+          "block w-full px-3 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base sm:text-sm min-h-[44px] touch-manipulation resize-y",
+          error &&
+            "border-red-300 dark:border-red-500 focus:ring-red-500 focus:border-red-500",
           className
         )}
         {...props}
@@ -101,13 +110,19 @@ export function FormTextarea({ error, className, ...props }: FormTextareaProps) 
   );
 }
 
-export function FormSelect({ error, className, children, ...props }: FormSelectProps) {
+export function FormSelect({
+  error,
+  className,
+  children,
+  ...props
+}: FormSelectProps) {
   return (
     <div>
       <select
         className={cn(
-          'block w-full px-3 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base sm:text-sm min-h-[44px] touch-manipulation',
-          error && 'border-red-300 dark:border-red-500 focus:ring-red-500 focus:border-red-500',
+          "block w-full px-3 py-3 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-base sm:text-sm min-h-[44px] touch-manipulation",
+          error &&
+            "border-red-300 dark:border-red-500 focus:ring-red-500 focus:border-red-500",
           className
         )}
         {...props}
@@ -121,24 +136,28 @@ export function FormSelect({ error, className, children, ...props }: FormSelectP
   );
 }
 
-export function FormButton({ 
-  children, 
-  type = 'button', 
-  variant = 'primary',
+export function FormButton({
+  children,
+  type = "button",
+  variant = "primary",
   className,
-  ...props 
+  ...props
 }: {
   children: ReactNode;
-  type?: 'button' | 'submit' | 'reset';
-  variant?: 'primary' | 'secondary' | 'danger';
+  type?: "button" | "submit" | "reset";
+  variant?: "primary" | "secondary" | "danger";
   className?: string;
 } & React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  const baseClasses = 'inline-flex items-center justify-center px-4 py-3 sm:px-4 sm:py-2 border text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px] touch-manipulation';
-  
+  const baseClasses =
+    "inline-flex items-center justify-center px-4 py-3 sm:px-4 sm:py-2 border text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 min-h-[44px] touch-manipulation";
+
   const variantClasses = {
-    primary: 'border-transparent text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 active:bg-blue-800',
-    secondary: 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:ring-blue-500 active:bg-gray-100 dark:active:bg-gray-800',
-    danger: 'border-transparent text-white bg-red-600 hover:bg-red-700 focus:ring-red-500 active:bg-red-800',
+    primary:
+      "border-transparent text-white bg-blue-600 hover:bg-blue-700 focus:ring-blue-500 active:bg-blue-800",
+    secondary:
+      "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:ring-blue-500 active:bg-gray-100 dark:active:bg-gray-800",
+    danger:
+      "border-transparent text-white bg-red-600 hover:bg-red-700 focus:ring-red-500 active:bg-red-800",
   };
 
   return (

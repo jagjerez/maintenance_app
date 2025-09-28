@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { SessionProvider } from 'next-auth/react';
-import { ThemeProvider } from './ThemeProvider';
-import { CompanyThemeProvider } from './CompanyThemeProvider';
+import { SessionProvider } from "next-auth/react";
+import { ThemeProvider } from "./ThemeProvider";
+import { CompanyThemeProvider } from "./CompanyThemeProvider";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -18,14 +18,12 @@ export function Providers({ children }: ProvidersProps) {
         disableTransitionOnChange
         storageKey="theme"
         value={{
-          light: 'light',
-          dark: 'dark',
-          system: 'system'
+          light: "light",
+          dark: "dark",
+          system: "system",
         }}
       >
-        <CompanyThemeProvider>
-          {children}
-        </CompanyThemeProvider>
+        <CompanyThemeProvider>{children}</CompanyThemeProvider>
       </ThemeProvider>
     </SessionProvider>
   );

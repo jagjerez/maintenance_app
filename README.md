@@ -84,10 +84,10 @@ src/
 │   ├── api/               # API Routes
 │   │   ├── machines/
 │   │   ├── operations/
-│   │   └── work-orders/
-│   ├── work-orders/       # Páginas de órdenes de trabajo
+│   │   └── locations/
 │   ├── machines/          # Páginas de máquinas
 │   ├── operations/        # Páginas de operaciones
+│   ├── locations/         # Páginas de ubicaciones
 │   └── page.tsx          # Dashboard principal
 ├── components/            # Componentes reutilizables
 │   ├── Form.tsx          # Componentes de formulario
@@ -102,7 +102,7 @@ src/
 └── models/              # Modelos de Mongoose
     ├── Machine.ts
     ├── Operation.ts
-    └── WorkOrder.ts
+    └── Location.ts
 ```
 
 ## Uso
@@ -110,42 +110,36 @@ src/
 ### Dashboard
 El dashboard principal muestra:
 - Estadísticas generales del sistema
-- Resumen de órdenes de trabajo por estado
+- Resumen de máquinas, operaciones y ubicaciones
 - Acciones rápidas
-- Lista de órdenes recientes
+- Vista de árbol de ubicaciones
 
-### Gestión de Órdenes de Trabajo
-- **Crear**: Formulario completo con selección de máquina y gama de mantenimiento
-- **Listar**: Tabla con filtros por estado y tipo
-- **Editar**: Actualizar estado y detalles
-- **Eliminar**: Confirmación antes de eliminar
-
-### Gestión de Máquinas y Modelos
-- CRUD completo para modelos de máquina
+### Gestión de Máquinas
 - CRUD completo para máquinas
-- Propiedades dinámicas para ambos
+- Propiedades dinámicas personalizables
+- Asociación con ubicaciones y operaciones
 
-### Gamas de Mantenimiento y Operaciones
-- Gestión de gamas de mantenimiento (preventivo/correctivo)
-- Gestión de operaciones individuales
-- Asociación de operaciones a gamas
+### Gestión de Operaciones
+- CRUD completo para operaciones
+- Tipos de datos flexibles (texto, fecha, booleano, etc.)
+- Reutilización en múltiples máquinas
+
+### Gestión de Ubicaciones
+- Estructura jerárquica de ubicaciones
+- Vista de árbol interactiva
+- Asociación con máquinas
 
 ## Características Avanzadas
 
-### Formulario de Orden de Trabajo
-- Selección de máquina existente o creación de nueva
-- Selección de gama de mantenimiento o creación de nueva
-- Creación de operaciones en el momento
-- Validación completa con Zod
-
 ### Propiedades Dinámicas
 - Agregar propiedades clave-valor personalizadas
-- Útil para datos específicos de cada máquina o modelo
+- Útil para datos específicos de cada máquina
+- Validación completa con Zod
 
-### Estados de Órdenes
-- **Pendiente**: Orden creada, esperando inicio
-- **En Progreso**: Orden en ejecución
-- **Completada**: Orden finalizada
+### Integración de Datos
+- Importación masiva desde Excel/CSV
+- Plantillas predefinidas
+- Procesamiento en cola
 
 ## Desarrollo
 

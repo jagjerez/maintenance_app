@@ -18,10 +18,12 @@ export default function YearSelectorModal({
   onClose,
   onSelectYear,
   selectedYear,
-  title
+  title,
 }: YearSelectorModalProps) {
   const { t } = useTranslations();
-  const [year, setYear] = useState<number>(selectedYear || new Date().getFullYear());
+  const [year, setYear] = useState<number>(
+    selectedYear || new Date().getFullYear()
+  );
 
   useEffect(() => {
     if (selectedYear) {
@@ -68,16 +70,10 @@ export default function YearSelectorModal({
         </div>
 
         <div className="flex justify-end space-x-3">
-          <FormButton
-            type="button"
-            variant="secondary"
-            onClick={onClose}
-          >
+          <FormButton type="button" variant="secondary" onClick={onClose}>
             {t("common.cancel")}
           </FormButton>
-          <FormButton type="submit">
-            {t("common.select")}
-          </FormButton>
+          <FormButton type="submit">{t("common.select")}</FormButton>
         </div>
       </form>
     </Modal>

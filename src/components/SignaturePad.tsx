@@ -46,9 +46,11 @@ export default function SignaturePad({
     ctx.fillRect(0, 0, width, height);
   }, [width, height]);
 
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const startDrawing = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
     if (disabled) return;
-    
+
     setIsDrawing(true);
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -57,10 +59,10 @@ export default function SignaturePad({
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.type.includes('touch') 
+    const x = e.type.includes("touch")
       ? (e as React.TouchEvent).touches[0].clientX - rect.left
       : (e as React.MouseEvent).nativeEvent.offsetX;
-    const y = e.type.includes('touch')
+    const y = e.type.includes("touch")
       ? (e as React.TouchEvent).touches[0].clientY - rect.top
       : (e as React.MouseEvent).nativeEvent.offsetY;
 
@@ -68,7 +70,9 @@ export default function SignaturePad({
     ctx.moveTo(x, y);
   };
 
-  const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+  const draw = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
     if (!isDrawing || disabled) return;
 
     const canvas = canvasRef.current;
@@ -78,10 +82,10 @@ export default function SignaturePad({
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.type.includes('touch')
+    const x = e.type.includes("touch")
       ? (e as React.TouchEvent).touches[0].clientX - rect.left
       : (e as React.MouseEvent).nativeEvent.offsetX;
-    const y = e.type.includes('touch')
+    const y = e.type.includes("touch")
       ? (e as React.TouchEvent).touches[0].clientY - rect.top
       : (e as React.MouseEvent).nativeEvent.offsetY;
 
@@ -91,7 +95,7 @@ export default function SignaturePad({
 
   const stopDrawing = () => {
     if (!isDrawing) return;
-    
+
     setIsDrawing(false);
     setHasSignature(true);
   };
@@ -135,7 +139,7 @@ export default function SignaturePad({
           style={{ display: "block" }}
         />
       </div>
-      
+
       <div className="mt-3 flex flex-col sm:flex-row gap-2">
         <FormButton
           type="button"

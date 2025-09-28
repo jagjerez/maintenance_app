@@ -12,27 +12,18 @@ interface Operation {
   order?: number;
 }
 
-interface MaintenanceRange {
-  _id: string;
-  name: string;
-  description?: string;
-  operations?: Operation[];
-}
-
 interface OperationsDisplayProps {
   operations: Operation[];
   title?: string;
   showOrder?: boolean;
   className?: string;
-  showMaintenanceRanges?: boolean;
 }
 
 export default function OperationsDisplay({
   operations,
   title = "Operations",
   showOrder = true,
-  className = "",
-  showMaintenanceRanges = true,
+  className = ""
 }: OperationsDisplayProps) {
   const { t } = useTranslations();
   const [isExpanded, setIsExpanded] = useState(true);
@@ -48,12 +39,13 @@ export default function OperationsDisplay({
     return a.name.localeCompare(b.name);
   });
 
-
   const totalOperations = sortedOperations.length;
-  
+
   if (totalOperations === 0) {
     return (
-      <div className={`p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800 ${className}`}>
+      <div
+        className={`p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800 ${className}`}
+      >
         <p className="text-sm text-yellow-800 dark:text-yellow-200">
           {t("operationsDisplay.noOperationsFound")}
         </p>
@@ -85,14 +77,13 @@ export default function OperationsDisplay({
 
       {isExpanded && (
         <div className="space-y-3">
-
           {/* Operations */}
           {totalOperations > 0 && (
             <div className="space-y-2">
               <div className="text-sm text-gray-600 dark:text-gray-400">
                 <strong>{t("operationsDisplay.operations")}:</strong>
               </div>
-              
+
               {sortedOperations.map((operation) => (
                 <div
                   key={operation._id}

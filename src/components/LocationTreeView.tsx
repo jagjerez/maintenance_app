@@ -1,11 +1,29 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { ChevronRight, ChevronDown, MapPin, Wrench, Plus, Edit, Trash2, Folder, FolderOpen, Building, Factory, Warehouse, Home, Store, Truck, Building2, Landmark } from 'lucide-react';
-import { useTranslations } from '@/hooks/useTranslations';
-import { FormButton } from './Form';
-import { ConfirmationModal } from './ConfirmationModal';
-import { toast } from 'react-hot-toast';
+import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  ChevronRight,
+  ChevronDown,
+  MapPin,
+  Wrench,
+  Plus,
+  Edit,
+  Trash2,
+  Folder,
+  FolderOpen,
+  Building,
+  Factory,
+  Warehouse,
+  Home,
+  Store,
+  Truck,
+  Building2,
+  Landmark,
+} from "lucide-react";
+import { useTranslations } from "@/hooks/useTranslations";
+import { FormButton } from "./Form";
+import { ConfirmationModal } from "./ConfirmationModal";
+import { toast } from "react-hot-toast";
 
 interface Machine {
   _id: string;
@@ -41,7 +59,10 @@ interface LocationTreeViewProps {
   onLocationClick?: (location: LocationNode) => void;
   onLocationEdit?: (location: LocationNode, event: React.MouseEvent) => void;
   onLocationDelete?: (location: LocationNode, event: React.MouseEvent) => void;
-  onLocationAdd?: (parentLocation?: LocationNode, event?: React.MouseEvent) => void;
+  onLocationAdd?: (
+    parentLocation?: LocationNode,
+    event?: React.MouseEvent
+  ) => void;
   onMachineClick?: (machine: Machine, event: React.MouseEvent) => void;
   selectedLocationId?: string;
   showActions?: boolean;
@@ -53,17 +74,17 @@ interface LocationTreeViewProps {
 }
 
 const iconMap = {
-  'building': Building,
-  'building2': Building2,
-  'home': Home,
-  'factory': Factory,
-  'warehouse': Warehouse,
-  'store': Store,
-  'landmark': Landmark,
-  'wrench': Wrench,
-  'folder': Folder,
-  'map-pin': MapPin,
-  'truck': Truck,
+  building: Building,
+  building2: Building2,
+  home: Home,
+  factory: Factory,
+  warehouse: Warehouse,
+  store: Store,
+  landmark: Landmark,
+  wrench: Wrench,
+  folder: Folder,
+  "map-pin": MapPin,
+  truck: Truck,
 };
 
 export default function LocationTreeView({
@@ -74,15 +95,15 @@ export default function LocationTreeView({
   onMachineClick,
   selectedLocationId,
   showActions = true,
-  className = '',
+  className = "",
   refreshTrigger,
   showMachines = false,
   preventFormSubmit = false,
-  searchQuery = '',
+  searchQuery = "",
 }: LocationTreeViewProps) {
   const { t } = useTranslations();
   const [tree, setTree] = useState<LocationNode[]>([]);
-  
+
   const [loading, setLoading] = useState(true);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [deleteModal, setDeleteModal] = useState<{
@@ -97,25 +118,38 @@ export default function LocationTreeView({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Function to load children for a specific location with pagination
-  const loadChildren = async (locationId: string, offset: number = 0, limit: number = 50) => {
+  const loadChildren = async (
+    locationId: string,
+    offset: number = 0,
+    limit: number = 50
+  ) => {
     try {
-      const response = await fetch(`/api/locations/${locationId}/children?offset=${offset}&limit=${limit}`);
+      const response = await fetch(
+        `/api/locations/${locationId}/children?offset=${offset}&limit=${limit}`
+      );
       if (response.ok) {
         const data = await response.json();
         return data;
       } else {
-        console.error('Error loading children:', response.statusText);
+        console.error("Error loading children:", response.statusText);
         return { locations: [], totalItems: 0, hasMore: false };
       }
     } catch (error) {
-      console.error('Error loading children:', error);
+      console.error("Error loading children:", error);
       return { locations: [], totalItems: 0, hasMore: false };
     }
   };
 
   // Function to update tree with loaded children (supports pagination)
-  const updateTreeWithChildren = (tree: LocationNode[], parentId: string, children: LocationNode[], append: boolean = false, hasMore: boolean = false, offset: number = 0): LocationNode[] => {
-    return tree.map(node => {
+  const updateTreeWithChildren = (
+    tree: LocationNode[],
+    parentId: string,
+    children: LocationNode[],
+    append: boolean = false,
+    hasMore: boolean = false,
+    offset: number = 0
+  ): LocationNode[] => {
+    return tree.map((node) => {
       if (node._id === parentId) {
         const existingChildren = append && node.children ? node.children : [];
         return {
@@ -125,12 +159,19 @@ export default function LocationTreeView({
           isLoadingChildren: false,
           isLeaf: children.length === 0 && !hasMore,
           childrenOffset: offset + children.length,
-          hasMoreChildren: hasMore
+          hasMoreChildren: hasMore,
         };
       } else if (node.children && node.children.length > 0) {
         return {
           ...node,
-          children: updateTreeWithChildren(node.children, parentId, children, append, hasMore, offset)
+          children: updateTreeWithChildren(
+            node.children,
+            parentId,
+            children,
+            append,
+            hasMore,
+            offset
+          ),
         };
       }
       return node;
@@ -152,25 +193,32 @@ export default function LocationTreeView({
     try {
       setIsLoadingMore(true);
       console.log(`Loading more root locations, offset: ${rootOffset}`);
-      const response = await fetch(`/api/locations/tree?limit=50&offset=${rootOffset}`);
+      const response = await fetch(
+        `/api/locations/tree?limit=50&offset=${rootOffset}`
+      );
       if (response.ok) {
         const data = await response.json();
         const newLocations = data.locations || data;
-        
-        console.log(`Loaded ${newLocations.length} new locations, hasMore: ${data.hasMore}`);
-        
+
+        console.log(
+          `Loaded ${newLocations.length} new locations, hasMore: ${data.hasMore}`
+        );
+
         if (newLocations.length > 0) {
-          setTree(prevTree => [...prevTree, ...newLocations]);
-          setRootOffset(prev => prev + newLocations.length);
+          setTree((prevTree) => [...prevTree, ...newLocations]);
+          setRootOffset((prev) => prev + newLocations.length);
           setHasMoreRoot(data.hasMore || false);
         } else {
           setHasMoreRoot(false);
         }
       } else {
-        console.error('Error loading more root locations:', response.statusText);
+        console.error(
+          "Error loading more root locations:",
+          response.statusText
+        );
       }
     } catch (error) {
-      console.error('Error loading more root locations:', error);
+      console.error("Error loading more root locations:", error);
     } finally {
       setIsLoadingMore(false);
     }
@@ -183,7 +231,7 @@ export default function LocationTreeView({
         setLoading(true);
         setRootOffset(0);
         setHasMoreRoot(true);
-        const response = await fetch('/api/locations/tree?limit=50&offset=0');
+        const response = await fetch("/api/locations/tree?limit=50&offset=0");
         if (response.ok) {
           const data = await response.json();
           setTree(data.locations || data);
@@ -192,7 +240,7 @@ export default function LocationTreeView({
           // Don't auto-expand - let user control expansion
         }
       } catch (error) {
-        console.error('Error loading location tree:', error);
+        console.error("Error loading location tree:", error);
       } finally {
         setLoading(false);
       }
@@ -209,18 +257,18 @@ export default function LocationTreeView({
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
       const isNearBottom = scrollTop + clientHeight >= scrollHeight - 50; // 50px threshold
-      
-      console.log('Scroll debug:', {
+
+      console.log("Scroll debug:", {
         scrollTop,
         scrollHeight,
         clientHeight,
         isNearBottom,
         hasMoreRoot,
-        isLoadingMore
+        isLoadingMore,
       });
 
       if (isNearBottom && hasMoreRoot && !isLoadingMore) {
-        console.log('Loading more root locations...');
+        console.log("Loading more root locations...");
         loadMoreRootLocations();
       }
     };
@@ -232,16 +280,19 @@ export default function LocationTreeView({
       timeoutId = setTimeout(handleScroll, 100);
     };
 
-    scrollContainer.addEventListener('scroll', throttledHandleScroll);
+    scrollContainer.addEventListener("scroll", throttledHandleScroll);
     return () => {
-      scrollContainer.removeEventListener('scroll', throttledHandleScroll);
+      scrollContainer.removeEventListener("scroll", throttledHandleScroll);
       clearTimeout(timeoutId);
     };
   }, [loadMoreRootLocations, hasMoreRoot, isLoadingMore]);
 
   // Function to load more children for pagination
   const loadMoreChildren = async (nodeId: string) => {
-    const findNode = (nodes: LocationNode[], id: string): LocationNode | null => {
+    const findNode = (
+      nodes: LocationNode[],
+      id: string
+    ): LocationNode | null => {
       for (const node of nodes) {
         if (node._id === id) return node;
         if (node.children) {
@@ -255,8 +306,10 @@ export default function LocationTreeView({
     const node = findNode(tree, nodeId);
     if (node && node.hasMoreChildren && !node.isLoadingChildren) {
       // Mark as loading
-      setTree(prevTree => 
-        prevTree.map(n => n._id === nodeId ? { ...n, isLoadingChildren: true } : n)
+      setTree((prevTree) =>
+        prevTree.map((n) =>
+          n._id === nodeId ? { ...n, isLoadingChildren: true } : n
+        )
       );
 
       // Load more children
@@ -264,18 +317,30 @@ export default function LocationTreeView({
       const childrenData = await loadChildren(nodeId, offset, 50);
       const children = childrenData.locations || childrenData;
       const hasMore = childrenData.hasMore || false;
-      
+
       // Update tree with additional children
-      setTree(prevTree => updateTreeWithChildren(prevTree, nodeId, children, true, hasMore, offset));
+      setTree((prevTree) =>
+        updateTreeWithChildren(
+          prevTree,
+          nodeId,
+          children,
+          true,
+          hasMore,
+          offset
+        )
+      );
     }
   };
 
   const toggleExpanded = async (nodeId: string) => {
     const isCurrentlyExpanded = expandedNodes.has(nodeId);
-    
+
     if (!isCurrentlyExpanded) {
       // Expanding - check if we need to load children
-      const findNode = (nodes: LocationNode[], id: string): LocationNode | null => {
+      const findNode = (
+        nodes: LocationNode[],
+        id: string
+      ): LocationNode | null => {
         for (const node of nodes) {
           if (node._id === id) return node;
           if (node.children) {
@@ -287,11 +352,17 @@ export default function LocationTreeView({
       };
 
       const node = findNode(tree, nodeId);
-      if (node && node.hasChildren && !node.childrenLoaded && !node.isLoadingChildren) {
+      if (
+        node &&
+        node.hasChildren &&
+        !node.childrenLoaded &&
+        !node.isLoadingChildren
+      ) {
         // Mark as loading
-        setTree(prevTree => 
-          updateTreeWithChildren(prevTree, nodeId, [])
-            .map(n => n._id === nodeId ? { ...n, isLoadingChildren: true } : n)
+        setTree((prevTree) =>
+          updateTreeWithChildren(prevTree, nodeId, []).map((n) =>
+            n._id === nodeId ? { ...n, isLoadingChildren: true } : n
+          )
         );
 
         // Load children
@@ -299,13 +370,22 @@ export default function LocationTreeView({
         const children = childrenData.locations || childrenData;
         const hasMore = childrenData.hasMore || false;
         const offset = childrenData.offset || 0;
-        
+
         // Update tree with loaded children
-        setTree(prevTree => updateTreeWithChildren(prevTree, nodeId, children, false, hasMore, offset));
+        setTree((prevTree) =>
+          updateTreeWithChildren(
+            prevTree,
+            nodeId,
+            children,
+            false,
+            hasMore,
+            offset
+          )
+        );
       }
     }
 
-    setExpandedNodes(prev => {
+    setExpandedNodes((prev) => {
       const newSet = new Set(prev);
       if (newSet.has(nodeId)) {
         newSet.delete(nodeId);
@@ -316,8 +396,10 @@ export default function LocationTreeView({
     });
   };
 
-
-  const handleLocationEdit = (location: LocationNode, event: React.MouseEvent) => {
+  const handleLocationEdit = (
+    location: LocationNode,
+    event: React.MouseEvent
+  ) => {
     if (preventFormSubmit) {
       event.preventDefault();
       event.stopPropagation();
@@ -327,7 +409,10 @@ export default function LocationTreeView({
     }
   };
 
-  const handleLocationDelete = (location: LocationNode, event: React.MouseEvent) => {
+  const handleLocationDelete = (
+    location: LocationNode,
+    event: React.MouseEvent
+  ) => {
     if (preventFormSubmit) {
       event.preventDefault();
       event.stopPropagation();
@@ -337,7 +422,10 @@ export default function LocationTreeView({
     }
   };
 
-  const handleLocationAdd = (parentLocation: LocationNode | undefined, event: React.MouseEvent) => {
+  const handleLocationAdd = (
+    parentLocation: LocationNode | undefined,
+    event: React.MouseEvent
+  ) => {
     if (preventFormSubmit) {
       event.preventDefault();
       event.stopPropagation();
@@ -361,9 +449,12 @@ export default function LocationTreeView({
     if (!deleteModal.location) return;
 
     try {
-      const response = await fetch(`/api/locations/${deleteModal.location._id}`, {
-        method: 'DELETE',
-      });
+      const response = await fetch(
+        `/api/locations/${deleteModal.location._id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
       if (response.ok) {
         toast.success(t("locations.deleteSuccess"));
@@ -381,7 +472,7 @@ export default function LocationTreeView({
         }
       }
     } catch (error) {
-      console.error('Error deleting location:', error);
+      console.error("Error deleting location:", error);
       toast.error(t("locations.deleteError"));
     }
   };
@@ -389,29 +480,36 @@ export default function LocationTreeView({
   // Filter function for search
   const filterLocation = (node: LocationNode, query: string): boolean => {
     if (!query) return true;
-    
+
     const searchLower = query.toLowerCase();
     return (
       node.name.toLowerCase().includes(searchLower) ||
-      (node.description && node.description.toLowerCase().includes(searchLower)) ||
+      (node.description &&
+        node.description.toLowerCase().includes(searchLower)) ||
       node.path.toLowerCase().includes(searchLower) ||
-      (showMachines && node.machines && node.machines.some(machine => 
-        machine.model.name.toLowerCase().includes(searchLower) ||
-        machine.model.manufacturer.toLowerCase().includes(searchLower) ||
-        machine.model.brand.toLowerCase().includes(searchLower) ||
-        machine.location.toLowerCase().includes(searchLower)
-      ))
+      (showMachines &&
+        node.machines &&
+        node.machines.some(
+          (machine) =>
+            machine.model.name.toLowerCase().includes(searchLower) ||
+            machine.model.manufacturer.toLowerCase().includes(searchLower) ||
+            machine.model.brand.toLowerCase().includes(searchLower) ||
+            machine.location.toLowerCase().includes(searchLower)
+        ))
     );
   };
 
   // Filter children recursively
-  const filterChildren = (nodes: LocationNode[], query: string): LocationNode[] => {
+  const filterChildren = (
+    nodes: LocationNode[],
+    query: string
+  ): LocationNode[] => {
     return nodes
-      .map(node => ({
+      .map((node) => ({
         ...node,
-        children: node.children ? filterChildren(node.children, query) : []
+        children: node.children ? filterChildren(node.children, query) : [],
       }))
-      .filter(node => {
+      .filter((node) => {
         const matchesSelf = filterLocation(node, query);
         const hasMatchingChildren = node.children && node.children.length > 0;
         return matchesSelf || hasMatchingChildren;
@@ -422,9 +520,10 @@ export default function LocationTreeView({
     const isExpanded = expandedNodes.has(node._id);
     const isSelected = selectedLocationId === node._id;
     const hasChildren = node.children && node.children.length > 0;
-    const hasMachines = showMachines && node.machines && node.machines.length > 0;
+    const hasMachines =
+      showMachines && node.machines && node.machines.length > 0;
     const isLoadingChildren = node.isLoadingChildren;
-    
+
     // Can expand if has children (loaded or available) or has machines
     const canExpand = hasChildren || hasMachines || node.hasChildren;
 
@@ -434,7 +533,9 @@ export default function LocationTreeView({
         <div className="block  mt-2">
           <div
             className={`bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3 mb-2 hover:bg-gray-100 dark:hover:bg-gray-600 min-h-[44px] touch-manipulation transition-colors ${
-              isSelected ? 'bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700' : ''
+              isSelected
+                ? "bg-blue-100 dark:bg-blue-900 border-blue-300 dark:border-blue-700"
+                : ""
             }`}
             style={{ marginLeft: `${level * 12}px` }}
           >
@@ -450,18 +551,18 @@ export default function LocationTreeView({
                     }}
                     className={`p-1 rounded min-h-[32px] touch-manipulation transition-colors ${
                       canExpand && !isLoadingChildren
-                        ? 'hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer'
-                        : 'cursor-default opacity-50'
+                        ? "hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer"
+                        : "cursor-default opacity-50"
                     }`}
                     disabled={!canExpand || isLoadingChildren}
                     title={
                       isLoadingChildren
-                        ? 'Loading children...'
+                        ? "Loading children..."
                         : canExpand
                         ? isExpanded
-                          ? 'Click to collapse'
-                          : 'Click to expand and load children'
-                        : 'No children to load'
+                          ? "Click to collapse"
+                          : "Click to expand and load children"
+                        : "No children to load"
                     }
                   >
                     {isLoadingChildren ? (
@@ -476,8 +577,8 @@ export default function LocationTreeView({
                       <div className="w-4 h-4" />
                     )}
                   </button>
-                  
-                  <div 
+
+                  <div
                     className="flex items-center space-x-2 cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -487,19 +588,18 @@ export default function LocationTreeView({
                       }
                     }}
                   >
-                    {getIconComponent(node.icon) || (
-                      isExpanded ? (
+                    {getIconComponent(node.icon) ||
+                      (isExpanded ? (
                         <FolderOpen className="h-4 w-4 text-gray-600 dark:text-gray-400" />
                       ) : (
                         <Folder className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-                      )
-                    )}
+                      ))}
                     <span className="text-sm font-medium text-gray-900 dark:text-white">
                       {node.name}
                     </span>
                   </div>
                 </div>
-                
+
                 {/* Counts - Simplified */}
                 <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
                   {/* Children count - Simple indicator */}
@@ -509,7 +609,7 @@ export default function LocationTreeView({
                       <span>{node.childrenCount || 0}</span>
                     </div>
                   )}
-                  
+
                   {/* Machine count */}
                   {hasMachines && (
                     <div className="flex items-center">
@@ -527,7 +627,6 @@ export default function LocationTreeView({
                 </div>
               )}
 
-
               {/* Actions */}
               {showActions && (
                 <div className="flex items-center space-x-1 ml-6">
@@ -536,30 +635,34 @@ export default function LocationTreeView({
                     variant="secondary"
                     onClick={(e) => handleLocationAdd(node, e)}
                     className="px-2 py-1 text-xs min-h-[32px] touch-manipulation"
-                    title={t('locations.addChild')}
+                    title={t("locations.addChild")}
                   >
                     <Plus className="h-3 w-3 mr-1" />
-                    <span className="hidden sm:inline">{t('locations.addChild')}</span>
+                    <span className="hidden sm:inline">
+                      {t("locations.addChild")}
+                    </span>
                   </FormButton>
                   <FormButton
                     type="button"
                     variant="secondary"
                     onClick={(e) => handleLocationEdit(node, e)}
                     className="px-2 py-1 text-xs min-h-[32px] touch-manipulation"
-                    title={t('common.edit')}
+                    title={t("common.edit")}
                   >
                     <Edit className="h-3 w-3 mr-1" />
-                    <span className="hidden sm:inline">{t('common.edit')}</span>
+                    <span className="hidden sm:inline">{t("common.edit")}</span>
                   </FormButton>
                   <FormButton
                     type="button"
                     variant="danger"
                     onClick={(e) => handleLocationDelete(node, e)}
                     className="px-2 py-1 text-xs min-h-[32px] touch-manipulation"
-                    title={t('common.delete')}
+                    title={t("common.delete")}
                   >
                     <Trash2 className="h-3 w-3 mr-1" />
-                    <span className="hidden sm:inline">{t('common.delete')}</span>
+                    <span className="hidden sm:inline">
+                      {t("common.delete")}
+                    </span>
                   </FormButton>
                 </div>
               )}
@@ -577,7 +680,7 @@ export default function LocationTreeView({
                   key={machine._id}
                   className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 min-h-[44px] touch-manipulation"
                   onClick={(e) => handleMachineClick(machine, e)}
-                  title={t('machines.clickToEdit')}
+                  title={t("machines.clickToEdit")}
                 >
                   <div className="flex items-start space-x-3">
                     <Wrench className="h-4 w-4 text-gray-500 dark:text-gray-400 mt-1 flex-shrink-0" />
@@ -586,7 +689,8 @@ export default function LocationTreeView({
                         {machine.model.name}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {machine.model.manufacturer} {machine.model.brand} ({machine.model.year})
+                        {machine.model.manufacturer} {machine.model.brand} (
+                        {machine.model.year})
                       </div>
                     </div>
                   </div>
@@ -608,7 +712,9 @@ export default function LocationTreeView({
               </div>
             ) : hasChildren ? (
               <>
-                {node.children.map((child) => renderLocationNode(child, level + 1))}
+                {node.children.map((child) =>
+                  renderLocationNode(child, level + 1)
+                )}
                 {/* Load More Button */}
                 {node.hasMoreChildren && (
                   <div className="ml-6 p-2">
@@ -627,7 +733,10 @@ export default function LocationTreeView({
                       ) : (
                         <>
                           <Plus className="h-3 w-3 mr-1" />
-                          Load more children ({node.childrenCount! - (node.childrenOffset || 0)} remaining)
+                          Load more children (
+                          {node.childrenCount! -
+                            (node.childrenOffset || 0)}{" "}
+                          remaining)
                         </>
                       )}
                     </FormButton>
@@ -656,23 +765,22 @@ export default function LocationTreeView({
   return (
     <div className={`${className}`}>
       <div className="relative z-10">
-      {tree.length === 0 ? (
-        <div className="text-center py-8">
-          <MapPin className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-            {t('locations.noLocations')}
-          </h3>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {t('locations.startAddingLocation')}
-          </p>
-        </div>
-      ) : (
-          <div 
-            ref={scrollContainerRef} 
-            className="overflow-y-auto max-h-auto"
-          >
-            {filterChildren(tree, searchQuery).map((node) => renderLocationNode(node))}
-            
+        {tree.length === 0 ? (
+          <div className="text-center py-8">
+            <MapPin className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+              {t("locations.noLocations")}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {t("locations.startAddingLocation")}
+            </p>
+          </div>
+        ) : (
+          <div ref={scrollContainerRef} className="overflow-y-auto max-h-auto">
+            {filterChildren(tree, searchQuery).map((node) =>
+              renderLocationNode(node)
+            )}
+
             {/* Load more button */}
             {hasMoreRoot && !isLoadingMore && (
               <div className="flex justify-center py-4">
@@ -683,7 +791,7 @@ export default function LocationTreeView({
                   className="px-4 py-2 text-sm"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  {t('common.loadMore')} ({rootOffset} loaded)
+                  {t("common.loadMore")} ({rootOffset} loaded)
                 </FormButton>
               </div>
             )}
@@ -693,15 +801,15 @@ export default function LocationTreeView({
               <div className="flex justify-center items-center py-4">
                 <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mr-2" />
                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                  {t('common.loadingMore')}...
+                  {t("common.loadingMore")}...
                 </span>
               </div>
             )}
-            
+
             {/* End of list indicator */}
             {!hasMoreRoot && tree.length > 0 && (
               <div className="text-center py-4 text-sm text-gray-500 dark:text-gray-400">
-                {t('common.endOfList')} ({tree.length} total)
+                {t("common.endOfList")} ({tree.length} total)
               </div>
             )}
           </div>
@@ -713,15 +821,19 @@ export default function LocationTreeView({
         isOpen={deleteModal.isOpen}
         onClose={() => setDeleteModal({ isOpen: false, location: null })}
         onConfirm={handleDelete}
-        title={t('modals.deleteLocation')}
-        message={t('modals.deleteLocationMessage')}
-        confirmText={t('common.delete')}
-        cancelText={t('common.cancel')}
+        title={t("modals.deleteLocation")}
+        message={t("modals.deleteLocationMessage")}
+        confirmText={t("common.delete")}
+        cancelText={t("common.cancel")}
         variant="danger"
-        itemDetails={deleteModal.location ? {
-          name: deleteModal.location.name,
-          description: deleteModal.location.description || '',
-        } : undefined}
+        itemDetails={
+          deleteModal.location
+            ? {
+                name: deleteModal.location.name,
+                description: deleteModal.location.description || "",
+              }
+            : undefined
+        }
       />
     </div>
   );

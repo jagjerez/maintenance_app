@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useRef, useEffect } from 'react';
-import { X, ChevronDown, Check } from 'lucide-react';
+import { useState, useRef, useEffect } from "react";
+import { X, ChevronDown, Check } from "lucide-react";
 
 interface Option {
   value: string;
@@ -31,18 +31,19 @@ export default function MultiSelect({
   hideSelected = false,
 }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Filter options based on search term
-  const filteredOptions = options.filter(option =>
-    option.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    option.description?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredOptions = options.filter(
+    (option) =>
+      option.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      option.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Get selected options for display
-  const selectedOptions = options.filter(option => 
+  const selectedOptions = options.filter((option) =>
     selectedValues.includes(option.value)
   );
 
@@ -50,7 +51,7 @@ export default function MultiSelect({
   const handleOptionClick = (value: string) => {
     if (selectedValues.includes(value)) {
       // Remove from selection
-      onChange(selectedValues.filter(v => v !== value));
+      onChange(selectedValues.filter((v) => v !== value));
     } else {
       // Add to selection
       onChange([...selectedValues, value]);
@@ -59,21 +60,24 @@ export default function MultiSelect({
 
   // Handle removing a selected option
   const handleRemoveOption = (value: string) => {
-    onChange(selectedValues.filter(v => v !== value));
+    onChange(selectedValues.filter((v) => v !== value));
   };
 
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
-        setSearchTerm('');
+        setSearchTerm("");
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -112,19 +116,36 @@ export default function MultiSelect({
       <div
         className={`
           relative w-full min-h-[44px] px-3 py-3 sm:py-2 border rounded-md cursor-pointer touch-manipulation
-          ${error 
-            ? 'border-red-300 dark:border-red-600 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500' 
-            : 'border-gray-300 dark:border-gray-600 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500'
+          ${
+            error
+              ? "border-red-300 dark:border-red-600 focus-within:border-red-500 focus-within:ring-1 focus-within:ring-red-500"
+              : "border-gray-300 dark:border-gray-600 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500"
           }
-          ${disabled ? 'bg-gray-50 dark:bg-gray-800 cursor-not-allowed' : 'bg-white dark:bg-gray-700'}
+          ${
+            disabled
+              ? "bg-gray-50 dark:bg-gray-800 cursor-not-allowed"
+              : "bg-white dark:bg-gray-700"
+          }
         `}
         onClick={() => !disabled && setIsOpen(!isOpen)}
       >
         <div className="flex items-center justify-between">
-          <span className={`text-base sm:text-sm ${selectedOptions.length === 0 ? 'text-gray-500 dark:text-gray-400' : 'text-gray-900 dark:text-white'}`}>
-            {selectedOptions.length === 0 ? placeholder : `${selectedOptions.length} selected`}
+          <span
+            className={`text-base sm:text-sm ${
+              selectedOptions.length === 0
+                ? "text-gray-500 dark:text-gray-400"
+                : "text-gray-900 dark:text-white"
+            }`}
+          >
+            {selectedOptions.length === 0
+              ? placeholder
+              : `${selectedOptions.length} selected`}
           </span>
-          <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`h-4 w-4 text-gray-400 transition-transform ${
+              isOpen ? "rotate-180" : ""
+            }`}
+          />
         </div>
       </div>
 
@@ -157,7 +178,7 @@ export default function MultiSelect({
                     key={option.value}
                     className={`
                       px-3 py-3 sm:py-2 cursor-pointer text-base sm:text-sm flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-700 min-h-[44px] touch-manipulation
-                      ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20' : ''}
+                      ${isSelected ? "bg-blue-50 dark:bg-blue-900/20" : ""}
                     `}
                     onClick={() => handleOptionClick(option.value)}
                   >
@@ -184,9 +205,7 @@ export default function MultiSelect({
 
       {/* Error message */}
       {error && (
-        <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-          {error}
-        </p>
+        <p className="mt-1 text-sm text-red-600 dark:text-red-400">{error}</p>
       )}
     </div>
   );

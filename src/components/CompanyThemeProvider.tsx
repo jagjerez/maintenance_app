@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useCompanyTheme } from '@/hooks/useCompanyTheme';
+import { useCompanyTheme } from "@/hooks/useCompanyTheme";
 
 interface CompanyThemeProviderProps {
   children: React.ReactNode;

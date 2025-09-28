@@ -20,11 +20,15 @@ export default function MonthSelectorModal({
   onSelectMonth,
   selectedMonth,
   selectedYear,
-  title
+  title,
 }: MonthSelectorModalProps) {
   const { t } = useTranslations();
-  const [month, setMonth] = useState<number>(selectedMonth || new Date().getMonth() + 1);
-  const [year, setYear] = useState<number>(selectedYear || new Date().getFullYear());
+  const [month, setMonth] = useState<number>(
+    selectedMonth || new Date().getMonth() + 1
+  );
+  const [year, setYear] = useState<number>(
+    selectedYear || new Date().getFullYear()
+  );
 
   useEffect(() => {
     if (selectedMonth) {
@@ -110,16 +114,10 @@ export default function MonthSelectorModal({
         </div>
 
         <div className="flex justify-end space-x-3">
-          <FormButton
-            type="button"
-            variant="secondary"
-            onClick={onClose}
-          >
+          <FormButton type="button" variant="secondary" onClick={onClose}>
             {t("common.cancel")}
           </FormButton>
-          <FormButton type="submit">
-            {t("common.select")}
-          </FormButton>
+          <FormButton type="submit">{t("common.select")}</FormButton>
         </div>
       </form>
     </Modal>

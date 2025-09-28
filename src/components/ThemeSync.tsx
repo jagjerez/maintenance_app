@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useTheme } from 'next-themes';
+import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
 
 export function ThemeSync() {
   const { theme, systemTheme } = useTheme();
@@ -15,13 +15,13 @@ export function ThemeSync() {
     if (!mounted) return;
 
     const htmlElement = document.documentElement;
-    const currentTheme = theme === 'system' ? systemTheme : theme;
-    
+    const currentTheme = theme === "system" ? systemTheme : theme;
+
     // Aplicar el tema correcto
-    if (currentTheme === 'dark') {
-      htmlElement.classList.add('dark');
+    if (currentTheme === "dark") {
+      htmlElement.classList.add("dark");
     } else {
-      htmlElement.classList.remove('dark');
+      htmlElement.classList.remove("dark");
     }
   }, [theme, systemTheme, mounted]);
 
