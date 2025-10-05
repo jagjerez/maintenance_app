@@ -4,7 +4,6 @@ import connectDB from "@/lib/db";
 import { Machine } from "@/models";
 import { machineCreateSchema } from "@/lib/validations";
 import { authOptions } from "@/lib/auth";
-import crypto from "crypto";
 
 export async function GET(request: NextRequest) {
   try {

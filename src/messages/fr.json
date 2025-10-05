@@ -163,6 +163,7 @@
     "marca": "Marque",
     "modelo": "Modèle",
     "characteristics": "Caractéristiques",
+    "characteristic": "Caractéristique",
     "addCharacteristic": "Ajouter Caractéristique",
     "characteristicCode": "Code",
     "characteristicDescription": "Description",

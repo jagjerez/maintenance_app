@@ -32,7 +32,7 @@ interface Machine {
   brand: string;
   model: string;
   series: string;
-  characteristics: Record<string, any>;
+  characteristics: Record<string, string>;
   state: 'active' | 'inactive' | 'maintenance' | 'retired';
   deletedAt?: string;
   companyId: string;
@@ -62,7 +62,8 @@ export default function MachinesPage() {
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [characteristics, setCharacteristics] = useState<Record<string, any>>({});
+  const [characteristics, setCharacteristics] = useState<Record<string, string>>({});
+  const [editingKeys, setEditingKeys] = useState<Record<string, string>>({});
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   // Form setup
@@ -139,7 +140,7 @@ export default function MachinesPage() {
     brand: string;
     model: string;
     series: string;
-    characteristics: Record<string, any>;
+    characteristics: Record<string, string>;
     state: string;
   }) => {
     try {
@@ -269,13 +270,14 @@ export default function MachinesPage() {
   };
 
   // Characteristics handlers
-  const addCharacteristic = (key: string, value: any) => {
-    const updatedCharacteristics = { ...characteristics, [key]: value };
+  const addCharacteristic = () => {
+    const newKey = `new_characteristic_${Date.now()}`;
+    const updatedCharacteristics = { ...characteristics, [newKey]: "" };
     setCharacteristics(updatedCharacteristics);
     setValue("characteristics", updatedCharacteristics);
   };
 
-  const updateCharacteristic = (key: string, value: any) => {
+  const updateCharacteristic = (key: string, value: string) => {
     const updatedCharacteristics = { ...characteristics, [key]: value };
     setCharacteristics(updatedCharacteristics);
     setValue("characteristics", updatedCharacteristics);
@@ -400,6 +402,7 @@ export default function MachinesPage() {
                 state: "active",
               });
               setCharacteristics({});
+              setEditingKeys({});
               setShowModal(true);
             }}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -480,6 +483,7 @@ export default function MachinesPage() {
           setEditingMachine(null);
           reset();
           setCharacteristics({});
+          setEditingKeys({});
         }}
         title={
           editingMachine
@@ -592,7 +596,7 @@ export default function MachinesPage() {
                 ) : (
                   <div className="space-y-4">
                     {Object.entries(characteristics).map(([key, value], index) => (
-                      <div key={key} className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
+                      <div key={`${key}-${index}`} className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
                         {/* Characteristic Header */}
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center">
@@ -602,7 +606,7 @@ export default function MachinesPage() {
                               </span>
                             </div>
                             <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                              {key}
+                              {t("machines.characteristic")} {index + 1}
                             </span>
                           </div>
                           <button
@@ -617,11 +621,50 @@ export default function MachinesPage() {
                           </button>
                         </div>
                         
-                        {/* Characteristic Value */}
+                        {/* Characteristic Fields */}
                         <div className="space-y-4">
                           <div>
                             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                              {t("machines.characteristicValue")}
+                              {t("machines.characteristicCode")} *
+                            </label>
+                            <input
+                              type="text"
+                              value={editingKeys[key] !== undefined ? editingKeys[key] : key}
+                              onChange={(e) => {
+                                setEditingKeys(prev => ({
+                                  ...prev,
+                                  [key]: e.target.value
+                                }));
+                              }}
+                              onBlur={(e) => {
+                                const newKey = e.target.value.trim();
+                                if (newKey && newKey !== key) {
+                                  const newCharacteristics = { ...characteristics };
+                                  delete newCharacteristics[key];
+                                  newCharacteristics[newKey] = value;
+                                  setCharacteristics(newCharacteristics);
+                                  setValue("characteristics", newCharacteristics);
+                                }
+                                // Clear the editing state
+                                setEditingKeys(prev => {
+                                  const newEditingKeys = { ...prev };
+                                  delete newEditingKeys[key];
+                                  return newEditingKeys;
+                                });
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.currentTarget.blur();
+                                }
+                              }}
+                              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-base min-h-[48px]"
+                              placeholder={t("placeholders.characteristicCode")}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                              {t("machines.characteristicValue")} *
                             </label>
                             <input
                               type="text"
@@ -667,6 +710,7 @@ export default function MachinesPage() {
                     setEditingMachine(null);
                     reset();
                     setCharacteristics({});
+                    setEditingKeys({});
                   }}
                   className="w-full min-h-[48px] text-base font-medium border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation"
                 >

@@ -168,6 +168,7 @@
     "description": "Descripción",
     "state": "Estado",
     "characteristics": "Características",
+    "characteristic": "Característica",
     "addCharacteristic": "Agregar Característica",
     "characteristicCode": "Código",
     "characteristicDescription": "Descripción",

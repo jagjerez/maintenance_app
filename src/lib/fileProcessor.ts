@@ -117,7 +117,7 @@ export class FileProcessor {
       const rowNumber = i + 1;
 
       try {
-        await this.processRow(row, rowNumber);
+        await this.processRow(row);
         result.successRows++;
       } catch (error: unknown) {
         result.errorRows++;
@@ -141,23 +141,23 @@ export class FileProcessor {
     return result;
   }
 
-  private async processRow(row: FileRowData, rowNumber: number): Promise<void> {
+  private async processRow(row: FileRowData): Promise<void> {
     switch (this.type) {
       case 'locations':
-        await this.processLocationRow(row, rowNumber);
+        await this.processLocationRow(row);
         break;
       case 'machines':
-        await this.processMachineRow(row, rowNumber);
+        await this.processMachineRow(row);
         break;
       case 'operations':
-        await this.processOperationRow(row, rowNumber);
+        await this.processOperationRow(row);
         break;
       default:
         throw new Error(`Unknown type: ${this.type}`);
     }
   }
 
-  private async processLocationRow(row: FileRowData, _rowNumber: number): Promise<void> {
+  private async processLocationRow(row: FileRowData): Promise<void> {
     const { internalCode, name, description, icon, parentInternalCode } = row;
 
     if (!name) {
@@ -230,79 +230,75 @@ export class FileProcessor {
   }
 
 
-  private async processMachineRow(row: FileRowData, _rowNumber: number): Promise<void> {
-    const { internalCode, name, manufacturer, brand, year, locationInternalCode, description, properties } = row;
+  private async processMachineRow(row: FileRowData): Promise<void> {
+    const { internalCode, description, brand, model, series, state, characteristics } = row;
 
-    if (!name) {
-      throw { field: 'name', value: name, message: 'Machine name is required' };
-    }
-    if (!manufacturer) {
-      throw { field: 'manufacturer', value: manufacturer, message: 'Manufacturer is required' };
-    }
-    if (!brand) {
-      throw { field: 'brand', value: brand, message: 'Brand is required' };
-    }
-    if (!year || isNaN(Number(year))) {
-      throw { field: 'year', value: year, message: 'Valid year is required' };
-    }
-    if (!locationInternalCode) {
-      throw { field: 'locationInternalCode', value: locationInternalCode, message: 'Location internal code is required' };
+    // Check if the row has the old structure (name, manufacturer, year, locationInternalCode)
+    if (row.name || row.manufacturer || row.year || row.locationInternalCode) {
+      throw { 
+        field: 'structure', 
+        value: 'old', 
+        message: 'This file uses the old machine structure. Please download the new template and use the updated format with columns: internalCode, description, brand, model, series, state, characteristics' 
+      };
     }
 
-    // Find location by internal code
-    const locationRecord = await Location.findOne({ 
-      internalCode: this.safeTrim(locationInternalCode), 
-      companyId: this.companyId 
-    });
-    if (!locationRecord) {
-      throw { field: 'locationInternalCode', value: locationInternalCode, message: 'Location not found' };
-    }
+    // Use N/A for missing required fields instead of throwing errors
+    const safeDescription = this.safeTrim(description) || 'N/A';
+    const safeBrand = this.safeTrim(brand) || 'N/A';
+    const safeModel = this.safeTrim(model) || 'N/A';
+    const safeSeries = this.safeTrim(series) || 'N/A';
+    const safeState = this.safeTrim(state) || 'active';
 
-    let propertiesMap = new Map();
-    if (properties) {
+    let characteristicsMap = new Map();
+    if (characteristics) {
       try {
-        const parsedProperties = JSON.parse(String(properties));
-        propertiesMap = new Map(Object.entries(parsedProperties));
-      } catch (_error) {
-        throw { field: 'properties', value: properties, message: 'Invalid JSON format' };
+        const parsedCharacteristics = JSON.parse(String(characteristics));
+        characteristicsMap = new Map(Object.entries(parsedCharacteristics));
+      } catch {
+        throw { field: 'characteristics', value: characteristics, message: 'Invalid JSON format' };
       }
     }
 
     // Check if this is an update (has internalCode) or create
     if (internalCode && this.safeTrim(internalCode)) {
       // Update existing machine
-      const existingMachine = await Machine.findOne({ 
+      let existingMachine = await Machine.findOne({ 
         internalCode: this.safeTrim(internalCode), 
         companyId: this.companyId 
       });
       
       if (!existingMachine) {
-        throw { field: 'internalCode', value: internalCode, message: 'Machine with this internal code not found' };
+        existingMachine = new Machine({
+          internalCode: this.safeTrim(internalCode) || undefined, // Will be auto-generated if not provided
+          description: safeDescription,
+          brand: safeBrand,
+          model: safeModel,
+          series: safeSeries,
+          state: safeState,
+          characteristics: characteristicsMap,
+          companyId: this.companyId,
+        });
       }
 
       // Update the machine
-      existingMachine.name = this.safeTrim(name);
-      existingMachine.manufacturer = this.safeTrim(manufacturer);
-      existingMachine.brand = this.safeTrim(brand);
-      existingMachine.year = Number(year);
-      existingMachine.location = locationRecord.name;
-      existingMachine.locationId = locationRecord._id;
-      existingMachine.description = this.safeTrim(description) || undefined;
-      existingMachine.properties = propertiesMap;
+      existingMachine.description = safeDescription;
+      existingMachine.brand = safeBrand;
+      existingMachine.model = safeModel;
+      existingMachine.series = safeSeries;
+      existingMachine.state = safeState;
+      existingMachine.characteristics = characteristicsMap;
       
       await existingMachine.save();
     } else {
       // Create new machine
       const machine = new Machine({
         internalCode: this.safeTrim(internalCode) || undefined, // Will be auto-generated if not provided
-        name: this.safeTrim(name),
-        manufacturer: this.safeTrim(manufacturer),
-        brand: this.safeTrim(brand),
-        year: Number(year),
-        location: locationRecord.name,
-        locationId: locationRecord._id,
-        description: this.safeTrim(description) || undefined,
-        properties: propertiesMap,
+        description: safeDescription,
+        brand: safeBrand,
+        model: safeModel,
+        series: safeSeries,
+        state: safeState,
+        characteristics: characteristicsMap,
         companyId: this.companyId,
       });
 
@@ -311,7 +307,7 @@ export class FileProcessor {
   }
 
 
-  private async processOperationRow(row: FileRowData, _rowNumber: number): Promise<void> {
+  private async processOperationRow(row: FileRowData): Promise<void> {
     const { internalCode, name, description, type } = row;
 
     if (!name) {
