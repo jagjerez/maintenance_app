@@ -9,7 +9,7 @@
  * 3. Setting up proper permissions
  */
 
-const Minio = require('minio');
+import Minio from 'minio';
 
 const MINIO_ENDPOINT = process.env.MINIO_ENDPOINT || 'localhost';
 const MINIO_PORT = parseInt(process.env.MINIO_PORT || '9000');

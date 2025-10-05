@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Use the same configuration as the project
 const STORAGE_MONGODB_URI = process.env.STORAGE_MONGODB_URI || 'mongodb://root:example@localhost:27017/admin';

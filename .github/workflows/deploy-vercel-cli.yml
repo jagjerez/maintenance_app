@@ -3,8 +3,6 @@ name: Deploy to Vercel Production (CLI)
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 jobs:
   deploy-production:

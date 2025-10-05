@@ -5,7 +5,7 @@
  * This ensures the cron is running when developing locally
  */
 
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 const API_BASE = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
@@ -69,8 +69,8 @@ async function main() {
   console.log('  - Status: curl http://localhost:3000/api/cron/local');
 }
 
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch(console.error);
 }
 
-module.exports = { startLocalCron, checkCronStatus };
+export { startLocalCron, checkCronStatus };

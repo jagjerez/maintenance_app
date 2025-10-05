@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 // Get the language code from command line arguments
 const languageCode = process.argv[2];
@@ -40,37 +40,39 @@ if (fs.existsSync(newFile)) {
   process.exit(1);
 }
 
-try {
-  // Read the template file
-  const templateContent = fs.readFileSync(templateFile, 'utf8');
-  const templateData = JSON.parse(templateContent);
-  
-  // Create a copy with placeholder values
-  const newData = JSON.parse(JSON.stringify(templateData));
-  
-  // Add a comment at the top indicating this is a new language file
-  const newContent = `{
+(async () => {
+  try {
+    // Read the template file
+    const templateContent = fs.readFileSync(templateFile, 'utf8');
+    const templateData = JSON.parse(templateContent);
+    
+    // Create a copy with placeholder values
+    const newData = JSON.parse(JSON.stringify(templateData));
+    
+    // Add a comment at the top indicating this is a new language file
+    const newContent = `{
   "_comment": "Translation file for ${languageCode.toUpperCase()}. Please translate all values to ${languageCode.toUpperCase()}.",
   "_instructions": "1. Translate all string values to ${languageCode.toUpperCase()}\\n2. Keep all keys unchanged\\n3. Maintain the same JSON structure\\n4. Remove this comment block when done",
   ${JSON.stringify(newData, null, 2).slice(1, -1)}
 }`;
-  
-  // Write the new file
-  fs.writeFileSync(newFile, newContent, 'utf8');
-  
-  console.log(`✅ Language file created: src/messages/${languageCode}.json`);
-  console.log(`📝 Please translate all values to ${languageCode.toUpperCase()}`);
-  
-  // Update the config file with the new language
-  try {
-    const { execSync } = require('child_process');
-    execSync('node scripts/update-locales.js', { stdio: 'inherit' });
-    console.log(`🔧 Config updated! The system will now use this new language!`);
+    
+    // Write the new file
+    fs.writeFileSync(newFile, newContent, 'utf8');
+    
+    console.log(`✅ Language file created: src/messages/${languageCode}.json`);
+    console.log(`📝 Please translate all values to ${languageCode.toUpperCase()}`);
+    
+    // Update the config file with the new language
+    try {
+      const { execSync } = await import('child_process');
+      execSync('node scripts/update-locales.js', { stdio: 'inherit' });
+      console.log(`🔧 Config updated! The system will now use this new language!`);
+    } catch (error) {
+      console.log(`⚠️  Language file created, but config update failed. Please run: node scripts/update-locales.js`);
+    }
+    
   } catch (error) {
-    console.log(`⚠️  Language file created, but config update failed. Please run: node scripts/update-locales.js`);
+    console.error('❌ Error creating language file:', error.message);
+    process.exit(1);
   }
-  
-} catch (error) {
-  console.error('❌ Error creating language file:', error.message);
-  process.exit(1);
-}
+})();
