@@ -123,13 +123,15 @@
     "noDiagnosticInfo": "Aucune information de diagnostic disponible"
   },
   "navigation": {
-    "dashboard": "Dashboard",
+    "dashboard": "Tableau de Bord",
     "machines": "Machines",
-    "operations": "Operations",
-    "locations": "Locations",
-    "settings": "Settings",
-    "signOut": "Sign Out",
-    "profile": "Profile"
+    "operations": "Opérations",
+    "locations": "Emplacements",
+    "integration": "Intégration de Données",
+    "settings": "Paramètres",
+    "adminTools": "Outils d'Administration",
+    "signOut": "Se Déconnecter",
+    "profile": "Profil"
   },
   "auth": {
     "signIn": "Sign In",
@@ -160,8 +162,10 @@
     "machine": "Machine",
     "machineName": "Machine Name",
     "internalCode": "Code Interne",
-    "marca": "Marque",
-    "modelo": "Modèle",
+    "brand": "Marque",
+    "model": "Modèle",
+    "series": "Série",
+    "state": "État",
     "characteristics": "Caractéristiques",
     "characteristic": "Caractéristique",
     "addCharacteristic": "Ajouter Caractéristique",
@@ -179,7 +183,8 @@
     "nextMaintenance": "Next Maintenance",
     "active": "Active",
     "inactive": "Inactive",
-    "maintenance": "In Maintenance",
+    "maintenance": "En Maintenance",
+    "retired": "Retirée",
     "noMachines": "No machines",
     "startAddingMachine": "Start adding a new machine to the system.",
     "selectModel": "Select Model",
@@ -356,7 +361,9 @@
     "characteristicCode": "Code de la caractéristique",
     "characteristicDescription": "Description de la caractéristique",
     "characteristicValue": "Valeur de la caractéristique",
-    "searchLocation": "Rechercher un emplacement..."
+    "searchLocation": "Rechercher un emplacement...",
+    "series": "Série de la machine",
+    "selectAdditionalOperations": "Sélectionner les opérations supplémentaires..."
   },
   "dynamicProperties": {
     "title": "Dynamic Properties",
@@ -395,9 +402,8 @@
     "unauthorized": "Unauthorized",
     "forbidden": "Access denied",
     "notFound": "Not found",
-    "notFoundDescription": "The page you are looking for does not exist.",
-    "goBackHome": "Go back home",
-    "description": "Désolé, nous n'avons pas pu trouver la page que vous recherchez.",
+    "notFoundDescription": "La page que vous recherchez n'existe pas.",
+    "goBackHome": "Retour à l'accueil",
     "errorCode": "Code d'Erreur",
     "fetchDashboardDataError": "Error fetching dashboard data"
   },
