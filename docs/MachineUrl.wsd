@@ -1,0 +1,97 @@
+@startuml Machine Domain Model
+
+!define ENTITY_COLOR #E1F5FE
+!define RELATION_COLOR #B3E5FC
+!define ATTRIBUTE_COLOR #F3E5F5
+
+entity "Machine" as Machine ENTITY_COLOR {
+  * _id : string <<PK>>
+  * internalCode : string <<unique>>
+  * marca : string
+  * modelo : string
+  * locationId : string <<FK>>
+  * companyId : string <<FK>>
+  * characteristics : MachineCharacteristic[]
+  --
+  * createdAt : Date
+  * updatedAt : Date
+}
+
+entity "Location" as Location ENTITY_COLOR {
+  * _id : string <<PK>>
+  * internalCode : string <<unique>>
+  * name : string
+  * description? : string
+  * icon? : string
+  * parentId? : string <<FK>>
+  * path : string
+  * level : number
+  * isLeaf : boolean
+  * children? : Location[]
+  * machines : string[] <<FK>>
+  * companyId : string <<FK>>
+  --
+  * createdAt : Date
+  * updatedAt : Date
+}
+
+entity "MachineCharacteristic" as MachineChar ENTITY_COLOR {
+  * _id : string <<PK>>
+  * machineId : string <<FK>>
+  * code : string
+  * description : string
+  * type : string
+  * value : string
+  * companyId : string <<FK>>
+  --
+  * createdAt : Date
+  * updatedAt : Date
+}
+
+entity "Company" as Company ENTITY_COLOR {
+  * _id : string <<PK>>
+  * name : string
+  * description? : string
+  --
+  * createdAt : Date
+  * updatedAt : Date
+}
+
+' Relationships
+Machine ||--o{ MachineChar : "has characteristics"
+Machine }o--|| Location : "located in"
+Machine }o--|| Company : "belongs to"
+Location ||--o{ Location : "parent-child"
+Location }o--|| Company : "belongs to"
+MachineChar }o--|| Company : "belongs to"
+
+' Notes
+note right of Machine
+  Entidad principal que representa
+  una máquina en el sistema de mantenimiento.
+  Incluye características dinámicas y
+  referencia a ubicación jerárquica.
+end note
+
+note right of MachineChar
+  Características dinámicas de la máquina.
+  Permite agregar propiedades personalizadas
+  como: voltaje, potencia, dimensiones, etc.
+  Estructura flexible para diferentes tipos
+  de máquinas.
+end note
+
+note right of Location
+  Estructura jerárquica de ubicaciones.
+  Soporta árboles de ubicaciones con
+  path completo y niveles de profundidad.
+  Incluye validaciones de integridad.
+end note
+
+note right of Company
+  Entidad de multi-tenancy.
+  Todas las entidades principales
+  pertenecen a una empresa específica.
+end note
+
+@enduml

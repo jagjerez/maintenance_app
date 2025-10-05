@@ -139,7 +139,7 @@ export default function LocationsPage() {
       );
       if (response.ok) {
         const data = await response.json();
-        setParentLocations(data.locations || data);
+        setParentLocations(data.locations || data || []);
       } else {
         toast.error(t("locations.locationLoadError"));
       }
@@ -523,7 +523,7 @@ export default function LocationsPage() {
               onEdit={handleEdit}
               onDelete={handleDelete}
               onBulkDelete={(items) => {
-                setSelectedLocations(items);
+                setSelectedLocations(items || []);
                 setShowBulkDeleteModal(true);
               }}
               enableBulkDelete={true}

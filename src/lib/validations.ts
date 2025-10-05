@@ -55,15 +55,16 @@ export const userSchema = z.object({
 
 // Machine validations
 export const machineSchema = z.object({
-  name: z.string().min(1, 'Machine name is required').max(100, 'Machine name too long'),
-  manufacturer: z.string().min(1, 'Manufacturer is required').max(100, 'Manufacturer name too long'),
-  brand: z.string().min(1, 'Brand is required').max(100, 'Brand name too long'),
-  year: z.number().min(1900, 'Year must be after 1900').max(new Date().getFullYear() + 1, 'Year cannot be in the future'),
-  location: z.string().min(1, 'Location is required').max(200, 'Location too long'),
-  locationId: z.string().optional(),
-  description: z.string().max(500, 'Description too long').optional(),
-  operations: z.array(z.string()).optional(),
-  properties: z.record(z.string(), z.unknown()).default({}),
+  internalCode: z.string().min(1, 'Internal code is required').max(36, 'Internal code too long'),
+  brand: z.string().min(1, 'Marca is required').max(100, 'Marca too long'),
+  model: z.string().min(1, 'Model is required').max(100, 'Model too long'),
+  locationId: z.string().min(1, 'Location is required').nullable(),
+  characteristics: z.array(z.object({
+    code: z.string().min(1, 'Code is required'),
+    description: z.string().min(1, 'Description is required'),
+    type: z.string().min(1, 'Type is required'),
+    value: z.string().min(1, 'Value is required'),
+  })).optional().default([]),
 });
 
 export const machineCreateSchema = machineSchema;

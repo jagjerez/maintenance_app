@@ -5,13 +5,9 @@ export interface IMachine {
   _id: string;
   internalCode: string; // GUID for Excel/CSV relationships
   name: string;
-  manufacturer: string;
+  model: string;
   brand: string;
-  year: number;
-  location: string;
   locationId?: string;
-  description?: string;
-  operations?: string[];
   properties: Map<string, unknown>;
   companyId: string;
   createdAt: Date;
@@ -31,40 +27,20 @@ const MachineSchema = new Schema({
     required: [true, 'Machine name is required'],
     trim: true,
   },
-  manufacturer: {
+  model: {
     type: String,
-    required: [true, 'Manufacturer is required'],
     trim: true,
+    maxlength: [255, 'Model cannot exceed 255 characters'],
   },
   brand: {
     type: String,
-    required: [true, 'Brand is required'],
     trim: true,
-  },
-  year: {
-    type: Number,
-    required: [true, 'Year is required'],
-    min: [1900, 'Year must be after 1900'],
-    max: [new Date().getFullYear() + 1, 'Year cannot be in the future'],
-  },
-  location: {
-    type: String,
-    required: [true, 'Location is required'],
-    trim: true,
+    maxlength: [255, 'Brand cannot exceed 255 characters'],
   },
   locationId: {
     type: Schema.Types.ObjectId,
     ref: 'Location',
   },
-  description: {
-    type: String,
-    trim: true,
-    maxlength: [500, 'Description cannot exceed 500 characters'],
-  },
-  operations: [{
-    type: Schema.Types.ObjectId,
-    ref: 'Operation',
-  }],
   properties: {
     type: Map,
     of: Schema.Types.Mixed,
@@ -90,9 +66,8 @@ MachineSchema.pre('validate', function(next) {
 
 // Index for better query performance
 MachineSchema.index({ internalCode: 1 });
-MachineSchema.index({ name: 1, manufacturer: 1, brand: 1 });
-MachineSchema.index({ year: 1 });
-MachineSchema.index({ location: 1 });
+MachineSchema.index({ name: 1, model: 1, brand: 1 });
+MachineSchema.index({ locationId: 1 });
 MachineSchema.index({ companyId: 1 });
 
 export default mongoose.models.Machine || mongoose.model<IMachine>('Machine', MachineSchema);

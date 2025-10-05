@@ -13,7 +13,6 @@ import {
   Home,
   Wrench,
   Cog,
-  List,
   Settings,
   Menu,
   X,

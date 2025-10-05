@@ -174,7 +174,7 @@ export default function OperationsPage() {
         await fetchOperations(currentPage, debouncedSearchQuery);
         toast.success(t("operations.operationDeleted"));
       } else {
-        const errorData = await response.json();
+        const _errorData = await response.json();
 
         toast.error(t("operations.operationError"));
       }

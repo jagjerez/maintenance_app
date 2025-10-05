@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "@/hooks/useTranslations";
-import { ChevronDown, ChevronRight, Settings, Wrench } from "lucide-react";
+import { ChevronDown, ChevronRight, Settings } from "lucide-react";
 
 interface Operation {
   _id: string;

@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useSearchParams } from "next/navigation";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useDebounce } from "@/hooks/useDebounce";
-import { Plus, ChevronDown, ChevronRight, Wrench } from "lucide-react";
+import { useLocationSearch } from "@/hooks/useLocationSearch";
+import { Plus, Wrench } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
@@ -16,58 +16,56 @@ import {
   FormGroup,
   FormLabel,
   FormInput,
-  FormSelect,
   FormButton,
 } from "@/components/Form";
 import { Pagination } from "@/components/Pagination";
 import DataTable from "@/components/DataTable";
-import { machineCreateSchema } from "@/lib/validations";
-import LocationTreeView from "@/components/LocationTreeView";
-import MultiSelect from "@/components/MultiSelect";
-import OperationsDisplay from "@/components/OperationsDisplay";
-import { IOperation } from "@/models/Operation";
+import SearchableSelect from "@/components/SearchableSelect";
+
+// Schema according to PlantUML structure
 import { formatDateSafe } from "@/lib/utils";
+import { machineSchema } from "@/lib/validations";
 
-interface Operation {
-  _id: string;
-  internalCode: string;
-  name: string;
-  description: string;
-  type: "text" | "date" | "time" | "datetime" | "boolean" | "number";
-  companyId: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-interface MaintenanceRange {
-  _id: string;
-  name: string;
-  description: string;
-  type: 'preventive' | 'corrective';
-  operations: Operation[];
-}
-
+// Type definitions
 interface Machine {
   _id: string;
-  name: string;
-  manufacturer: string;
-  brand: string;
-  year: number;
-  location: string;
+  internalCode: string;
+  marca: string;
+  modelo: string;
   locationId?: string;
-  description?: string;
-  operations?: Operation[];
-  properties: Record<string, unknown>;
+  location?: {
+    _id: string;
+    name: string;
+    path: string;
+  };
+  characteristics: MachineCharacteristic[];
+  companyId: string;
   createdAt: string;
   updatedAt: string;
 }
 
+interface MachineCharacteristic {
+  _id: string;
+  machineId: string;
+  code: string;
+  description: string;
+  type: string;
+  value: string;
+  companyId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+
+
+const ITEMS_PER_PAGE = 10;
+
 export default function MachinesPage() {
   const { t } = useTranslations();
-  const searchParams = useSearchParams();
+  const { fetchOptions } = useLocationSearch();
+  
+  // State management
   const [machines, setMachines] = useState<Machine[]>([]);
-  const [operations, setOperations] = useState<Operation[]>([]);
-  const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingMachine, setEditingMachine] = useState<Machine | null>(null);
@@ -76,76 +74,34 @@ export default function MachinesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
-  const [showLocationSelector, setShowLocationSelector] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<{
-    _id: string;
-    name: string;
-    path: string;
-  } | null>(null);
-  const [newPropertyKey, setNewPropertyKey] = useState("");
-  const [newPropertyValue, setNewPropertyValue] = useState("");
-  const [selectedMaintenanceRanges, setSelectedMaintenanceRanges] = useState<
-    string[]
-  >([]);
-  const [selectedMaintenanceType, setSelectedMaintenanceType] = useState<'preventive' | 'corrective' | ''>('');
   const [selectedMachines, setSelectedMachines] = useState<Machine[]>([]);
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const debouncedSearchQuery = useDebounce(searchQuery, 500); // 500ms delay
+  const [selectedLocation, setSelectedLocation] = useState<{_id: string; name: string; path?: string} | null>(null);
+  const [characteristics, setCharacteristics] = useState<Omit<MachineCharacteristic, '_id' | 'machineId' | 'companyId' | 'createdAt' | 'updatedAt'>[]>([]);
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  const ITEMS_PER_PAGE = 10;
-
+  // Form setup
   const {
     register,
     handleSubmit,
     reset,
     setValue,
-    watch,
     formState: { errors, isSubmitting },
   } = useForm({
-    resolver: zodResolver(machineCreateSchema),
+    resolver: zodResolver(machineSchema),
     defaultValues: {
-      properties: {},
+      internalCode: "",
+      brand: "",
+      model: "",
+      locationId: "",
+      characteristics: [],
     },
   });
 
-  // Custom properties handlers
-  const addCustomProperty = () => {
-    if (newPropertyKey.trim() && newPropertyValue.trim()) {
-      const currentProperties = watch("properties") || {};
-      setValue("properties", {
-        ...currentProperties,
-        [newPropertyKey.trim()]: newPropertyValue.trim(),
-      });
-      setNewPropertyKey("");
-      setNewPropertyValue("");
-    }
-  };
-
-  const removeCustomProperty = (key: string) => {
-    const currentProperties = watch("properties") || {};
-    const newProperties = { ...currentProperties };
-    delete newProperties[key];
-    setValue("properties", newProperties);
-  };
-
-  // Update form values when selectedLocation changes
-  useEffect(() => {
-    if (selectedLocation) {
-      setValue("location", selectedLocation.path);
-      setValue("locationId", selectedLocation._id);
-    }
-  }, [selectedLocation, setValue]);
-
-
-  // Update operations field when selectedOperations changes
-  useEffect(() => {
-    setValue("operations", selectedOperations);
-  }, [selectedOperations, setValue]);
-
-  // Fetch machines with pagination and search
+  // Data fetching functions
   const fetchMachines = useCallback(
     async (page = 1, search = "") => {
       try {
@@ -176,88 +132,40 @@ export default function MachinesPage() {
   );
 
 
-  // Fetch operations
-  const fetchOperations = useCallback(async () => {
-    try {
-      const response = await fetch("/api/operations?limit=1000");
-      if (response.ok) {
-        const data = await response.json();
-        setOperations(data.operations || data);
-      } else {
-        toast.error(t("operations.operationError"));
-      }
-    } catch (error) {
-      console.error("Error fetching operations:", error);
-      toast.error(t("operations.operationError"));
-    }
-  }, [t]);
-
-  const handleEdit = useCallback(
-    (machine: Machine) => {
-      setEditingMachine(machine);
-
-      // Set form values using setValue
-      setValue("name", machine.name);
-      setValue("manufacturer", machine.manufacturer);
-      setValue("brand", machine.brand);
-      setValue("year", machine.year);
-      setValue("location", machine.location);
-      setValue("locationId", machine.locationId || "");
-      setValue("description", machine.description || "");
-      setValue("properties", machine.properties);
-
-      // Set default maintenance type
-      setSelectedMaintenanceType('preventive');
-
-      // Set selected operations
-      const operationIds =
-        machine.operations?.map((operation) => operation._id) || [];
-      setSelectedOperations(operationIds);
-
-      // Set selected location if machine has locationId
-      if (machine.locationId) {
-        setSelectedLocation({
-          _id: machine.locationId,
-          name: machine.location,
-          path: machine.location,
-        });
-      } else {
-        setSelectedLocation(null);
-      }
-
-      setShowModal(true);
-    },
-    [setValue]
-  );
-
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      await Promise.all([
-        fetchMachines(currentPage, debouncedSearchQuery),
-        fetchOperations(),
-      ]);
-    } catch (error) {
-      console.error("Error loading data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Load data on component mount and when dependencies change
   useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        await fetchMachines(currentPage, debouncedSearchQuery);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
     loadData();
-  }, [currentPage, debouncedSearchQuery]);
+  }, [currentPage, debouncedSearchQuery, fetchMachines]);
 
+  // Handle location selection
+  useEffect(() => {
+    if (selectedLocation) {
+      setValue("locationId", selectedLocation._id);
+    }
+  }, [selectedLocation, setValue]);
+
+  // Form submission
   const onSubmit = async (data: {
-    name: string;
-    manufacturer: string;
+    internalCode: string;
     brand: string;
-    year: number;
-    location: string;
-    locationId?: string;
-    description?: string;
-    operations?: string[];
-    properties: Record<string, unknown>;
+    model: string;
+    locationId: string | null;
+    characteristics: Array<{
+      code: string;
+      description: string;
+      type: string;
+      value: string;
+    }>;
   }) => {
     try {
       const url = editingMachine ? `/api/machines/${editingMachine._id}` : "/api/machines";
@@ -272,19 +180,15 @@ export default function MachinesPage() {
       });
 
       if (response.ok) {
-        const result = await response.json();
-        if (editingMachine) {
-          toast.success(t("machines.machineUpdated"));
-        } else {
-          toast.success(t("machines.machineCreated"));
-        }
+        await fetchMachines(currentPage, debouncedSearchQuery);
         setShowModal(false);
         setEditingMachine(null);
         reset();
-        setSelectedLocation(null);
-        setSelectedOperations([]);
-        setSelectedMaintenanceType('');
-        await fetchMachines(currentPage, debouncedSearchQuery);
+        toast.success(
+          editingMachine
+            ? t("machines.machineUpdated")
+            : t("machines.machineCreated")
+        );
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || t("machines.machineError"));
@@ -295,6 +199,35 @@ export default function MachinesPage() {
     }
   };
 
+  // Edit handler
+  const handleEdit = (machine: Machine) => {
+    setEditingMachine(machine);
+    reset({
+      internalCode: machine.internalCode,
+      brand: machine.marca,
+      model: machine.modelo,
+      locationId: machine.locationId || "",
+      characteristics: machine.characteristics || [],
+    });
+    
+    // Set selected location if machine has locationId
+    if (machine.locationId && machine.location) {
+      setSelectedLocation({
+        _id: machine.locationId,
+        name: machine.location.name,
+        path: machine.location.path || "",
+      });
+    } else {
+      setSelectedLocation(null);
+    }
+    
+    // Set characteristics
+    setCharacteristics(machine.characteristics || []);
+    
+    setShowModal(true);
+  };
+
+  // Delete handlers
   const handleDelete = (machine: Machine) => {
     setMachineToDelete(machine);
     setShowDeleteModal(true);
@@ -309,10 +242,8 @@ export default function MachinesPage() {
       });
 
       if (response.ok) {
-        toast.success(t("machines.machineDeleted"));
-        setShowDeleteModal(false);
-        setMachineToDelete(null);
         await fetchMachines(currentPage, debouncedSearchQuery);
+        toast.success(t("machines.machineDeleted"));
       } else {
         const errorData = await response.json();
         toast.error(errorData.error || t("machines.machineError"));
@@ -320,36 +251,37 @@ export default function MachinesPage() {
     } catch (error) {
       console.error("Error deleting machine:", error);
       toast.error(t("machines.machineError"));
+    } finally {
+      setShowDeleteModal(false);
+      setMachineToDelete(null);
     }
   };
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-  };
-
+  // Bulk delete handler
   const handleBulkDelete = async () => {
     if (selectedMachines.length === 0) return;
 
-    setIsBulkDeleting(true);
     try {
-      const response = await fetch("/api/machines/bulk-delete", {
-        method: "POST",
+      setIsBulkDeleting(true);
+      const response = await fetch('/api/machines/bulk-delete', {
+        method: 'DELETE',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          machineIds: selectedMachines.map((machine) => machine._id),
+          ids: selectedMachines.map(machine => machine._id)
         }),
       });
 
       if (response.ok) {
-        toast.success(t("machines.machineDeleted"));
-        setShowBulkDeleteModal(false);
-        setSelectedMachines([]);
+        const result = await response.json();
+        toast.success(result.message || t("machines.machineDeleted"));
         await fetchMachines(currentPage, debouncedSearchQuery);
+        setSelectedMachines([]);
+        setShowBulkDeleteModal(false);
       } else {
-        const errorData = await response.json();
-        toast.error(errorData.error || t("machines.machineError"));
+        const error = await response.json();
+        toast.error(error.error || t("machines.machineError"));
       }
     } catch (error) {
       console.error("Error bulk deleting machines:", error);
@@ -359,81 +291,120 @@ export default function MachinesPage() {
     }
   };
 
+  // Pagination handler
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // Search handler
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     setCurrentPage(1);
   };
 
-  const handleNewMachine = () => {
-    setEditingMachine(null);
-    reset();
-    setSelectedLocation(null);
-    setSelectedMaintenanceRanges([]);
-    setSelectedOperations([]);
-    setSelectedMaintenanceType('');
-    setShowModal(true);
+  // Characteristics handlers
+  const addCharacteristic = () => {
+    const newCharacteristic = {
+      code: "",
+      description: "",
+      type: "text",
+      value: "",
+    };
+    const updatedCharacteristics = [...characteristics, newCharacteristic];
+    setCharacteristics(updatedCharacteristics);
+    setValue("characteristics", updatedCharacteristics);
   };
 
+  const updateCharacteristic = (index: number, field: keyof typeof characteristics[0], value: string) => {
+    const updatedCharacteristics = characteristics.map((char, i) => 
+      i === index ? { ...char, [field]: value } : char
+    );
+    setCharacteristics(updatedCharacteristics);
+    setValue("characteristics", updatedCharacteristics);
+  };
 
+  const removeCharacteristic = (index: number) => {
+    const updatedCharacteristics = characteristics.filter((_, i) => i !== index);
+    setCharacteristics(updatedCharacteristics);
+    setValue("characteristics", updatedCharacteristics);
+  };
+
+  // Table configuration
   const columns = [
     {
-      key: "name",
-      label: t("machines.machineName"),
-      render: (machine: Machine) => (
-        <div className="flex items-center space-x-3">
-          <Wrench className="h-5 w-5 text-gray-400" />
-          <div>
-            <div className="font-medium text-gray-900 dark:text-white">
-              {machine.name}
-            </div>
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              {machine.manufacturer} {machine.brand} ({machine.year})
-            </div>
-          </div>
-        </div>
-      ),
+      key: "internalCode" as keyof Machine,
+      label: t("machines.internalCode"),
     },
     {
-      key: "location",
+      key: "marca" as keyof Machine,
+      label: t("machines.marca"),
+    },
+    {
+      key: "modelo" as keyof Machine,
+      label: t("machines.modelo"),
+    },
+    {
+      key: "location" as keyof Machine,
       label: t("machines.location"),
-      render: (machine: Machine) => (
-        <span className="text-gray-900 dark:text-white">{machine.location}</span>
-      ),
+      render: (value: unknown) => {
+        const location = value as { path: string } | undefined;
+        return location?.path || "-";
+      },
     },
     {
-      key: "createdAt",
+      key: "createdAt" as keyof Machine,
       label: t("common.createdAt"),
-      render: (machine: Machine) => (
-        <span className="text-gray-500 dark:text-gray-400">
-          {formatDateSafe(machine.createdAt)}
-        </span>
-      ),
+      render: (value: unknown) => formatDateSafe(value as string),
     },
   ];
 
-  const actions = [
-    {
-      label: t("common.edit"),
-      onClick: handleEdit,
-      className: "text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300",
-    },
-    {
-      label: t("common.delete"),
-      onClick: handleDelete,
-      className: "text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300",
-    },
-  ];
 
+  // Loading state
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-6"></div>
-            <div className="space-y-4">
-              {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded"></div>
-              ))}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+            <div>
+              <div className="h-6 sm:h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/3 sm:w-64 mb-2 animate-pulse"></div>
+              <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 sm:w-96 animate-pulse"></div>
+            </div>
+            <div className="h-10 sm:h-11 bg-gray-200 dark:bg-gray-700 rounded w-full sm:w-32 animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Item Count Indicator Skeleton */}
+        <div className="mb-4 sm:mb-6 flex justify-between items-center">
+          <div className="flex items-center space-x-2">
+            <div className="h-4 w-4 sm:h-5 sm:w-5 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+            <div className="h-3 sm:h-4 bg-gray-200 dark:bg-gray-700 rounded w-20 sm:w-24 animate-pulse"></div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+          <div className="px-3 py-4 sm:px-4 sm:py-5 lg:p-6">
+            <div className="animate-pulse">
+              {/* Mobile view skeleton */}
+              <div className="block space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3 sm:p-4">
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between">
+                        <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
+                        <div className="flex flex-col items-end space-y-1 ml-2">
+                          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-16"></div>
+                          <div className="h-6 bg-gray-200 dark:bg-gray-600 rounded w-20"></div>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/4"></div>
+                        <div className="h-8 bg-gray-200 dark:bg-gray-600 rounded w-full"></div>
+                      </div>
+                      <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -442,113 +413,102 @@ export default function MachinesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {t("machines.title")}
-          </h1>
-          <p className="mt-2 text-gray-600 dark:text-gray-400">
-            {t("machines.subtitle")}
-          </p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+              {t("machines.title")}
+            </h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
+              {t("machines.subtitle")}
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setEditingMachine(null);
+              reset({
+                internalCode: "",
+                brand: "",
+                model: "",
+                locationId: "",
+                characteristics: [],
+              });
+              setSelectedLocation(null);
+              setCharacteristics([]);
+              setShowModal(true);
+            }}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            {t("machines.addMachine")}
+          </button>
         </div>
+      </div>
 
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-              <div className="flex-1 min-w-0">
-                <div className="relative">
-                  <input
-                    type="text"
-                    placeholder={t("common.search")}
-                    value={searchQuery}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 dark:focus:placeholder-gray-500 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 dark:focus:border-blue-400 sm:text-sm"
-                  />
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg
-                      className="h-5 w-5 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center space-x-3">
-                {selectedMachines.length > 0 && (
-                  <button
-                    onClick={() => setShowBulkDeleteModal(true)}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800"
-                  >
-                    {t("common.deleteSelected")} ({selectedMachines.length})
-                  </button>
-                )}
-                <button
-                  onClick={handleNewMachine}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {t("machines.addMachine")}
-                </button>
-              </div>
+      {/* Search and Item Count */}
+      <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <div className="flex items-center space-x-2">
+          <Wrench className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            {totalItems} {t("machines.title")}
+            {totalItems !== 1 ? "s" : ""}
+          </span>
+        </div>
+        
+        {/* Search Input */}
+        <div className="flex items-center space-x-2">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder={t("common.search")}
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full sm:w-64 px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </div>
           </div>
-
-          <div className="px-6 py-4">
-            {machines.length === 0 ? (
-              <div className="text-center py-12">
-                <Wrench className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                  {t("machines.noMachines")}
-                </h3>
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {t("machines.startAddingMachine")}
-                </p>
-                <div className="mt-6">
-                  <button
-                    onClick={handleNewMachine}
-                    className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    {t("machines.addMachine")}
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <DataTable
-                data={machines}
-                columns={columns}
-                actions={actions}
-                selectedItems={selectedMachines}
-                onSelectionChange={setSelectedMachines}
-                loading={isSearching}
-              />
-            )}
-          </div>
-
-          {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
-              <Pagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-                totalItems={totalItems}
-                itemsPerPage={ITEMS_PER_PAGE}
-              />
+          {isSearching && (
+            <div className="flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Add/Edit Machine Modal */}
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+        <div className="px-4 py-5 sm:p-6">
+          <DataTable
+            data={machines}
+            columns={columns}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+            onBulkDelete={(items) => {
+              setSelectedMachines(items);
+              setShowBulkDeleteModal(true);
+            }}
+            enableBulkDelete={true}
+            selectedItems={selectedMachines}
+            onSelectionChange={setSelectedMachines}
+          />
+        </div>
+      </div>
+
+      {/* Pagination */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        totalItems={totalItems}
+        itemsPerPage={ITEMS_PER_PAGE}
+        className="mt-6"
+      />
+
+      {/* Add/Edit Machine Modal - Mobile First Design */}
       <Modal
         isOpen={showModal}
         onClose={() => {
@@ -556,165 +516,237 @@ export default function MachinesPage() {
           setEditingMachine(null);
           reset();
           setSelectedLocation(null);
-          setSelectedOperations([]);
-          setSelectedMaintenanceType('');
+          setCharacteristics([]);
         }}
-        title={editingMachine ? t("machines.editMachine") : t("machines.addMachine")}
-        size="lg"
+        title={
+          editingMachine
+            ? t("machines.editMachine")
+            : t("machines.addMachine")
+        }
+        size="xl"
+        className="max-h-[95vh] overflow-hidden"
       >
-        <Form onSubmit={handleSubmit(onSubmit)}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <FormGroup>
-              <FormLabel htmlFor="name">{t("machines.machineName")} *</FormLabel>
-              <FormInput
-                id="name"
-                {...register("name")}
-                placeholder={t("placeholders.machineName")}
-                error={errors.name?.message}
-              />
-            </FormGroup>
+        <div className="max-h-[calc(95vh-6rem)]">
+          <Form onSubmit={handleSubmit(onSubmit)}>
+            {/* Mobile-First Form Layout - Single Column Always */}
+            <div className="space-y-6">
+              {/* Machine Information Card */}
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                <h3 className="text-base font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+                  <Wrench className="h-5 w-5 mr-2 text-blue-600 dark:text-blue-400" />
+                  {t("machines.machine")} {t("common.information")}
+                </h3>
+                
+                <div className="space-y-4">
+                  <FormGroup>
+                    <FormLabel required>{t("machines.internalCode")}</FormLabel>
+                    <FormInput
+                      {...register("internalCode")}
+                      error={errors.internalCode?.message}
+                      placeholder={t("placeholders.internalCode")}
+                      className="text-base" // Larger text for mobile
+                    />
+                  </FormGroup>
 
-            <FormGroup>
-              <FormLabel htmlFor="manufacturer">{t("common.manufacturer")} *</FormLabel>
-              <FormInput
-                id="manufacturer"
-                {...register("manufacturer")}
-                placeholder={t("placeholders.manufacturerName")}
-                error={errors.manufacturer?.message}
-              />
-            </FormGroup>
+                  <FormGroup>
+                    <FormLabel required>{t("machines.marca")}</FormLabel>
+                    <FormInput
+                      {...register("brand")}
+                      error={errors.brand?.message}
+                      placeholder={t("placeholders.brand")}
+                      className="text-base"
+                    />
+                  </FormGroup>
 
-            <FormGroup>
-              <FormLabel htmlFor="brand">{t("common.brand")} *</FormLabel>
-              <FormInput
-                id="brand"
-                {...register("brand")}
-                placeholder={t("placeholders.manufacturerBrand")}
-                error={errors.brand?.message}
-              />
-            </FormGroup>
+                  <FormGroup>
+                    <FormLabel required>{t("machines.modelo")}</FormLabel>
+                    <FormInput
+                      {...register("model")}
+                      error={errors.model?.message}
+                      placeholder={t("placeholders.model")}
+                      className="text-base"
+                    />
+                  </FormGroup>
 
-            <FormGroup>
-              <FormLabel htmlFor="year">{t("common.year")} *</FormLabel>
-              <FormInput
-                id="year"
-                type="number"
-                {...register("year", { valueAsNumber: true })}
-                placeholder={t("placeholders.manufacturingYear")}
-                error={errors.year?.message}
-              />
-            </FormGroup>
-          </div>
-
-          <FormGroup>
-            <FormLabel htmlFor="location">{t("machines.location")} *</FormLabel>
-            <div className="flex space-x-2">
-              <FormInput
-                id="location"
-                {...register("location")}
-                placeholder={t("placeholders.machineLocation")}
-                error={errors.location?.message}
-                readOnly
-              />
-              <button
-                type="button"
-                onClick={() => setShowLocationSelector(true)}
-                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
-              >
-                {t("common.select")}
-              </button>
-            </div>
-          </FormGroup>
-
-          <FormGroup>
-            <FormLabel htmlFor="description">{t("machines.description")}</FormLabel>
-            <FormInput
-              id="description"
-              {...register("description")}
-              placeholder={t("placeholders.machineDescription")}
-              error={errors.description?.message}
-            />
-          </FormGroup>
-
-
-          {selectedMaintenanceType === 'preventive' && (
-            <FormGroup>
-              <FormLabel>{t("machines.operations")}</FormLabel>
-              <MultiSelect
-                options={operations.map((operation) => ({
-                  value: operation._id,
-                  label: operation.name,
-                }))}
-                selectedValues={selectedOperations}
-                onChange={setSelectedOperations}
-                placeholder={t("machines.selectOperations")}
-                error={errors.operations?.message}
-              />
-              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                {t("machines.operations")}
-              </p>
-            </FormGroup>
-          )}
-
-          {selectedMaintenanceType === 'corrective' && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md p-4">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                    {t("machines.correctiveMaintenance")}
-                  </h3>
-                  <div className="mt-2 text-sm text-yellow-700 dark:text-yellow-300">
-                    <p>{t("machines.correctiveMaintenanceDescription")}</p>
-                  </div>
+                  <FormGroup>
+                    <FormLabel required>{t("machines.location")}</FormLabel>
+                    <SearchableSelect
+                      value={selectedLocation?._id || null}
+                      onChange={(locationId, location) => {
+                        setValue("locationId", locationId || "");
+                        setSelectedLocation(location);
+                      }}
+                      fetchOptions={fetchOptions}
+                      placeholder={t("placeholders.selectLocation")}
+                      searchPlaceholder={t("placeholders.searchLocation")}
+                      noResultsText={t("locations.noLocationsFound")}
+                      loadingText={t("common.loading")}
+                      displayField="name"
+                      displayPath="path"
+                      required
+                      clearable
+                      searchDelay={800}
+                      error={errors.locationId?.message}
+                      className="w-full"
+                      inputClassName="text-base min-h-[48px]" // Mobile-optimized input
+                    />
+                  </FormGroup>
                 </div>
               </div>
+
+              {/* Characteristics Section - Mobile First */}
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center">
+                    <Plus className="h-5 w-5 mr-2 text-green-600 dark:text-green-400" />
+                    {t("machines.characteristics")}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={addCharacteristic}
+                    className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors min-h-[44px] touch-manipulation"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t("machines.addCharacteristic")}
+                  </button>
+                </div>
+
+                {characteristics.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+                    <Wrench className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-3" />
+                    <p className="text-sm font-medium">{t("machines.noCharacteristics")}</p>
+                    <p className="text-xs mt-1">Toca el botón de arriba para agregar una</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {characteristics.map((characteristic, index) => (
+                      <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
+                        {/* Characteristic Header */}
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mr-3">
+                              <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                                {index + 1}
+                              </span>
+                            </div>
+                            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                              {t("machines.characteristic")} {index + 1}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeCharacteristic(index)}
+                            className="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 focus:outline-none rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors min-h-[44px] min-w-[44px] touch-manipulation"
+                            title={t("common.remove")}
+                          >
+                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
+                        
+                        {/* Characteristic Fields - Always Single Column */}
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                              {t("machines.characteristicCode")} *
+                            </label>
+                            <input
+                              type="text"
+                              value={characteristic.code}
+                              onChange={(e) => updateCharacteristic(index, 'code', e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-base min-h-[48px]"
+                              placeholder={t("placeholders.characteristicCode")}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                              {t("machines.characteristicDescription")} *
+                            </label>
+                            <input
+                              type="text"
+                              value={characteristic.description}
+                              onChange={(e) => updateCharacteristic(index, 'description', e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-base min-h-[48px]"
+                              placeholder={t("placeholders.characteristicDescription")}
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                              {t("machines.characteristicType")} *
+                            </label>
+                            <select
+                              value={characteristic.type}
+                              onChange={(e) => updateCharacteristic(index, 'type', e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-base min-h-[48px]"
+                            >
+                              <option value="text">Texto</option>
+                              <option value="number">Número</option>
+                              <option value="boolean">Sí/No</option>
+                              <option value="date">Fecha</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                              {t("machines.characteristicValue")} *
+                            </label>
+                            <input
+                              type={characteristic.type === 'number' ? 'number' : characteristic.type === 'date' ? 'date' : 'text'}
+                              value={characteristic.value}
+                              onChange={(e) => updateCharacteristic(index, 'value', e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-base min-h-[48px]"
+                              placeholder={t("placeholders.characteristicValue")}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          )}
 
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={() => {
-                setShowModal(false);
-                setEditingMachine(null);
-                reset();
-                setSelectedLocation(null);
-                setSelectedOperations([]);
-                setSelectedMaintenanceType('');
-              }}
-              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
-            >
-              {t("common.cancel")}
-            </button>
-            <FormButton
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 disabled:opacity-50"
-            >
-              {isSubmitting ? t("common.saving") : editingMachine ? t("common.update") : t("common.create")}
-            </FormButton>
-          </div>
-        </Form>
-      </Modal>
-
-      {/* Location Selector Modal */}
-      <Modal
-        isOpen={showLocationSelector}
-        onClose={() => setShowLocationSelector(false)}
-        title={t("machines.location")}
-        size="lg"
-      >
-        <LocationTreeView
-          onLocationSelect={(location) => {
-            setSelectedLocation(location);
-            setShowLocationSelector(false);
-          }}
-        />
+            {/* Modal Actions - Mobile First */}
+            <div className="sticky bottom-0 bg-white dark:bg-gray-800 pt-4 mt-6 border-t border-gray-200 dark:border-gray-600">
+              <div className="flex flex-col gap-3">
+                <FormButton 
+                  type="submit" 
+                  disabled={isSubmitting}
+                  className="w-full min-h-[48px] text-base font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors touch-manipulation"
+                >
+                  {isSubmitting ? (
+                    <div className="flex items-center justify-center">
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                      {t("common.saving")}
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-center">
+                      <Wrench className="h-5 w-5 mr-2" />
+                      {editingMachine ? t("common.update") : t("common.create")}
+                    </div>
+                  )}
+                </FormButton>
+                <FormButton
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditingMachine(null);
+                    reset();
+                    setSelectedLocation(null);
+                    setCharacteristics([]);
+                  }}
+                  className="w-full min-h-[48px] text-base font-medium border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation"
+                >
+                  {t("common.cancel")}
+                </FormButton>
+              </div>
+            </div>
+          </Form>
+        </div>
       </Modal>
 
       {/* Delete Confirmation Modal */}
@@ -722,11 +754,18 @@ export default function MachinesPage() {
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         onConfirm={confirmDelete}
-        title={t("machines.deleteMachine")}
+        title={t("modals.confirmDeletion")}
         message={t("modals.deleteMachineMessage")}
         confirmText={t("common.delete")}
-        cancelText={t("common.cancel")}
-        type="danger"
+        variant="danger"
+        itemDetails={
+          machineToDelete
+            ? {
+                name: machineToDelete.internalCode,
+                description: `${machineToDelete.marca} ${machineToDelete.modelo}`,
+              }
+            : undefined
+        }
       />
 
       {/* Bulk Delete Modal */}
@@ -734,8 +773,8 @@ export default function MachinesPage() {
         isOpen={showBulkDeleteModal}
         onClose={() => setShowBulkDeleteModal(false)}
         onConfirm={handleBulkDelete}
-        itemType={t("machines.machine")}
-        itemCount={selectedMachines.length}
+        selectedCount={selectedMachines.length}
+        itemType={t("machines.title")}
         isDeleting={isBulkDeleting}
       />
     </div>

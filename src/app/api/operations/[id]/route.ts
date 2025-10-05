@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import connectDB from '@/lib/db';
-import { Operation, MaintenanceRange } from '@/models';
+import { Operation } from '@/models';
 import { operationUpdateSchema } from '@/lib/validations';
 import { authOptions } from '@/lib/auth';
 
