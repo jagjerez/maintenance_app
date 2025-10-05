@@ -162,8 +162,11 @@
     "machine": "Machine",
     "machineName": "Machine Name",
     "internalCode": "Internal Code",
-    "marca": "Brand",
-    "modelo": "Model",
+    "brand": "Brand",
+    "model": "Model",
+    "series": "Series",
+    "description": "Description",
+    "state": "State",
     "characteristics": "Characteristics",
     "addCharacteristic": "Add Characteristic",
     "characteristicCode": "Code",
@@ -181,6 +184,7 @@
     "active": "Active",
     "inactive": "Inactive",
     "maintenance": "In Maintenance",
+    "retired": "Retired",
     "noMachines": "No machines",
     "startAddingMachine": "Start adding a new machine to the system.",
     "selectModel": "Select Model",
@@ -358,7 +362,8 @@
     "characteristicCode": "Characteristic code",
     "characteristicDescription": "Characteristic description",
     "characteristicValue": "Characteristic value",
-    "searchLocation": "Search location..."
+    "searchLocation": "Search location...",
+    "series": "Machine series"
   },
   "dynamicProperties": {
     "title": "Dynamic Properties",

@@ -27,21 +27,17 @@ export async function GET(request: NextRequest) {
 
     if (search) {
       query.$or = [
-        { name: { $regex: search, $options: "i" } },
+        { description: { $regex: search, $options: "i" } },
         { model: { $regex: search, $options: "i" } },
         { brand: { $regex: search, $options: "i" } },
-        { location: { $regex: search, $options: "i" } },
-        { properties: { $regex: search, $options: "i" } },
+        { series: { $regex: search, $options: "i" } },
+        { state: { $regex: search, $options: "i" } },
       ];
     }
     console.log("GET request antes de contar", query);
     const totalItems = await Machine.countDocuments(query);
     console.log("GET request despues de contar", totalItems);
     const machines = await Machine.find(query)
-      .populate({
-        path: "location",
-        match: { companyId: session.user.companyId },
-      })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -79,22 +75,15 @@ export async function POST(request: NextRequest) {
       companyId: session.user.companyId,
     };
 
-    // Clean empty string values for ObjectId fields
-    if (dataWithCompany.locationId === "") {
-      dataWithCompany.locationId = null;
-    }
-
-    // Validate no duplicate model in same location
+    // Validate no duplicate internal code
     const existingMachine = await Machine.findOne({
-      model: dataWithCompany.model,
-      locationId: dataWithCompany.locationId,
+      internalCode: dataWithCompany.internalCode,
       companyId: session.user.companyId,
-      internalCode: crypto.randomUUID(),
     });
 
     if (existingMachine) {
       return NextResponse.json(
-        { error: "duplicateModelLocation" },
+        { error: "duplicateInternalCode" },
         { status: 400 }
       );
     }
@@ -105,11 +94,7 @@ export async function POST(request: NextRequest) {
     const machine = new Machine(machineData);
     await machine.save();
 
-    const populatedMachine = await Machine.findById(machine._id).populate({
-      path: "location",
-      match: { companyId: session.user.companyId },
-    });
-    return NextResponse.json(populatedMachine, { status: 201 });
+    return NextResponse.json(machine, { status: 201 });
   } catch (error) {
     console.error("Error creating machine:", error);
     if (error instanceof Error && error.name === "ZodError") {

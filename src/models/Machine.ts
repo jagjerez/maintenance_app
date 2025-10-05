@@ -4,11 +4,13 @@ import { randomUUID } from 'crypto';
 export interface IMachine {
   _id: string;
   internalCode: string; // GUID for Excel/CSV relationships
-  name: string;
-  model: string;
+  description: string;
   brand: string;
-  locationId?: string;
-  properties: Map<string, unknown>;
+  model: string;
+  series: string;
+  characteristics: Map<string, unknown>;
+  state: string;
+  deletedAt?: Date;
   companyId: string;
   createdAt: Date;
   updatedAt: Date;
@@ -22,29 +24,44 @@ const MachineSchema = new Schema({
     trim: true,
     maxlength: [36, 'Internal code too long'],
   },
-  name: {
+  description: {
     type: String,
-    required: [true, 'Machine name is required'],
+    required: [true, 'Description is required'],
     trim: true,
-  },
-  model: {
-    type: String,
-    trim: true,
-    maxlength: [255, 'Model cannot exceed 255 characters'],
+    maxlength: [500, 'Description cannot exceed 500 characters'],
   },
   brand: {
     type: String,
+    required: [true, 'Brand is required'],
     trim: true,
     maxlength: [255, 'Brand cannot exceed 255 characters'],
   },
-  locationId: {
-    type: Schema.Types.ObjectId,
-    ref: 'Location',
+  model: {
+    type: String,
+    required: [true, 'Model is required'],
+    trim: true,
+    maxlength: [255, 'Model cannot exceed 255 characters'],
   },
-  properties: {
+  series: {
+    type: String,
+    required: [true, 'Series is required'],
+    trim: true,
+    maxlength: [255, 'Series cannot exceed 255 characters'],
+  },
+  characteristics: {
     type: Map,
     of: Schema.Types.Mixed,
     default: new Map(),
+  },
+  state: {
+    type: String,
+    required: [true, 'State is required'],
+    enum: ['active', 'inactive', 'maintenance', 'retired'],
+    default: 'active',
+  },
+  deletedAt: {
+    type: Date,
+    default: null,
   },
   companyId: {
     type: Schema.Types.ObjectId,
@@ -64,10 +81,24 @@ MachineSchema.pre('validate', function(next) {
   next();
 });
 
+// Soft delete middleware
+MachineSchema.pre('find', function() {
+  this.where({ deletedAt: null });
+});
+
+MachineSchema.pre('findOne', function() {
+  this.where({ deletedAt: null });
+});
+
+MachineSchema.pre('findOneAndUpdate', function() {
+  this.where({ deletedAt: null });
+});
+
 // Index for better query performance
 MachineSchema.index({ internalCode: 1 });
-MachineSchema.index({ name: 1, model: 1, brand: 1 });
-MachineSchema.index({ locationId: 1 });
+MachineSchema.index({ brand: 1, model: 1, series: 1 });
+MachineSchema.index({ state: 1 });
+MachineSchema.index({ deletedAt: 1 });
 MachineSchema.index({ companyId: 1 });
 
 export default mongoose.models.Machine || mongoose.model<IMachine>('Machine', MachineSchema);

@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useDebounce } from "@/hooks/useDebounce";
-import { useLocationSearch } from "@/hooks/useLocationSearch";
 import { Plus, Wrench } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
@@ -20,7 +19,6 @@ import {
 } from "@/components/Form";
 import { Pagination } from "@/components/Pagination";
 import DataTable from "@/components/DataTable";
-import SearchableSelect from "@/components/SearchableSelect";
 
 // Schema according to PlantUML structure
 import { formatDateSafe } from "@/lib/utils";
@@ -30,27 +28,13 @@ import { machineSchema } from "@/lib/validations";
 interface Machine {
   _id: string;
   internalCode: string;
-  marca: string;
-  modelo: string;
-  locationId?: string;
-  location?: {
-    _id: string;
-    name: string;
-    path: string;
-  };
-  characteristics: MachineCharacteristic[];
-  companyId: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface MachineCharacteristic {
-  _id: string;
-  machineId: string;
-  code: string;
   description: string;
-  type: string;
-  value: string;
+  brand: string;
+  model: string;
+  series: string;
+  characteristics: Record<string, any>;
+  state: 'active' | 'inactive' | 'maintenance' | 'retired';
+  deletedAt?: string;
   companyId: string;
   createdAt: string;
   updatedAt: string;
@@ -62,7 +46,6 @@ const ITEMS_PER_PAGE = 10;
 
 export default function MachinesPage() {
   const { t } = useTranslations();
-  const { fetchOptions } = useLocationSearch();
   
   // State management
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -79,8 +62,7 @@ export default function MachinesPage() {
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<{_id: string; name: string; path?: string} | null>(null);
-  const [characteristics, setCharacteristics] = useState<Omit<MachineCharacteristic, '_id' | 'machineId' | 'companyId' | 'createdAt' | 'updatedAt'>[]>([]);
+  const [characteristics, setCharacteristics] = useState<Record<string, any>>({});
   const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   // Form setup
@@ -94,10 +76,12 @@ export default function MachinesPage() {
     resolver: zodResolver(machineSchema),
     defaultValues: {
       internalCode: "",
+      description: "",
       brand: "",
       model: "",
-      locationId: "",
-      characteristics: [],
+      series: "",
+      characteristics: {},
+      state: "active",
     },
   });
 
@@ -147,25 +131,16 @@ export default function MachinesPage() {
     loadData();
   }, [currentPage, debouncedSearchQuery, fetchMachines]);
 
-  // Handle location selection
-  useEffect(() => {
-    if (selectedLocation) {
-      setValue("locationId", selectedLocation._id);
-    }
-  }, [selectedLocation, setValue]);
 
   // Form submission
   const onSubmit = async (data: {
     internalCode: string;
+    description: string;
     brand: string;
     model: string;
-    locationId: string | null;
-    characteristics: Array<{
-      code: string;
-      description: string;
-      type: string;
-      value: string;
-    }>;
+    series: string;
+    characteristics: Record<string, any>;
+    state: string;
   }) => {
     try {
       const url = editingMachine ? `/api/machines/${editingMachine._id}` : "/api/machines";
@@ -204,25 +179,16 @@ export default function MachinesPage() {
     setEditingMachine(machine);
     reset({
       internalCode: machine.internalCode,
-      brand: machine.marca,
-      model: machine.modelo,
-      locationId: machine.locationId || "",
-      characteristics: machine.characteristics || [],
+      description: machine.description,
+      brand: machine.brand,
+      model: machine.model,
+      series: machine.series,
+      characteristics: machine.characteristics || {},
+      state: machine.state,
     });
     
-    // Set selected location if machine has locationId
-    if (machine.locationId && machine.location) {
-      setSelectedLocation({
-        _id: machine.locationId,
-        name: machine.location.name,
-        path: machine.location.path || "",
-      });
-    } else {
-      setSelectedLocation(null);
-    }
-    
     // Set characteristics
-    setCharacteristics(machine.characteristics || []);
+    setCharacteristics(machine.characteristics || {});
     
     setShowModal(true);
   };
@@ -303,28 +269,21 @@ export default function MachinesPage() {
   };
 
   // Characteristics handlers
-  const addCharacteristic = () => {
-    const newCharacteristic = {
-      code: "",
-      description: "",
-      type: "text",
-      value: "",
-    };
-    const updatedCharacteristics = [...characteristics, newCharacteristic];
+  const addCharacteristic = (key: string, value: any) => {
+    const updatedCharacteristics = { ...characteristics, [key]: value };
     setCharacteristics(updatedCharacteristics);
     setValue("characteristics", updatedCharacteristics);
   };
 
-  const updateCharacteristic = (index: number, field: keyof typeof characteristics[0], value: string) => {
-    const updatedCharacteristics = characteristics.map((char, i) => 
-      i === index ? { ...char, [field]: value } : char
-    );
+  const updateCharacteristic = (key: string, value: any) => {
+    const updatedCharacteristics = { ...characteristics, [key]: value };
     setCharacteristics(updatedCharacteristics);
     setValue("characteristics", updatedCharacteristics);
   };
 
-  const removeCharacteristic = (index: number) => {
-    const updatedCharacteristics = characteristics.filter((_, i) => i !== index);
+  const removeCharacteristic = (key: string) => {
+    const updatedCharacteristics = { ...characteristics };
+    delete updatedCharacteristics[key];
     setCharacteristics(updatedCharacteristics);
     setValue("characteristics", updatedCharacteristics);
   };
@@ -336,20 +295,24 @@ export default function MachinesPage() {
       label: t("machines.internalCode"),
     },
     {
-      key: "marca" as keyof Machine,
-      label: t("machines.marca"),
+      key: "description" as keyof Machine,
+      label: t("machines.description"),
     },
     {
-      key: "modelo" as keyof Machine,
-      label: t("machines.modelo"),
+      key: "brand" as keyof Machine,
+      label: t("machines.brand"),
     },
     {
-      key: "location" as keyof Machine,
-      label: t("machines.location"),
-      render: (value: unknown) => {
-        const location = value as { path: string } | undefined;
-        return location?.path || "-";
-      },
+      key: "model" as keyof Machine,
+      label: t("machines.model"),
+    },
+    {
+      key: "series" as keyof Machine,
+      label: t("machines.series"),
+    },
+    {
+      key: "state" as keyof Machine,
+      label: t("machines.state"),
     },
     {
       key: "createdAt" as keyof Machine,
@@ -429,13 +392,14 @@ export default function MachinesPage() {
               setEditingMachine(null);
               reset({
                 internalCode: "",
+                description: "",
                 brand: "",
                 model: "",
-                locationId: "",
-                characteristics: [],
+                series: "",
+                characteristics: {},
+                state: "active",
               });
-              setSelectedLocation(null);
-              setCharacteristics([]);
+              setCharacteristics({});
               setShowModal(true);
             }}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -515,8 +479,7 @@ export default function MachinesPage() {
           setShowModal(false);
           setEditingMachine(null);
           reset();
-          setSelectedLocation(null);
-          setCharacteristics([]);
+          setCharacteristics({});
         }}
         title={
           editingMachine
@@ -549,7 +512,17 @@ export default function MachinesPage() {
                   </FormGroup>
 
                   <FormGroup>
-                    <FormLabel required>{t("machines.marca")}</FormLabel>
+                    <FormLabel required>{t("machines.description")}</FormLabel>
+                    <FormInput
+                      {...register("description")}
+                      error={errors.description?.message}
+                      placeholder={t("placeholders.machineDescription")}
+                      className="text-base"
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <FormLabel required>{t("machines.brand")}</FormLabel>
                     <FormInput
                       {...register("brand")}
                       error={errors.brand?.message}
@@ -559,7 +532,7 @@ export default function MachinesPage() {
                   </FormGroup>
 
                   <FormGroup>
-                    <FormLabel required>{t("machines.modelo")}</FormLabel>
+                    <FormLabel required>{t("machines.model")}</FormLabel>
                     <FormInput
                       {...register("model")}
                       error={errors.model?.message}
@@ -569,27 +542,26 @@ export default function MachinesPage() {
                   </FormGroup>
 
                   <FormGroup>
-                    <FormLabel required>{t("machines.location")}</FormLabel>
-                    <SearchableSelect
-                      value={selectedLocation?._id || null}
-                      onChange={(locationId, location) => {
-                        setValue("locationId", locationId || "");
-                        setSelectedLocation(location);
-                      }}
-                      fetchOptions={fetchOptions}
-                      placeholder={t("placeholders.selectLocation")}
-                      searchPlaceholder={t("placeholders.searchLocation")}
-                      noResultsText={t("locations.noLocationsFound")}
-                      loadingText={t("common.loading")}
-                      displayField="name"
-                      displayPath="path"
-                      required
-                      clearable
-                      searchDelay={800}
-                      error={errors.locationId?.message}
-                      className="w-full"
-                      inputClassName="text-base min-h-[48px]" // Mobile-optimized input
+                    <FormLabel required>{t("machines.series")}</FormLabel>
+                    <FormInput
+                      {...register("series")}
+                      error={errors.series?.message}
+                      placeholder={t("placeholders.series")}
+                      className="text-base"
                     />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <FormLabel required>{t("machines.state")}</FormLabel>
+                    <select
+                      {...register("state")}
+                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-base min-h-[48px]"
+                    >
+                      <option value="active">{t("machines.active")}</option>
+                      <option value="inactive">{t("machines.inactive")}</option>
+                      <option value="maintenance">{t("machines.maintenance")}</option>
+                      <option value="retired">{t("machines.retired")}</option>
+                    </select>
                   </FormGroup>
                 </div>
               </div>
@@ -611,7 +583,7 @@ export default function MachinesPage() {
                   </button>
                 </div>
 
-                {characteristics.length === 0 ? (
+                {Object.keys(characteristics).length === 0 ? (
                   <div className="text-center py-8 text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
                     <Wrench className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-3" />
                     <p className="text-sm font-medium">{t("machines.noCharacteristics")}</p>
@@ -619,8 +591,8 @@ export default function MachinesPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {characteristics.map((characteristic, index) => (
-                      <div key={index} className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
+                    {Object.entries(characteristics).map(([key, value], index) => (
+                      <div key={key} className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm">
                         {/* Characteristic Header */}
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center">
@@ -630,12 +602,12 @@ export default function MachinesPage() {
                               </span>
                             </div>
                             <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                              {t("machines.characteristic")} {index + 1}
+                              {key}
                             </span>
                           </div>
                           <button
                             type="button"
-                            onClick={() => removeCharacteristic(index)}
+                            onClick={() => removeCharacteristic(key)}
                             className="p-2 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 focus:outline-none rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors min-h-[44px] min-w-[44px] touch-manipulation"
                             title={t("common.remove")}
                           >
@@ -645,58 +617,16 @@ export default function MachinesPage() {
                           </button>
                         </div>
                         
-                        {/* Characteristic Fields - Always Single Column */}
+                        {/* Characteristic Value */}
                         <div className="space-y-4">
                           <div>
                             <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                              {t("machines.characteristicCode")} *
+                              {t("machines.characteristicValue")}
                             </label>
                             <input
                               type="text"
-                              value={characteristic.code}
-                              onChange={(e) => updateCharacteristic(index, 'code', e.target.value)}
-                              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-base min-h-[48px]"
-                              placeholder={t("placeholders.characteristicCode")}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                              {t("machines.characteristicDescription")} *
-                            </label>
-                            <input
-                              type="text"
-                              value={characteristic.description}
-                              onChange={(e) => updateCharacteristic(index, 'description', e.target.value)}
-                              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-base min-h-[48px]"
-                              placeholder={t("placeholders.characteristicDescription")}
-                            />
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                              {t("machines.characteristicType")} *
-                            </label>
-                            <select
-                              value={characteristic.type}
-                              onChange={(e) => updateCharacteristic(index, 'type', e.target.value)}
-                              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-base min-h-[48px]"
-                            >
-                              <option value="text">Texto</option>
-                              <option value="number">Número</option>
-                              <option value="boolean">Sí/No</option>
-                              <option value="date">Fecha</option>
-                            </select>
-                          </div>
-
-                          <div>
-                            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                              {t("machines.characteristicValue")} *
-                            </label>
-                            <input
-                              type={characteristic.type === 'number' ? 'number' : characteristic.type === 'date' ? 'date' : 'text'}
-                              value={characteristic.value}
-                              onChange={(e) => updateCharacteristic(index, 'value', e.target.value)}
+                              value={value}
+                              onChange={(e) => updateCharacteristic(key, e.target.value)}
                               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-base min-h-[48px]"
                               placeholder={t("placeholders.characteristicValue")}
                             />
@@ -736,8 +666,7 @@ export default function MachinesPage() {
                     setShowModal(false);
                     setEditingMachine(null);
                     reset();
-                    setSelectedLocation(null);
-                    setCharacteristics([]);
+                    setCharacteristics({});
                   }}
                   className="w-full min-h-[48px] text-base font-medium border-2 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg transition-colors touch-manipulation"
                 >
@@ -762,7 +691,7 @@ export default function MachinesPage() {
           machineToDelete
             ? {
                 name: machineToDelete.internalCode,
-                description: `${machineToDelete.marca} ${machineToDelete.modelo}`,
+                description: `${machineToDelete.brand} ${machineToDelete.model} - ${machineToDelete.description}`,
               }
             : undefined
         }

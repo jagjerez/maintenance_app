@@ -7,11 +7,14 @@
 entity "Machine" as Machine ENTITY_COLOR {
   * _id : string <<PK>>
   * internalCode : string <<unique>>
-  * marca : string
-  * modelo : string
-  * locationId : string <<FK>>
+  * description : string
+  * brand : string
+  * model : string
+  * series : string
+  * characteristics : Map<string, any>
+  * state : string
+  * deletedAt? : Date
   * companyId : string <<FK>>
-  * characteristics : MachineCharacteristic[]
   --
   * createdAt : Date
   * updatedAt : Date
@@ -35,18 +38,6 @@ entity "Location" as Location ENTITY_COLOR {
   * updatedAt : Date
 }
 
-entity "MachineCharacteristic" as MachineChar ENTITY_COLOR {
-  * _id : string <<PK>>
-  * machineId : string <<FK>>
-  * code : string
-  * description : string
-  * type : string
-  * value : string
-  * companyId : string <<FK>>
-  --
-  * createdAt : Date
-  * updatedAt : Date
-}
 
 entity "Company" as Company ENTITY_COLOR {
   * _id : string <<PK>>
@@ -58,27 +49,17 @@ entity "Company" as Company ENTITY_COLOR {
 }
 
 ' Relationships
-Machine ||--o{ MachineChar : "has characteristics"
-Machine }o--|| Location : "located in"
 Machine }o--|| Company : "belongs to"
 Location ||--o{ Location : "parent-child"
 Location }o--|| Company : "belongs to"
-MachineChar }o--|| Company : "belongs to"
 
 ' Notes
 note right of Machine
   Entidad principal que representa
   una máquina en el sistema de mantenimiento.
-  Incluye características dinámicas y
-  referencia a ubicación jerárquica.
-end note
-
-note right of MachineChar
-  Características dinámicas de la máquina.
-  Permite agregar propiedades personalizadas
-  como: voltaje, potencia, dimensiones, etc.
-  Estructura flexible para diferentes tipos
-  de máquinas.
+  Incluye características dinámicas como
+  un mapa de clave-valor para propiedades
+  personalizadas. Soporta soft delete.
 end note
 
 note right of Location

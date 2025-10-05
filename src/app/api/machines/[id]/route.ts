@@ -20,9 +20,6 @@ export async function GET(
     const machine = await Machine.findOne({
       _id: id,
       companyId: session.user.companyId,
-    }).populate({
-      path: "location",
-      match: { companyId: session.user.companyId },
     });
 
     if (!machine) {
@@ -53,11 +50,6 @@ export async function PUT(
     const body = await request.json();
     const validatedData = machineUpdateSchema.parse(body);
 
-    // Clean empty string values for ObjectId fields
-    if (validatedData.locationId === "") {
-      validatedData.locationId = undefined;
-    }
-
     const { id } = await params;
 
     // Get current machine to check if we need to validate
@@ -69,25 +61,17 @@ export async function PUT(
       return NextResponse.json({ error: "Machine not found" }, { status: 404 });
     }
 
-    // Validate no duplicate model in same location (only if model or locationId are being updated)
-    if (validatedData.model || validatedData.locationId !== undefined) {
-      const modelToCheck = validatedData.model || currentMachine.model;
-      const locationIdToCheck =
-        validatedData.locationId !== undefined
-          ? validatedData.locationId
-          : currentMachine.locationId;
-
+    // Validate no duplicate internal code (only if internalCode is being updated)
+    if (validatedData.internalCode && validatedData.internalCode !== currentMachine.internalCode) {
       const existingMachine = await Machine.findOne({
         _id: { $ne: id },
-        brand: modelToCheck,
-        manufacturer: validatedData.model || currentMachine.modelo,
-        locationId: locationIdToCheck,
+        internalCode: validatedData.internalCode,
         companyId: session.user.companyId,
       });
 
       if (existingMachine) {
         return NextResponse.json(
-          { error: "duplicateModelLocation" },
+          { error: "duplicateInternalCode" },
           { status: 400 }
         );
       }
@@ -99,10 +83,7 @@ export async function PUT(
       { _id: id, companyId: session.user.companyId },
       updateData,
       { new: true, runValidators: true }
-    ).populate({
-      path: "location",
-      match: { companyId: session.user.companyId },
-    });
+    );
 
     if (!machine) {
       return NextResponse.json({ error: "Machine not found" }, { status: 404 });
@@ -136,10 +117,11 @@ export async function DELETE(
 
     await connectDB();
     const { id } = await params;
-    const machine = await Machine.findOneAndDelete({
-      _id: id,
-      companyId: session.user.companyId,
-    });
+    const machine = await Machine.findOneAndUpdate(
+      { _id: id, companyId: session.user.companyId },
+      { deletedAt: new Date() },
+      { new: true }
+    );
 
     if (!machine) {
       return NextResponse.json({ error: "Machine not found" }, { status: 404 });

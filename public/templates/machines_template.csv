@@ -1,4 +1,4 @@
-internalCode,modelInternalCode,locationInternalCode,description,properties
-"","MODEL_X1","PLANT_A","Main production machine","{"serialNumber":"MX1001","installationDate":"2023-01-15"}"
-"","MODEL_Y2","BUILDING_A","Secondary machine","{"serialNumber":"MY2002","installationDate":"2023-02-20"}"
-"","MODEL_Z3","BUILDING_B","Backup machine","{"serialNumber":"MZ3003","installationDate":"2023-03-10"}"
+internalCode,description,brand,model,series,state,characteristics
+"","Main production machine","Brand X","Model X1","Series A","active","{"power":"100kW","weight":"500kg","voltage":"220V"}"
+"","Secondary machine","Brand Y","Model Y2","Series B","active","{"power":"150kW","weight":"750kg","voltage":"380V"}"
+"","Backup machine","Brand Z","Model Z3","Series C","inactive","{"power":"200kW","weight":"1000kg","voltage":"220V"}"

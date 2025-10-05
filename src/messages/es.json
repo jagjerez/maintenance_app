@@ -162,8 +162,11 @@
     "machine": "Máquina",
     "machineName": "Nombre de la Máquina",
     "internalCode": "Código Interno",
-    "marca": "Marca",
-    "modelo": "Modelo",
+    "brand": "Marca",
+    "model": "Modelo",
+    "series": "Serie",
+    "description": "Descripción",
+    "state": "Estado",
     "characteristics": "Características",
     "addCharacteristic": "Agregar Característica",
     "characteristicCode": "Código",
@@ -181,6 +184,7 @@
     "active": "Activa",
     "inactive": "Inactiva",
     "maintenance": "En Mantenimiento",
+    "retired": "Retirada",
     "noMachines": "No hay máquinas",
     "startAddingMachine": "Comienza agregando una nueva máquina al sistema.",
     "selectModel": "Seleccionar Modelo",
@@ -358,7 +362,8 @@
     "characteristicCode": "Código de la característica",
     "characteristicDescription": "Descripción de la característica",
     "characteristicValue": "Valor de la característica",
-    "searchLocation": "Buscar ubicación..."
+    "searchLocation": "Buscar ubicación...",
+    "series": "Serie de la máquina"
   },
   "dynamicProperties": {
     "title": "Propiedades Dinámicas",

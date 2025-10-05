@@ -56,15 +56,12 @@ export const userSchema = z.object({
 // Machine validations
 export const machineSchema = z.object({
   internalCode: z.string().min(1, 'Internal code is required').max(36, 'Internal code too long'),
-  brand: z.string().min(1, 'Marca is required').max(100, 'Marca too long'),
-  model: z.string().min(1, 'Model is required').max(100, 'Model too long'),
-  locationId: z.string().min(1, 'Location is required').nullable(),
-  characteristics: z.array(z.object({
-    code: z.string().min(1, 'Code is required'),
-    description: z.string().min(1, 'Description is required'),
-    type: z.string().min(1, 'Type is required'),
-    value: z.string().min(1, 'Value is required'),
-  })).optional().default([]),
+  description: z.string().min(1, 'Description is required').max(500, 'Description too long'),
+  brand: z.string().min(1, 'Brand is required').max(255, 'Brand too long'),
+  model: z.string().min(1, 'Model is required').max(255, 'Model too long'),
+  series: z.string().min(1, 'Series is required').max(255, 'Series too long'),
+  characteristics: z.record(z.string(), z.any()).optional().default({}),
+  state: z.enum(['active', 'inactive', 'maintenance', 'retired']).default('active'),
 });
 
 export const machineCreateSchema = machineSchema;

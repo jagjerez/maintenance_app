@@ -20,10 +20,10 @@ const templates = {
     ['', 'Loading Dock', 'Transport and loading area', 'truck', 'Plant A']
   ],
   machines: [
-    ['_id', 'name', 'manufacturer', 'brand', 'year', 'locationInternalCode', 'description', 'properties'],
-    ['', 'Production Machine 1', 'Manufacturer A', 'Brand X', 2023, 'PLANT_A', 'Main production machine', '{"serialNumber":"MX1001","installationDate":"2023-01-15"}'],
-    ['', 'Production Machine 2', 'Manufacturer B', 'Brand Y', 2022, 'PLANT_A', 'Secondary machine', '{"serialNumber":"MY2002","installationDate":"2023-02-20"}'],
-    ['', 'Backup Machine', 'Manufacturer C', 'Brand Z', 2024, 'PLANT_A', 'Backup machine', '{"serialNumber":"MZ3003","installationDate":"2023-03-10"}']
+    ['internalCode', 'description', 'brand', 'model', 'series', 'state', 'characteristics'],
+    ['', 'Main production machine', 'Brand X', 'Model X1', 'Series A', 'active', '{"power":"100kW","weight":"500kg","voltage":"220V"}'],
+    ['', 'Secondary machine', 'Brand Y', 'Model Y2', 'Series B', 'active', '{"power":"150kW","weight":"750kg","voltage":"380V"}'],
+    ['', 'Backup machine', 'Brand Z', 'Model Z3', 'Series C', 'inactive', '{"power":"200kW","weight":"1000kg","voltage":"220V"}']
   ],
   operations: [
     ['_id', 'name', 'description', 'type'],
