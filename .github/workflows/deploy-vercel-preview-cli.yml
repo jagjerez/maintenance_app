@@ -33,5 +33,18 @@ jobs:
     - name: Build Project Artifacts
       run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
       
+    - name: List and Clean Previous Preview Deployments
+      run: |
+        echo "Listing current preview deployments..."
+        vercel ls --token=${{ secrets.VERCEL_TOKEN }}
+        
+        echo "Cleaning up old preview deployments (keeping last 5)..."
+        vercel ls --token=${{ secrets.VERCEL_TOKEN }} --json | jq -r '.[5:] | .[].uid' | while read deployment_id; do
+          if [ ! -z "$deployment_id" ]; then
+            echo "Removing preview deployment: $deployment_id"
+            vercel rm $deployment_id --yes --token=${{ secrets.VERCEL_TOKEN }} || echo "Failed to remove $deployment_id"
+          fi
+        done
+        
     - name: Deploy Project Artifacts to Vercel Preview
       run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
