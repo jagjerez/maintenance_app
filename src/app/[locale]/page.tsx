@@ -8,6 +8,7 @@ import { Plus, Wrench, Cog, MapPin } from "lucide-react";
 import toast from "react-hot-toast";
 import { useTranslations } from "@/hooks/useTranslations";
 import LocationTreeView from "@/components/LocationTreeView";
+import SearchInput from "@/components/SearchInput";
 
 interface Stats {
   totalMachines: number;
@@ -25,6 +26,8 @@ export default function Dashboard() {
     totalLocations: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [, setIsSearching] = useState(false);
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -56,6 +59,10 @@ export default function Dashboard() {
       setLoading(false);
     }
   }, [t]);
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+  }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -254,6 +261,18 @@ export default function Dashboard() {
               {t("common.viewAll")}
             </Link>
           </div>
+          
+          {/* Search Input */}
+          <div className="mb-4">
+            <SearchInput
+              placeholder={t("common.search")}
+              value={searchQuery}
+              onSearch={handleSearch}
+              onSearchingChange={setIsSearching}
+              delay={500}
+              className="w-full px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
           <div className="border border-gray-200 dark:border-gray-700 rounded-md p-2 h-auto max-h-64 sm:max-h-80 overflow-y-auto">
             <LocationTreeView
               onMachineClick={(machine) => {
@@ -264,6 +283,7 @@ export default function Dashboard() {
               showMachines={true}
               className="max-h-64 sm:max-h-80 lg:max-h-96"
               refreshTrigger={0}
+              searchQuery={searchQuery}
             />
           </div>
         </div>
