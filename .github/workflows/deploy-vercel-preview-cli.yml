@@ -24,14 +24,14 @@ jobs:
     - name: Run linting
       run: npm run lint
       
+    - name: Build with Next.js
+      run: npm run build
+      
     - name: Install Vercel CLI
       run: npm install --global vercel@latest
       
     - name: Pull Vercel Environment Information
       run: vercel pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
-      
-    - name: Build Project Artifacts
-      run: vercel build --token=${{ secrets.VERCEL_TOKEN }}
       
     - name: List and Clean Previous Preview Deployments
       run: |
@@ -46,5 +46,5 @@ jobs:
           fi
         done
         
-    - name: Deploy Project Artifacts to Vercel Preview
-      run: vercel deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }}
+    - name: Deploy to Vercel Preview
+      run: vercel deploy --token=${{ secrets.VERCEL_TOKEN }}
