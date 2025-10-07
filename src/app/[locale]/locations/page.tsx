@@ -29,9 +29,9 @@ import {
   FormLabel,
   FormInput,
   FormTextarea,
-  FormSelect,
   FormButton,
 } from "@/components/Form";
+import SearchableSelect from "@/components/SearchableSelect";
 import { Pagination } from "@/components/Pagination";
 import DataTable from "@/components/DataTable";
 import { locationSchema } from "@/lib/validations";
@@ -88,7 +88,6 @@ export default function LocationsPage() {
   const { t } = useTranslations();
   const router = useRouter();
   const [locations, setLocations] = useState<Location[]>([]);
-  const [parentLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
@@ -111,6 +110,8 @@ export default function LocationsPage() {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm({
     resolver: zodResolver(locationSchema),
@@ -150,12 +151,46 @@ export default function LocationsPage() {
     [t]
   );
 
+
+  // Fetch options for SearchableSelect
+  const fetchLocationOptions = useCallback(async (search: string, offset: number, limit: number) => {
+    try {
+      const searchParam = search ? `&search=${encodeURIComponent(search)}` : '';
+      const page = Math.floor(offset / limit) + 1;
+      const url = `/api/locations?flat=true&includeChildren=true&page=${page}&limit=${limit}${searchParam}`;
+      
+      const response = await fetch(url);
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        const options = data.locations || data || [];
+        const totalItems = data.totalItems || options.length;
+        const currentPage = data.currentPage || page;
+        const totalPages = data.totalPages || Math.ceil(totalItems / limit);
+        
+        return {
+          options,
+          hasMore: currentPage < totalPages,
+          totalItems
+        };
+      } else {
+        throw new Error('Failed to fetch locations');
+      }
+    } catch (error) {
+      console.error('Error fetching location options:', error);
+      return {
+        options: [],
+        hasMore: false,
+        totalItems: 0
+      };
+    }
+  }, []);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([
-        fetchLocations(currentPage, searchQuery),
-      ]);
+      await fetchLocations(currentPage, searchQuery);
       setLoading(false);
     };
     loadData();
@@ -590,29 +625,67 @@ export default function LocationsPage() {
 
           <FormGroup>
             <FormLabel>{t("locations.icon")}</FormLabel>
-            <FormSelect {...register("icon")} error={errors.icon?.message}>
+            <select 
+              {...register("icon")} 
+              className={`w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.icon?.message 
+                  ? "border-red-300 dark:border-red-600" 
+                  : "border-gray-300 dark:border-gray-600"
+              } bg-white dark:bg-gray-800 text-gray-900 dark:text-white`}
+            >
               {iconOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
-            </FormSelect>
+            </select>
+            {errors.icon?.message && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                {errors.icon.message}
+              </p>
+            )}
           </FormGroup>
 
           <FormGroup>
             <FormLabel>{t("locations.parentLocation")}</FormLabel>
-            <FormSelect
-              {...register("parentId")}
+            <SearchableSelect
+              value={watch("parentId") || null}
+              onChange={(value, option) => {
+                setValue("parentId", value || "");
+              }}
+              fetchOptions={fetchLocationOptions}
+              placeholder={t("locations.selectParentLocation")}
+              searchPlaceholder={t("locations.searchParentLocation")}
+              noResultsText={t("locations.noParentLocationsFound")}
+              loadingText={t("locations.loadingParentLocations")}
+              clearable={true}
+              searchable={true}
               error={errors.parentId?.message}
-            >
-              <option value="">{t("locations.selectParentLocation")}</option>
-              {parentLocations.map((location) => (
-                <option key={location._id} value={location._id}>
-                  {"  ".repeat(location.level)}
-                  {location.name}
-                </option>
-              ))}
-            </FormSelect>
+              displayField="name"
+              displayPath="path"
+              renderOption={(option, isSelected) => (
+                <div className="flex flex-col">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-gray-900 dark:text-white truncate">
+                      {"  ".repeat(Number(option.level) || 0)}{option.name}
+                    </span>
+                    {isSelected && (
+                      <div className="w-2 h-2 bg-blue-600 rounded-full flex-shrink-0 ml-2" />
+                    )}
+                  </div>
+                  {option.path && (
+                    <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {option.path}
+                    </span>
+                  )}
+                  {option.description && (
+                    <span className="text-xs text-gray-400 dark:text-gray-500 truncate mt-1">
+                      {option.description}
+                    </span>
+                  )}
+                </div>
+              )}
+            />
           </FormGroup>
 
           <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 mt-6">

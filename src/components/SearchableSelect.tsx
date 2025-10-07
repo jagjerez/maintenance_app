@@ -101,8 +101,13 @@ export default function SearchableSelect({
           
           const result = await fetchOptions(debouncedSearchQuery, offset, ITEMS_PER_PAGE);
           
-          setOptions(prev => [...prev, ...result.options]);
-          setOffset(prev => prev + result.options.length);
+          setOptions(prev => {
+            // Filter out duplicates based on _id
+            const existingIds = new Set(prev.map(option => option._id));
+            const newOptions = result.options.filter(option => !existingIds.has(option._id));
+            return [...prev, ...newOptions];
+          });
+          setOffset(prev => prev + ITEMS_PER_PAGE);
           setHasMore(result.hasMore);
           setTotalItems(result.totalItems || 0);
         } catch (error) {
@@ -126,7 +131,7 @@ export default function SearchableSelect({
         const result = await fetchOptions(debouncedSearchQuery, 0, ITEMS_PER_PAGE);
         
         setOptions(result.options);
-        setOffset(result.options.length);
+        setOffset(ITEMS_PER_PAGE);
         setHasMore(result.hasMore);
         setTotalItems(result.totalItems || 0);
       } catch (error) {

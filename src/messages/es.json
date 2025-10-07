@@ -282,7 +282,10 @@
     "deleteError": "Error al eliminar la ubicación",
     "deleteSuccess": "Ubicación eliminada correctamente",
     "treeView": "Vista de Árbol",
-    "listView": "Vista de Lista"
+    "listView": "Vista de Lista",
+    "searchParentLocation": "Buscar ubicación padre...",
+    "noParentLocationsFound": "No se encontraron ubicaciones padre",
+    "loadingParentLocations": "Cargando ubicaciones padre..."
   },
   "settings": {
     "title": "Configuración",

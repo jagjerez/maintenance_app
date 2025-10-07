@@ -69,16 +69,39 @@ export async function GET(request: NextRequest) {
 
     // If includeChildren is true, get all locations for tree building
     if (includeChildren) {
-      const allLocations = await Location.find(query)
-        .populate(populateFields)
-        .sort({ name: 1 })
-        .lean();
-
       if (flat) {
-        // Return flat array with level information for dropdown
-        const flatLocations = flattenLocationTree(allLocations as LocationWithChildren[]);
-        return NextResponse.json(flatLocations);
+        // For flat view with pagination support
+        const totalItems = await Location.countDocuments(query);
+        
+        const allLocations = await Location.find(query)
+          .populate(populateFields)
+          .sort({ name: 1 })
+          .skip(skip)
+          .limit(limit)
+          .lean();
+
+        // For paginated results, just return the locations as-is with level information
+        const flatLocations = allLocations.map((location) => ({
+          ...location,
+          level: 0 // For now, just set level to 0 for all locations
+        }));
+        
+        const totalPages = Math.ceil(totalItems / limit);
+
+        return NextResponse.json({
+          locations: flatLocations,
+          totalItems,
+          totalPages,
+          currentPage: page,
+          itemsPerPage: limit
+        });
       } else {
+        // For tree view, get all locations without pagination
+        const allLocations = await Location.find(query)
+          .populate(populateFields)
+          .sort({ name: 1 })
+          .lean();
+
         const tree = buildLocationTree(allLocations as LocationWithChildren[]);
         return NextResponse.json(tree);
       }
@@ -196,6 +219,8 @@ function buildLocationTree(locations: LocationWithChildren[], parentId: string |
 }
 
 // Helper function to flatten location tree with level information
+// Note: This function is currently not used for paginated results
+// but kept for potential future use with tree view
 function flattenLocationTree(locations: LocationWithChildren[], parentId: string | null = null, level: number = 0): FlatLocation[] {
   const children = locations.filter(loc => 
     (parentId === null && !loc.parentId) || 

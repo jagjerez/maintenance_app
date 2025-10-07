@@ -38,15 +38,17 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete all machines
-    const result = await Machine.deleteMany({
+    // Soft delete all machines - marcar como eliminados en lugar de borrar físicamente
+    const result = await Machine.updateMany({
       _id: { $in: ids },
       companyId: session.user.companyId
+    }, {
+      deletedAt: new Date()
     });
 
     return NextResponse.json({
-      message: `${result.deletedCount} machines deleted successfully`,
-      deletedCount: result.deletedCount
+      message: `${result.modifiedCount} machines deleted successfully`,
+      deletedCount: result.modifiedCount
     });
   } catch (error) {
     console.error('Error bulk deleting machines:', error);

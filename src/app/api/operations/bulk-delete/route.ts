@@ -39,15 +39,17 @@ export async function DELETE(request: NextRequest) {
     }
 
 
-    // Delete all operations
-    const result = await Operation.deleteMany({
+    // Soft delete all operations - marcar como eliminados en lugar de borrar físicamente
+    const result = await Operation.updateMany({
       _id: { $in: ids },
       companyId: session.user.companyId
+    }, {
+      deletedAt: new Date()
     });
 
     return NextResponse.json({
-      message: `${result.deletedCount} operations deleted successfully`,
-      deletedCount: result.deletedCount
+      message: `${result.modifiedCount} operations deleted successfully`,
+      deletedCount: result.modifiedCount
     });
   } catch (error) {
     console.error('Error bulk deleting operations:', error);

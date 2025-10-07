@@ -19,6 +19,7 @@ export interface ICompany {
     requireEmailVerification: boolean;
     defaultUserRole: 'admin' | 'user';
   };
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -93,12 +94,30 @@ const CompanySchema = new Schema({
       default: 'user',
     },
   },
+  deletedAt: {
+    type: Date,
+    default: null,
+  },
 }, {
   timestamps: true,
+});
+
+// Soft delete middleware
+CompanySchema.pre('find', function() {
+  this.where({ deletedAt: null });
+});
+
+CompanySchema.pre('findOne', { document: false, query: true }, function() {
+  this.where({ deletedAt: null });
+});
+
+CompanySchema.pre('findOneAndUpdate', function() {
+  this.where({ deletedAt: null });
 });
 
 // Index for better query performance
 CompanySchema.index({ name: 1 });
 CompanySchema.index({ appName: 1 });
+CompanySchema.index({ deletedAt: 1 });
 
 export default mongoose.models.Company || mongoose.model<ICompany>('Company', CompanySchema);

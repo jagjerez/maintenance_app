@@ -169,7 +169,7 @@ export class FileProcessor {
       // Update existing location
       let existingLocation = await Location.findOne({ 
         internalCode: this.safeTrim(internalCode), 
-        companyId: this.companyId 
+        companyId: this.companyId
       });
       
       // Find parent location if parentInternalCode is provided
@@ -177,7 +177,7 @@ export class FileProcessor {
       if (parentInternalCode && this.safeTrim(parentInternalCode)) {
         const parentLocation = await Location.findOne({ 
           internalCode: this.safeTrim(parentInternalCode), 
-          companyId: this.companyId 
+          companyId: this.companyId
         });
         if (parentLocation) {
           parentLocationId = parentLocation._id;
@@ -209,7 +209,7 @@ export class FileProcessor {
       if (parentInternalCode && this.safeTrim(parentInternalCode)) {
         const parentLocation = await Location.findOne({ 
           internalCode: this.safeTrim(parentInternalCode), 
-          companyId: this.companyId 
+          companyId: this.companyId
         });
         if (parentLocation) {
           parentLocationId = parentLocation._id;
@@ -264,7 +264,7 @@ export class FileProcessor {
       // Update existing machine
       let existingMachine = await Machine.findOne({ 
         internalCode: this.safeTrim(internalCode), 
-        companyId: this.companyId 
+        companyId: this.companyId
       });
       
       if (!existingMachine) {
@@ -325,7 +325,7 @@ export class FileProcessor {
       // Update existing operation
       let existingOperation = await Operation.findOne({ 
         internalCode: this.safeTrim(internalCode), 
-        companyId: this.companyId 
+        companyId: this.companyId
       });
       
       if (!existingOperation) {

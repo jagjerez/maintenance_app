@@ -14,6 +14,7 @@ export interface ILocation {
   children?: ILocation[];
   machines?: string[]; // Array of machine IDs in this location
   companyId: string;
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -70,8 +71,25 @@ const LocationSchema = new Schema({
     ref: 'Company',
     required: [true, 'Company is required'],
   },
+  deletedAt: {
+    type: Date,
+    default: null,
+  },
 }, {
   timestamps: true,
+});
+
+// Soft delete middleware
+LocationSchema.pre('find', function() {
+  this.where({ deletedAt: null });
+});
+
+LocationSchema.pre('findOne', { document: false, query: true }, function() {
+  this.where({ deletedAt: null });
+});
+
+LocationSchema.pre('findOneAndUpdate', function() {
+  this.where({ deletedAt: null });
 });
 
 // Indexes for better query performance
@@ -81,6 +99,7 @@ LocationSchema.index({ parentId: 1 });
 LocationSchema.index({ path: 1 });
 LocationSchema.index({ level: 1 });
 LocationSchema.index({ isLeaf: 1 });
+LocationSchema.index({ deletedAt: 1 });
 
 // Virtual for children count
 LocationSchema.virtual('childrenCount', {

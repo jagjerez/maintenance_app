@@ -8,6 +8,7 @@ export interface IOperation {
   description: string;
   type: 'text' | 'date' | 'time' | 'datetime' | 'boolean' | 'number';
   companyId: string;
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -40,6 +41,10 @@ const OperationSchema = new Schema({
     ref: 'Company',
     required: [true, 'Company is required'],
   },
+  deletedAt: {
+    type: Date,
+    default: null,
+  },
 }, {
   timestamps: true,
 });
@@ -53,10 +58,24 @@ OperationSchema.pre('validate', function(next) {
   next();
 });
 
+// Soft delete middleware
+OperationSchema.pre('find', function() {
+  this.where({ deletedAt: null });
+});
+
+OperationSchema.pre('findOne', { document: false, query: true }, function() {
+  this.where({ deletedAt: null });
+});
+
+OperationSchema.pre('findOneAndUpdate', function() {
+  this.where({ deletedAt: null });
+});
+
 // Index for better query performance
 OperationSchema.index({ internalCode: 1 });
 OperationSchema.index({ name: 1 });
 OperationSchema.index({ companyId: 1 });
+OperationSchema.index({ deletedAt: 1 });
 
 // Force recreation of the model to avoid cached schema issues
 if (mongoose.models.Operation) {

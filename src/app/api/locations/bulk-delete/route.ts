@@ -65,15 +65,17 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Delete all locations
-    const result = await Location.deleteMany({
+    // Soft delete all locations - marcar como eliminados en lugar de borrar físicamente
+    const result = await Location.updateMany({
       _id: { $in: ids },
       companyId: session.user.companyId
+    }, {
+      deletedAt: new Date()
     });
 
     return NextResponse.json({
-      message: `${result.deletedCount} locations deleted successfully`,
-      deletedCount: result.deletedCount
+      message: `${result.modifiedCount} locations deleted successfully`,
+      deletedCount: result.modifiedCount
     });
   } catch (error) {
     console.error('Error bulk deleting locations:', error);

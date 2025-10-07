@@ -281,7 +281,10 @@
     "deleteError": "Error deleting location",
     "deleteSuccess": "Location deleted successfully",
     "treeView": "Vue Arbre",
-    "listView": "Vue Liste"
+    "listView": "Vue Liste",
+    "searchParentLocation": "Rechercher une location parent...",
+    "noParentLocationsFound": "Aucune location parent trouvée",
+    "loadingParentLocations": "Chargement des locations parent..."
   },
   "settings": {
     "title": "Settings",

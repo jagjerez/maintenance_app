@@ -118,8 +118,8 @@ export async function DELETE(
     }
 
 
-    // Si no está siendo usada, proceder con la eliminación
-    await Operation.findByIdAndDelete(id);
+    // Soft delete - marcar como eliminado en lugar de borrar físicamente
+    await Operation.findByIdAndUpdate(id, { deletedAt: new Date() });
     
     return NextResponse.json({ message: 'Operation deleted successfully' });
   } catch (error) {

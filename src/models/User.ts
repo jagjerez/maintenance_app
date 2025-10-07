@@ -20,6 +20,7 @@ export interface IUser {
       push: boolean;
     };
   };
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -88,8 +89,25 @@ const UserSchema = new Schema({
       },
     },
   },
+  deletedAt: {
+    type: Date,
+    default: null,
+  },
 }, {
   timestamps: true,
+});
+
+// Soft delete middleware
+UserSchema.pre('find', function() {
+  this.where({ deletedAt: null });
+});
+
+UserSchema.pre('findOne', { document: false, query: true }, function() {
+  this.where({ deletedAt: null });
+});
+
+UserSchema.pre('findOneAndUpdate', function() {
+  this.where({ deletedAt: null });
 });
 
 // Index for better query performance
@@ -97,10 +115,6 @@ UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ companyId: 1 });
 UserSchema.index({ role: 1 });
 UserSchema.index({ isActive: 1 });
-
-// Ensure users can only access data from their company
-UserSchema.pre('find', function() {
-  // This will be handled in the API routes with proper authentication
-});
+UserSchema.index({ deletedAt: 1 });
 
 export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

@@ -86,7 +86,7 @@ MachineSchema.pre('find', function() {
   this.where({ deletedAt: null });
 });
 
-MachineSchema.pre('findOne', function() {
+MachineSchema.pre('findOne', { document: false, query: true }, function() {
   this.where({ deletedAt: null });
 });
 

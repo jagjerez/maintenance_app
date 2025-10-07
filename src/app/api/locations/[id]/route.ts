@@ -183,7 +183,8 @@ export async function DELETE(
       );
     }
 
-    await Location.findByIdAndDelete(id);
+    // Soft delete - marcar como eliminado en lugar de borrar físicamente
+    await Location.findByIdAndUpdate(id, { deletedAt: new Date() });
 
     return NextResponse.json({ message: 'Location deleted successfully' });
   } catch (error) {
