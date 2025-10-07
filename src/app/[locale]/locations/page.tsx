@@ -6,7 +6,20 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "@/hooks/useTranslations";
 import { useDebounce } from "@/hooks/useDebounce";
-import { Plus, MapPin, Folder, Building, Factory, Warehouse, Home, Store, Truck, Wrench, Building2, Landmark } from "lucide-react";
+import {
+  Plus,
+  MapPin,
+  Folder,
+  Building,
+  Factory,
+  Warehouse,
+  Home,
+  Store,
+  Truck,
+  Wrench,
+  Building2,
+  Landmark,
+} from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
 import { ConfirmationModal } from "@/components/ConfirmationModal";
@@ -28,22 +41,22 @@ import LocationTreeView from "@/components/LocationTreeView";
 const ITEMS_PER_PAGE = 10;
 
 const iconOptions = [
-  { value: '', label: 'No Icon', icon: null },
+  { value: "", label: "No Icon", icon: null },
   // Building category
-  { value: 'building', label: 'Building', icon: Building },
-  { value: 'building2', label: 'Building Complex', icon: Building2 },
-  { value: 'home', label: 'House/Home', icon: Home },
+  { value: "building", label: "Building", icon: Building },
+  { value: "building2", label: "Building Complex", icon: Building2 },
+  { value: "home", label: "House/Home", icon: Home },
   // Company category
-  { value: 'factory', label: 'Factory', icon: Factory },
-  { value: 'warehouse', label: 'Warehouse', icon: Warehouse },
-  { value: 'store', label: 'Store/Shop', icon: Store },
-  { value: 'landmark', label: 'Company Landmark', icon: Landmark },
+  { value: "factory", label: "Factory", icon: Factory },
+  { value: "warehouse", label: "Warehouse", icon: Warehouse },
+  { value: "store", label: "Store/Shop", icon: Store },
+  { value: "landmark", label: "Company Landmark", icon: Landmark },
   // Structure category
-  { value: 'wrench', label: 'Workshop/Station', icon: Wrench },
-  { value: 'folder', label: 'Department/Section', icon: Folder },
+  { value: "wrench", label: "Workshop/Station", icon: Wrench },
+  { value: "folder", label: "Department/Section", icon: Folder },
   // Physical Location category
-  { value: 'map-pin', label: 'Physical Location', icon: MapPin },
-  { value: 'truck', label: 'Loading/Transport Area', icon: Truck },
+  { value: "map-pin", label: "Physical Location", icon: MapPin },
+  { value: "truck", label: "Loading/Transport Area", icon: Truck },
 ];
 
 interface Machine {
@@ -105,58 +118,47 @@ export default function LocationsPage() {
   });
 
   // Fetch all locations for list view
-  const fetchLocations = useCallback(async (page = 1, search = "") => {
-    try {
-      setIsSearching(true);
-      const searchParam = search ? `&search=${encodeURIComponent(search)}` : "";
-      const response = await fetch(
-        `/api/locations?page=${page}&limit=${ITEMS_PER_PAGE}${searchParam}`
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setLocations(data.locations || data);
-        setTotalPages(
-          data.totalPages ||
-            Math.ceil((data.locations || data).length / ITEMS_PER_PAGE)
+  const fetchLocations = useCallback(
+    async (page = 1, search = "") => {
+      try {
+        setIsSearching(true);
+        const searchParam = search
+          ? `&search=${encodeURIComponent(search)}`
+          : "";
+        const response = await fetch(
+          `/api/locations?page=${page}&limit=${ITEMS_PER_PAGE}${searchParam}`
         );
-        setTotalItems(data.totalItems || (data.locations || data).length);
-      } else {
+        if (response.ok) {
+          const data = await response.json();
+          setLocations(data.locations || data);
+          setTotalPages(
+            data.totalPages ||
+              Math.ceil((data.locations || data).length / ITEMS_PER_PAGE)
+          );
+          setTotalItems(data.totalItems || (data.locations || data).length);
+        } else {
+          toast.error(t("locations.locationLoadError"));
+        }
+      } catch (error) {
+        console.error("Error fetching locations:", error);
         toast.error(t("locations.locationLoadError"));
+      } finally {
+        setIsSearching(false);
       }
-    } catch (error) {
-      console.error("Error fetching locations:", error);
-      toast.error(t("locations.locationLoadError"));
-    } finally {
-      setIsSearching(false);
-    }
-  }, [t]);
-
-  // Fetch all locations for parent selection (optimized - only get root locations for dropdown)
-  const fetchAllLocations = useCallback(async () => {
-    try {
-      const response = await fetch(
-        "/api/locations?rootOnly=true&limit=100"
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setParentLocations(data.locations || data || []);
-      } else {
-        toast.error(t("locations.locationLoadError"));
-      }
-    } catch (error) {
-      console.error("Error fetching all locations:", error);
-      toast.error(t("locations.locationLoadError"));
-    }
-  }, [t]);
+    },
+    [t]
+  );
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([fetchLocations(currentPage, debouncedSearchQuery), fetchAllLocations()]);
+      await Promise.all([
+        fetchLocations(currentPage, debouncedSearchQuery),
+      ]);
       setLoading(false);
     };
     loadData();
-  }, [currentPage, debouncedSearchQuery, fetchLocations, fetchAllLocations]);
+  }, [currentPage, debouncedSearchQuery, fetchLocations]);
 
   const onSubmit = async (data: {
     name: string;
@@ -185,7 +187,6 @@ export default function LocationsPage() {
             : t("locations.locationCreated")
         );
         await fetchLocations(currentPage, debouncedSearchQuery);
-        await fetchAllLocations();
         setRefreshTrigger((prev) => prev + 1); // Trigger tree refresh
         setShowModal(false);
         setEditingLocation(null);
@@ -227,7 +228,6 @@ export default function LocationsPage() {
       if (response.ok) {
         toast.success(t("locations.locationDeleted"));
         await fetchLocations(currentPage, debouncedSearchQuery);
-        await fetchAllLocations();
         setRefreshTrigger((prev) => prev + 1); // Trigger tree refresh
       } else {
         const error = await response.json();
@@ -257,13 +257,13 @@ export default function LocationsPage() {
 
     try {
       setIsBulkDeleting(true);
-      const response = await fetch('/api/locations/bulk-delete', {
-        method: 'DELETE',
+      const response = await fetch("/api/locations/bulk-delete", {
+        method: "DELETE",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          ids: selectedLocations.map(location => location._id)
+          ids: selectedLocations.map((location) => location._id),
         }),
       });
 
@@ -271,15 +271,16 @@ export default function LocationsPage() {
         const result = await response.json();
         toast.success(result.message);
         await fetchLocations(currentPage, debouncedSearchQuery);
-        await fetchAllLocations();
         setRefreshTrigger((prev) => prev + 1);
         setSelectedLocations([]);
         setShowBulkDeleteModal(false);
       } else {
         const error = await response.json();
-        if (error.error === 'Cannot delete locations that have children') {
+        if (error.error === "Cannot delete locations that have children") {
           toast.error(t("locations.cannotDeleteWithChildren"));
-        } else if (error.error === 'Cannot delete locations that have machines') {
+        } else if (
+          error.error === "Cannot delete locations that have machines"
+        ) {
           toast.error(t("locations.cannotDeleteWithMachines"));
         } else {
           toast.error(error.error || t("locations.locationError"));
@@ -294,7 +295,7 @@ export default function LocationsPage() {
   };
 
   const getIconComponent = (iconName?: string) => {
-    const option = iconOptions.find(opt => opt.value === iconName);
+    const option = iconOptions.find((opt) => opt.value === iconName);
     if (!option || !option.icon) return null;
     const IconComponent = option.icon;
     return <IconComponent className="w-4 h-4" />;
@@ -384,7 +385,10 @@ export default function LocationsPage() {
               {/* Mobile view skeleton */}
               <div className="block space-y-3">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3 sm:p-4">
+                  <div
+                    key={i}
+                    className="bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-3 sm:p-4"
+                  >
                     <div className="space-y-2">
                       <div className="flex items-start justify-between">
                         <div className="h-4 bg-gray-200 dark:bg-gray-600 rounded w-3/4"></div>
@@ -422,9 +426,7 @@ export default function LocationsPage() {
 
       {/* Header with Add Button and View Toggle */}
       <div className="mb-6 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div className="flex items-center space-x-2">
-          
-        </div>
+        <div className="flex items-center space-x-2"></div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
           {/* View Mode Toggle */}
           <div className="flex rounded-md shadow-sm">
@@ -469,7 +471,7 @@ export default function LocationsPage() {
             {totalItems !== 1 ? "s" : ""}
           </span>
         </div>
-        
+
         {/* Search Input - Show in both views */}
         <div className="flex items-center space-x-2">
           <div className="relative">
@@ -484,8 +486,18 @@ export default function LocationsPage() {
               className="w-full sm:w-64 px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
             />
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              <svg
+                className="h-4 w-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
               </svg>
             </div>
           </div>
@@ -504,7 +516,9 @@ export default function LocationsPage() {
             <LocationTreeView
               onLocationEdit={(location) => handleLocationEdit(location)}
               onLocationDelete={(location) => handleLocationDelete(location)}
-              onLocationAdd={(parentLocation) => handleLocationAdd(parentLocation)}
+              onLocationAdd={(parentLocation) =>
+                handleLocationAdd(parentLocation)
+              }
               onMachineClick={(machine) => handleMachineClick(machine)}
               showActions={true}
               showMachines={true}
@@ -583,10 +597,7 @@ export default function LocationsPage() {
 
           <FormGroup>
             <FormLabel>{t("locations.icon")}</FormLabel>
-            <FormSelect
-              {...register("icon")}
-              error={errors.icon?.message}
-            >
+            <FormSelect {...register("icon")} error={errors.icon?.message}>
               {iconOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -624,7 +635,11 @@ export default function LocationsPage() {
             >
               {t("common.cancel")}
             </FormButton>
-            <FormButton type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+            <FormButton
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full sm:w-auto"
+            >
               {isSubmitting
                 ? t("common.saving")
                 : editingLocation
