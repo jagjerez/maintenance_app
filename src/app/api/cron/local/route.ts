@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import LocalCron from '@/lib/localCron';
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   try {
     const localCron = LocalCron.getInstance();
     

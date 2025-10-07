@@ -3,7 +3,23 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
 import { Location, Machine } from '@/models';
+import { IMachine } from '@/models/Machine';
 import mongoose from 'mongoose';
+
+interface LocationNode {
+  _id: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  path: string;
+  level: number;
+  isLeaf: boolean;
+  parentId?: string;
+  machines: IMachine[];
+  children: LocationNode[];
+  childrenCount?: number;
+  hasChildren?: boolean;
+}
 
 // GET /api/locations/search-tree - Search locations with full hierarchy
 export async function GET(request: NextRequest) {
@@ -151,11 +167,11 @@ export async function GET(request: NextRequest) {
     });
 
     // Build the complete tree structure recursively
-    const rootLocations: any[] = [];
+    const rootLocations: LocationNode[] = [];
     const processedIds = new Set<string>();
 
     // Function to recursively build tree from a location
-    const buildTreeFromLocation = (location: any): any => {
+    const buildTreeFromLocation = (location: LocationNode): LocationNode | null => {
       if (!location || processedIds.has(location._id.toString())) {
         return null;
       }
@@ -171,7 +187,7 @@ export async function GET(request: NextRequest) {
       const builtChildren = children.map(child => {
         const childLocation = locationMap.get(child._id.toString());
         return buildTreeFromLocation(childLocation);
-      }).filter(Boolean);
+      }).filter((child): child is LocationNode => child !== null);
 
       // Update location with children
       return {

@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "@/hooks/useTranslations";
-import { useDebounce } from "@/hooks/useDebounce";
 import { Plus, Wrench } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
@@ -176,7 +175,7 @@ export default function OperationsPage() {
         await fetchOperations(currentPage, searchQuery);
         toast.success(t("operations.operationDeleted"));
       } else {
-        const _errorData = await response.json();
+        await response.json();
 
         toast.error(t("operations.operationError"));
       }
