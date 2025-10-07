@@ -264,6 +264,8 @@
     "selectParentLocation": "Seleccionar Ubicación Padre",
     "noLocations": "No hay ubicaciones",
     "noLocationsFound": "No se encontraron ubicaciones",
+    "noSearchResults": "No se encontraron resultados de búsqueda",
+    "tryDifferentSearch": "Intenta con un término de búsqueda diferente o verifica la ortografía.",
     "startAddingLocation": "Comienza agregando una nueva ubicación al sistema.",
     "newLocation": "Nueva Ubicación",
     "addChild": "Agregar Ubicación Hija",

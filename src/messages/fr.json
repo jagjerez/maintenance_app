@@ -263,6 +263,8 @@
     "selectParentLocation": "Select Parent Location",
     "noLocations": "No locations",
     "noLocationsFound": "Aucun emplacement trouvé",
+    "noSearchResults": "Aucun résultat de recherche trouvé",
+    "tryDifferentSearch": "Essayez un terme de recherche différent ou vérifiez l'orthographe.",
     "startAddingLocation": "Start adding a new location to the system.",
     "newLocation": "New Location",
     "addChild": "Add Child Location",

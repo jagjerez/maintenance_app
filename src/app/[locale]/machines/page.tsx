@@ -19,6 +19,7 @@ import {
 } from "@/components/Form";
 import { Pagination } from "@/components/Pagination";
 import DataTable from "@/components/DataTable";
+import SearchInput from "@/components/SearchInput";
 
 // Schema according to PlantUML structure
 import { formatDateSafe } from "@/lib/utils";
@@ -64,7 +65,6 @@ export default function MachinesPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [characteristics, setCharacteristics] = useState<Record<string, string>>({});
   const [editingKeys, setEditingKeys] = useState<Record<string, string>>({});
-  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
   // Form setup
   const {
@@ -122,7 +122,7 @@ export default function MachinesPage() {
     const loadData = async () => {
       setLoading(true);
       try {
-        await fetchMachines(currentPage, debouncedSearchQuery);
+        await fetchMachines(currentPage, searchQuery);
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -130,7 +130,7 @@ export default function MachinesPage() {
       }
     };
     loadData();
-  }, [currentPage, debouncedSearchQuery, fetchMachines]);
+  }, [currentPage, searchQuery, fetchMachines]);
 
 
   // Form submission
@@ -156,7 +156,7 @@ export default function MachinesPage() {
       });
 
       if (response.ok) {
-        await fetchMachines(currentPage, debouncedSearchQuery);
+        await fetchMachines(currentPage, searchQuery);
         setShowModal(false);
         setEditingMachine(null);
         reset();
@@ -209,7 +209,7 @@ export default function MachinesPage() {
       });
 
       if (response.ok) {
-        await fetchMachines(currentPage, debouncedSearchQuery);
+        await fetchMachines(currentPage, searchQuery);
         toast.success(t("machines.machineDeleted"));
       } else {
         const errorData = await response.json();
@@ -243,7 +243,7 @@ export default function MachinesPage() {
       if (response.ok) {
         const result = await response.json();
         toast.success(result.message || t("machines.machineDeleted"));
-        await fetchMachines(currentPage, debouncedSearchQuery);
+        await fetchMachines(currentPage, searchQuery);
         setSelectedMachines([]);
         setShowBulkDeleteModal(false);
       } else {
@@ -425,20 +425,17 @@ export default function MachinesPage() {
         
         {/* Search Input */}
         <div className="flex items-center space-x-2">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder={t("common.search")}
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="w-full sm:w-64 px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-          </div>
+          <SearchInput
+            placeholder={t("common.search")}
+            value={searchQuery}
+            onSearch={(query) => {
+              setSearchQuery(query);
+              setCurrentPage(1);
+            }}
+            onSearchingChange={setIsSearching}
+            delay={500}
+            className="w-full sm:w-64 px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          />
           {isSearching && (
             <div className="flex items-center">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>

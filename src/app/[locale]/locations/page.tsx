@@ -5,7 +5,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "@/hooks/useTranslations";
-import { useDebounce } from "@/hooks/useDebounce";
 import {
   Plus,
   MapPin,
@@ -37,6 +36,7 @@ import { Pagination } from "@/components/Pagination";
 import DataTable from "@/components/DataTable";
 import { locationSchema } from "@/lib/validations";
 import LocationTreeView from "@/components/LocationTreeView";
+import SearchInput from "@/components/SearchInput";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -88,7 +88,7 @@ export default function LocationsPage() {
   const { t } = useTranslations();
   const router = useRouter();
   const [locations, setLocations] = useState<Location[]>([]);
-  const [parentLocations, setParentLocations] = useState<Location[]>([]);
+  const [parentLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
@@ -106,7 +106,6 @@ export default function LocationsPage() {
   const [isBulkDeleting, setIsBulkDeleting] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const debouncedSearchQuery = useDebounce(searchQuery, 500); // 500ms delay
 
   const {
     register,
@@ -121,7 +120,6 @@ export default function LocationsPage() {
   const fetchLocations = useCallback(
     async (page = 1, search = "") => {
       try {
-        setIsSearching(true);
         const searchParam = search
           ? `&search=${encodeURIComponent(search)}`
           : "";
@@ -142,8 +140,6 @@ export default function LocationsPage() {
       } catch (error) {
         console.error("Error fetching locations:", error);
         toast.error(t("locations.locationLoadError"));
-      } finally {
-        setIsSearching(false);
       }
     },
     [t]
@@ -153,12 +149,12 @@ export default function LocationsPage() {
     const loadData = async () => {
       setLoading(true);
       await Promise.all([
-        fetchLocations(currentPage, debouncedSearchQuery),
+        fetchLocations(currentPage, searchQuery),
       ]);
       setLoading(false);
     };
     loadData();
-  }, [currentPage, debouncedSearchQuery, fetchLocations]);
+  }, [currentPage, searchQuery, fetchLocations]);
 
   const onSubmit = async (data: {
     name: string;
@@ -186,7 +182,7 @@ export default function LocationsPage() {
             ? t("locations.locationUpdated")
             : t("locations.locationCreated")
         );
-        await fetchLocations(currentPage, debouncedSearchQuery);
+        await fetchLocations(currentPage, searchQuery);
         setRefreshTrigger((prev) => prev + 1); // Trigger tree refresh
         setShowModal(false);
         setEditingLocation(null);
@@ -227,7 +223,7 @@ export default function LocationsPage() {
 
       if (response.ok) {
         toast.success(t("locations.locationDeleted"));
-        await fetchLocations(currentPage, debouncedSearchQuery);
+        await fetchLocations(currentPage, searchQuery);
         setRefreshTrigger((prev) => prev + 1); // Trigger tree refresh
       } else {
         const error = await response.json();
@@ -270,7 +266,7 @@ export default function LocationsPage() {
       if (response.ok) {
         const result = await response.json();
         toast.success(result.message);
-        await fetchLocations(currentPage, debouncedSearchQuery);
+        await fetchLocations(currentPage, searchQuery);
         setRefreshTrigger((prev) => prev + 1);
         setSelectedLocations([]);
         setShowBulkDeleteModal(false);
@@ -474,33 +470,17 @@ export default function LocationsPage() {
 
         {/* Search Input - Show in both views */}
         <div className="flex items-center space-x-2">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder={t("common.search")}
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1); // Reset to first page when searching
-              }}
-              className="w-full sm:w-64 px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg
-                className="h-4 w-4 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
-          </div>
+          <SearchInput
+            placeholder={t("common.search")}
+            value={searchQuery}
+            onSearch={(query) => {
+              setSearchQuery(query);
+              setCurrentPage(1); // Reset to first page when searching
+            }}
+            onSearchingChange={setIsSearching}
+            delay={500}
+            className="w-full sm:w-64 px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+          />
           {isSearching && (
             <div className="flex items-center">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
@@ -523,7 +503,7 @@ export default function LocationsPage() {
               showActions={true}
               showMachines={true}
               refreshTrigger={refreshTrigger}
-              searchQuery={debouncedSearchQuery}
+              searchQuery={searchQuery}
               className=""
             />
           </div>

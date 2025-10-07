@@ -193,9 +193,13 @@ export default function LocationTreeView({
     try {
       setIsLoadingMore(true);
       console.log(`Loading more root locations, offset: ${rootOffset}`);
-      const response = await fetch(
-        `/api/locations/tree?limit=50&offset=${rootOffset}`
-      );
+      
+      // Use search API if there's a search query, otherwise use regular tree API
+      const apiUrl = searchQuery 
+        ? `/api/locations/search-tree?search=${encodeURIComponent(searchQuery)}&limit=50&offset=${rootOffset}`
+        : `/api/locations/tree?limit=50&offset=${rootOffset}`;
+        
+      const response = await fetch(apiUrl);
       if (response.ok) {
         const data = await response.json();
         const newLocations = data.locations || data;
@@ -208,6 +212,26 @@ export default function LocationTreeView({
           setTree((prevTree) => [...prevTree, ...newLocations]);
           setRootOffset((prev) => prev + newLocations.length);
           setHasMoreRoot(data.hasMore || false);
+          
+          // If there's a search query, auto-expand new nodes
+          if (searchQuery && newLocations.length > 0) {
+            setExpandedNodes((prevExpanded) => {
+              const newExpanded = new Set(prevExpanded);
+              
+              // Function to collect all node IDs that should be expanded
+              const collectExpandableNodes = (nodes: LocationNode[]) => {
+                nodes.forEach(node => {
+                  if (node.children && node.children.length > 0) {
+                    newExpanded.add(node._id);
+                    collectExpandableNodes(node.children);
+                  }
+                });
+              };
+              
+              collectExpandableNodes(newLocations);
+              return newExpanded;
+            });
+          }
         } else {
           setHasMoreRoot(false);
         }
@@ -222,7 +246,7 @@ export default function LocationTreeView({
     } finally {
       setIsLoadingMore(false);
     }
-  }, [rootOffset, isLoadingMore, hasMoreRoot]);
+  }, [rootOffset, isLoadingMore, hasMoreRoot, searchQuery]);
 
   // Load location tree with pagination
   useEffect(() => {
@@ -231,13 +255,39 @@ export default function LocationTreeView({
         setLoading(true);
         setRootOffset(0);
         setHasMoreRoot(true);
-        const response = await fetch("/api/locations/tree?limit=50&offset=0");
+        
+        // Use search API if there's a search query, otherwise use regular tree API
+        const apiUrl = searchQuery 
+          ? `/api/locations/search-tree?search=${encodeURIComponent(searchQuery)}&limit=50&offset=0`
+          : "/api/locations/tree?limit=50&offset=0";
+          
+        const response = await fetch(apiUrl);
         if (response.ok) {
           const data = await response.json();
           setTree(data.locations || data);
           setRootOffset(data.locations?.length || 0);
           setHasMoreRoot(data.hasMore || false);
-          // Don't auto-expand - let user control expansion
+          
+          // If there's a search query, auto-expand all nodes to show the complete hierarchy
+          if (searchQuery && data.locations) {
+            const nodesToExpand = new Set<string>();
+            
+            // Function to collect all node IDs that should be expanded
+            const collectExpandableNodes = (nodes: LocationNode[]) => {
+              nodes.forEach(node => {
+                // Expand all nodes that have children to show the complete hierarchy
+                if (node.children && node.children.length > 0) {
+                  nodesToExpand.add(node._id);
+                  collectExpandableNodes(node.children);
+                }
+              });
+            };
+            
+            collectExpandableNodes(data.locations);
+            setExpandedNodes(nodesToExpand);
+          }
+        } else {
+          console.error("Error loading location tree:", response.status);
         }
       } catch (error) {
         console.error("Error loading location tree:", error);
@@ -247,7 +297,7 @@ export default function LocationTreeView({
     };
 
     loadTree();
-  }, [refreshTrigger]); // Add refreshTrigger as dependency
+  }, [refreshTrigger, searchQuery]); // Add searchQuery as dependency
 
   // Infinite scroll effect
   useEffect(() => {
@@ -504,6 +554,11 @@ export default function LocationTreeView({
     nodes: LocationNode[],
     query: string
   ): LocationNode[] => {
+    // If there's a search query, don't filter on frontend since API already returns relevant nodes
+    if (query) {
+      return nodes;
+    }
+    
     return nodes
       .map((node) => ({
         ...node,
@@ -526,6 +581,8 @@ export default function LocationTreeView({
 
     // Can expand if has children (loaded or available) or has machines
     const canExpand = hasChildren || hasMachines || node.hasChildren;
+    
+    // Note: Removed search match highlighting as requested
 
     return (
       <div key={node._id} className="select-none">
@@ -769,10 +826,13 @@ export default function LocationTreeView({
           <div className="text-center py-8">
             <MapPin className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
             <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-              {t("locations.noLocations")}
+              {searchQuery ? t("locations.noSearchResults") : t("locations.noLocations")}
             </h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {t("locations.startAddingLocation")}
+              {searchQuery 
+                ? t("locations.tryDifferentSearch") 
+                : t("locations.startAddingLocation")
+              }
             </p>
           </div>
         ) : (

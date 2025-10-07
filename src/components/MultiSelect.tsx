@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { X, ChevronDown, Check } from "lucide-react";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface Option {
   value: string;
@@ -32,14 +33,15 @@ export default function MultiSelect({
 }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearchTerm = useDebounce(searchTerm, 300); // 300ms delay for better UX
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Filter options based on search term
+  // Filter options based on debounced search term
   const filteredOptions = options.filter(
     (option) =>
-      option.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      option.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      option.label.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
+      option.description?.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
   );
 
   // Get selected options for display
