@@ -75,7 +75,6 @@ export default function MachinesPage() {
   } = useForm({
     resolver: zodResolver(machineSchema),
     defaultValues: {
-      internalCode: "",
       description: "",
       brand: "",
       model: "",
@@ -136,7 +135,6 @@ export default function MachinesPage() {
 
   // Form submission
   const onSubmit = async (data: {
-    internalCode: string;
     description: string;
     brand: string;
     model: string;
@@ -180,7 +178,6 @@ export default function MachinesPage() {
   const handleEdit = (machine: Machine) => {
     setEditingMachine(machine);
     reset({
-      internalCode: machine.internalCode,
       description: machine.description,
       brand: machine.brand,
       model: machine.model,
@@ -295,10 +292,6 @@ export default function MachinesPage() {
   // Table configuration
   const columns = [
     {
-      key: "internalCode" as keyof Machine,
-      label: t("machines.internalCode"),
-    },
-    {
       key: "description" as keyof Machine,
       label: t("machines.description"),
     },
@@ -395,7 +388,6 @@ export default function MachinesPage() {
             onClick={() => {
               setEditingMachine(null);
               reset({
-                internalCode: "",
                 description: "",
                 brand: "",
                 model: "",
@@ -501,15 +493,6 @@ export default function MachinesPage() {
                 </h3>
                 
                 <div className="space-y-4">
-                  <FormGroup>
-                    <FormLabel required>{t("machines.internalCode")}</FormLabel>
-                    <FormInput
-                      {...register("internalCode")}
-                      error={errors.internalCode?.message}
-                      placeholder={t("placeholders.internalCode")}
-                      className="text-base" // Larger text for mobile
-                    />
-                  </FormGroup>
 
                   <FormGroup>
                     <FormLabel required>{t("machines.description")}</FormLabel>
