@@ -104,11 +104,11 @@ export default function OperationsPage() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await fetchOperations(currentPage, "");
+      await fetchOperations(currentPage, searchQuery);
       setLoading(false);
     };
     loadData();
-  }, [currentPage, fetchOperations]);
+  }, [currentPage, fetchOperations, searchQuery]);
 
   const onSubmit = async (data: {
     name: string;
@@ -193,10 +193,15 @@ export default function OperationsPage() {
   };
 
   const handleSearch = useCallback((query: string, signal?: AbortSignal) => {
+    const previousQuery = searchQuery;
     setSearchQuery(query);
-    setCurrentPage(1);
-    fetchOperations(1, query, signal);
-  }, [fetchOperations]);
+    
+    // Only reset to page 1 if the search query actually changed
+    if (query !== previousQuery) {
+      setCurrentPage(1);
+      fetchOperations(1, query, signal);
+    }
+  }, [fetchOperations, searchQuery]);
 
   const handleBulkDelete = async () => {
     if (selectedOperations.length === 0) return;

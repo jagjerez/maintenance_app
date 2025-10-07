@@ -122,7 +122,7 @@ export default function MachinesPage() {
     const loadData = async () => {
       setLoading(true);
       try {
-        await fetchMachines(currentPage, "");
+        await fetchMachines(currentPage, searchQuery);
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -130,7 +130,7 @@ export default function MachinesPage() {
       }
     };
     loadData();
-  }, [currentPage, fetchMachines]);
+  }, [currentPage, fetchMachines, searchQuery]);
 
 
   // Form submission
@@ -262,10 +262,15 @@ export default function MachinesPage() {
   };
 
   const handleSearch = useCallback((query: string, signal?: AbortSignal) => {
+    const previousQuery = searchQuery;
     setSearchQuery(query);
-    setCurrentPage(1);
-    fetchMachines(1, query, signal);
-  }, [fetchMachines]);
+    
+    // Only reset to page 1 if the search query actually changed
+    if (query !== previousQuery) {
+      setCurrentPage(1);
+      fetchMachines(1, query, signal);
+    }
+  }, [fetchMachines, searchQuery]);
 
 
   // Characteristics handlers

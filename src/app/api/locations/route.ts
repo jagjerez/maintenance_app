@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
 import { Location } from '@/models';
 import { locationCreateSchema } from '@/lib/validations';
+import crypto from 'crypto';
 
 interface LocationWithChildren {
   _id: string;
@@ -128,6 +129,7 @@ export async function POST(request: NextRequest) {
     const validatedData = locationCreateSchema.parse(body);
     const dataWithCompany = {
       ...validatedData,
+      internalCode: crypto.randomUUID(),
       companyId: session.user.companyId,
     };
     
@@ -151,8 +153,7 @@ export async function POST(request: NextRequest) {
     const existingLocation = await Location.findOne({
       name: dataWithCompany.name,
       parentId: dataWithCompany.parentId || { $exists: false },
-      companyId: session.user.companyId,
-      internalCode: crypto.randomUUID()
+      companyId: session.user.companyId
     });
 
     if (existingLocation) {

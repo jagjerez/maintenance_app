@@ -154,12 +154,12 @@ export default function LocationsPage() {
     const loadData = async () => {
       setLoading(true);
       await Promise.all([
-        fetchLocations(currentPage, ""),
+        fetchLocations(currentPage, searchQuery),
       ]);
       setLoading(false);
     };
     loadData();
-  }, [currentPage, fetchLocations]);
+  }, [currentPage, fetchLocations, searchQuery]);
 
   const onSubmit = async (data: {
     name: string;
@@ -353,10 +353,15 @@ export default function LocationsPage() {
   };
 
   const handleSearch = useCallback((query: string, signal?: AbortSignal) => {
+    const previousQuery = searchQuery;
     setSearchQuery(query);
-    setCurrentPage(1); // Reset to first page when searching
-    fetchLocations(1, query, signal);
-  }, [fetchLocations]);
+    
+    // Only reset to page 1 if the search query actually changed
+    if (query !== previousQuery) {
+      setCurrentPage(1);
+      fetchLocations(1, query, signal);
+    }
+  }, [fetchLocations, searchQuery]);
 
   // Clear search when switching view modes
   const handleViewModeChange = (mode: "list" | "tree") => {
