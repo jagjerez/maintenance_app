@@ -88,12 +88,12 @@ export default function MachinesPage() {
 
   // Data fetching functions
   const fetchMachines = useCallback(
-    async (page = 1, search = "") => {
+    async (page = 1, search = "", signal?: AbortSignal) => {
       try {
-        setIsSearching(true);
         const searchParam = search ? `&search=${encodeURIComponent(search)}` : "";
         const response = await fetch(
-          `/api/machines?page=${page}&limit=${ITEMS_PER_PAGE}${searchParam}`
+          `/api/machines?page=${page}&limit=${ITEMS_PER_PAGE}${searchParam}`,
+          { signal }
         );
         if (response.ok) {
           const data = await response.json();
@@ -107,10 +107,12 @@ export default function MachinesPage() {
           toast.error(t("machines.machineLoadError"));
         }
       } catch (error) {
+        // Don't show error if request was aborted
+        if (error instanceof Error && error.name === 'AbortError') {
+          return;
+        }
         console.error("Error fetching machines:", error);
         toast.error(t("machines.machineLoadError"));
-      } finally {
-        setIsSearching(false);
       }
     },
     [t]
@@ -122,7 +124,7 @@ export default function MachinesPage() {
     const loadData = async () => {
       setLoading(true);
       try {
-        await fetchMachines(currentPage, searchQuery);
+        await fetchMachines(currentPage, "");
       } catch (error) {
         console.error("Error loading data:", error);
       } finally {
@@ -130,7 +132,7 @@ export default function MachinesPage() {
       }
     };
     loadData();
-  }, [currentPage, searchQuery, fetchMachines]);
+  }, [currentPage, fetchMachines]);
 
 
   // Form submission
@@ -263,11 +265,12 @@ export default function MachinesPage() {
     setCurrentPage(page);
   };
 
-  // Search handler
-  const handleSearch = (query: string) => {
+  const handleSearch = useCallback((query: string, signal?: AbortSignal) => {
     setSearchQuery(query);
     setCurrentPage(1);
-  };
+    fetchMachines(1, query, signal);
+  }, [fetchMachines]);
+
 
   // Characteristics handlers
   const addCharacteristic = () => {
@@ -428,10 +431,7 @@ export default function MachinesPage() {
           <SearchInput
             placeholder={t("common.search")}
             value={searchQuery}
-            onSearch={(query) => {
-              setSearchQuery(query);
-              setCurrentPage(1);
-            }}
+            onSearch={handleSearch}
             onSearchingChange={setIsSearching}
             delay={500}
             className="w-full sm:w-64 px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"

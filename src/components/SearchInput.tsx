@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 
 interface SearchInputProps {
   placeholder: string;
-  onSearch: (query: string) => void;
+  onSearch: (query: string, signal?: AbortSignal) => void;
   onSearchingChange?: (isSearching: boolean) => void;
   delay?: number;
   className?: string;
@@ -22,6 +22,7 @@ export default function SearchInput({
 }: SearchInputProps) {
   const [searchQuery, setSearchQuery] = useState(value);
   const debouncedSearchQuery = useDebounce(searchQuery, delay);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Sync with external value changes
   useEffect(() => {
@@ -30,7 +31,24 @@ export default function SearchInput({
 
   // Update parent when debounced value changes
   useEffect(() => {
-    onSearch(debouncedSearchQuery);
+    // Cancel previous request if it exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    // Call onSearch with abort signal
+    onSearch(debouncedSearchQuery, abortController.signal);
+
+    // Cleanup function
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [debouncedSearchQuery, onSearch]);
 
   // Handle searching state

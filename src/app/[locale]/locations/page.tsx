@@ -118,13 +118,14 @@ export default function LocationsPage() {
 
   // Fetch all locations for list view
   const fetchLocations = useCallback(
-    async (page = 1, search = "") => {
+    async (page = 1, search = "", signal?: AbortSignal) => {
       try {
         const searchParam = search
           ? `&search=${encodeURIComponent(search)}`
           : "";
         const response = await fetch(
-          `/api/locations?page=${page}&limit=${ITEMS_PER_PAGE}${searchParam}`
+          `/api/locations?page=${page}&limit=${ITEMS_PER_PAGE}${searchParam}`,
+          { signal }
         );
         if (response.ok) {
           const data = await response.json();
@@ -138,6 +139,10 @@ export default function LocationsPage() {
           toast.error(t("locations.locationLoadError"));
         }
       } catch (error) {
+        // Don't show error if request was aborted
+        if (error instanceof Error && error.name === 'AbortError') {
+          return;
+        }
         console.error("Error fetching locations:", error);
         toast.error(t("locations.locationLoadError"));
       }
@@ -149,12 +154,12 @@ export default function LocationsPage() {
     const loadData = async () => {
       setLoading(true);
       await Promise.all([
-        fetchLocations(currentPage, searchQuery),
+        fetchLocations(currentPage, ""),
       ]);
       setLoading(false);
     };
     loadData();
-  }, [currentPage, searchQuery, fetchLocations]);
+  }, [currentPage, fetchLocations]);
 
   const onSubmit = async (data: {
     name: string;
@@ -347,6 +352,12 @@ export default function LocationsPage() {
     router.push(`/machines?edit=${machine._id}`);
   };
 
+  const handleSearch = useCallback((query: string, signal?: AbortSignal) => {
+    setSearchQuery(query);
+    setCurrentPage(1); // Reset to first page when searching
+    fetchLocations(1, query, signal);
+  }, [fetchLocations]);
+
   // Clear search when switching view modes
   const handleViewModeChange = (mode: "list" | "tree") => {
     setViewMode(mode);
@@ -473,10 +484,7 @@ export default function LocationsPage() {
           <SearchInput
             placeholder={t("common.search")}
             value={searchQuery}
-            onSearch={(query) => {
-              setSearchQuery(query);
-              setCurrentPage(1); // Reset to first page when searching
-            }}
+            onSearch={handleSearch}
             onSearchingChange={setIsSearching}
             delay={500}
             className="w-full sm:w-64 px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"

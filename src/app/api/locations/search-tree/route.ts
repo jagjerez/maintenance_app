@@ -59,7 +59,6 @@ export async function GET(request: NextRequest) {
     const getAllParentIds = async (locationIds: string[]) => {
       if (locationIds.length === 0) return;
       
-      console.log('Getting parents for IDs:', locationIds);
       
       // Convert string IDs back to ObjectIds for the query
       const objectIds = locationIds.map(id => new mongoose.Types.ObjectId(id));
@@ -69,19 +68,16 @@ export async function GET(request: NextRequest) {
         companyId: session.user.companyId
       }).select('parentId').lean();
 
-      console.log('Found parents:', parents.map(p => ({ id: p._id, parentId: p.parentId })));
 
       const newParentIds: string[] = [];
       for (const parent of parents) {
         if (parent.parentId && !allParentIds.has(parent.parentId.toString())) {
           allParentIds.add(parent.parentId.toString());
           newParentIds.push(parent.parentId.toString());
-          console.log('Added parent ID:', parent.parentId.toString());
         }
       }
 
       if (newParentIds.length > 0) {
-        console.log('Recursively getting parents for:', newParentIds);
         await getAllParentIds(newParentIds);
       }
     };
@@ -92,7 +88,6 @@ export async function GET(request: NextRequest) {
       .filter((id): id is string => id !== null && id !== undefined)
       .map(id => id.toString());
 
-    console.log('Initial parent IDs from matching locations:', initialParentIds);
 
     if (initialParentIds.length > 0) {
       await getAllParentIds(initialParentIds);
@@ -104,9 +99,6 @@ export async function GET(request: NextRequest) {
       ...Array.from(allParentIds)
     ];
 
-    console.log('Matching location IDs:', Array.from(matchingLocationIds));
-    console.log('Parent IDs found:', Array.from(allParentIds));
-    console.log('All relevant IDs:', allRelevantIds);
 
     // Also include the direct parent of the matching location if it's not already included
     const directParentIds = matchingLocations
@@ -117,7 +109,6 @@ export async function GET(request: NextRequest) {
     directParentIds.forEach(parentId => {
       if (!allRelevantIds.includes(parentId)) {
         allRelevantIds.push(parentId);
-        console.log('Added direct parent ID:', parentId);
       }
     });
 
@@ -129,11 +120,6 @@ export async function GET(request: NextRequest) {
       companyId: session.user.companyId
     }).sort({ name: 1 }).lean();
 
-    console.log('All relevant locations found:', allRelevantLocations.map(loc => ({ 
-      id: loc._id, 
-      name: loc.name, 
-      parentId: loc.parentId 
-    })));
 
     // Get machines for all relevant locations
     const machines = await Machine.find({ 
@@ -210,8 +196,6 @@ export async function GET(request: NextRequest) {
       return !allRelevantIds.includes(parentIdStr);
     });
 
-    console.log('Root level locations:', rootLevelLocations.map(loc => ({ id: loc._id, name: loc.name, parentId: loc.parentId })));
-    console.log('All relevant IDs:', allRelevantIds);
 
     // Build tree for each root location
     rootLevelLocations.forEach(loc => {

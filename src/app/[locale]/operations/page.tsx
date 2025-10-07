@@ -72,12 +72,12 @@ export default function OperationsPage() {
 
   // Fetch operations with pagination and search
   const fetchOperations = useCallback(
-    async (page = 1, search = "") => {
+    async (page = 1, search = "", signal?: AbortSignal) => {
       try {
-        setIsSearching(true);
         const searchParam = search ? `&search=${encodeURIComponent(search)}` : "";
         const response = await fetch(
-          `/api/operations?page=${page}&limit=${ITEMS_PER_PAGE}${searchParam}`
+          `/api/operations?page=${page}&limit=${ITEMS_PER_PAGE}${searchParam}`,
+          { signal }
         );
         if (response.ok) {
           const data = await response.json();
@@ -91,10 +91,12 @@ export default function OperationsPage() {
           toast.error(t("operations.operationLoadError"));
         }
       } catch (error) {
+        // Don't show error if request was aborted
+        if (error instanceof Error && error.name === 'AbortError') {
+          return;
+        }
         console.error("Error fetching operations:", error);
         toast.error(t("operations.operationLoadError"));
-      } finally {
-        setIsSearching(false);
       }
     },
     [t]
@@ -103,11 +105,11 @@ export default function OperationsPage() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await fetchOperations(currentPage, searchQuery);
+      await fetchOperations(currentPage, "");
       setLoading(false);
     };
     loadData();
-  }, [currentPage, searchQuery, fetchOperations]);
+  }, [currentPage, fetchOperations]);
 
   const onSubmit = async (data: {
     name: string;
@@ -190,6 +192,12 @@ export default function OperationsPage() {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
+
+  const handleSearch = useCallback((query: string, signal?: AbortSignal) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+    fetchOperations(1, query, signal);
+  }, [fetchOperations]);
 
   const handleBulkDelete = async () => {
     if (selectedOperations.length === 0) return;
@@ -355,10 +363,7 @@ export default function OperationsPage() {
           <SearchInput
             placeholder={t("common.search")}
             value={searchQuery}
-            onSearch={(query) => {
-              setSearchQuery(query);
-              setCurrentPage(1);
-            }}
+            onSearch={handleSearch}
             onSearchingChange={setIsSearching}
             delay={500}
             className="w-full sm:w-64 px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"

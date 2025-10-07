@@ -33,14 +33,11 @@ export async function GET(request: NextRequest) {
         { state: { $regex: search, $options: "i" } },
       ];
     }
-    console.log("GET request antes de contar", query);
     const totalItems = await Machine.countDocuments(query);
-    console.log("GET request despues de contar", totalItems);
     const machines = await Machine.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
-    console.log("GET request despues de encontrar", machines);
     const totalPages = Math.ceil(totalItems / limit);
 
     return NextResponse.json({

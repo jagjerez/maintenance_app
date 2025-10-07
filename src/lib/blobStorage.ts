@@ -35,7 +35,6 @@ async function ensureBucketExists(): Promise<void> {
   
   if (!bucketExists) {
     await client.makeBucket(MINIO_BUCKET_NAME, 'us-east-1');
-    console.log(`Created MinIO bucket: ${MINIO_BUCKET_NAME}`);
   }
 }
 

@@ -207,7 +207,6 @@ export default function IntegrationPage() {
       if (response.ok) {
         const data = await response.json();
         toast.success(t('cronTestSuccess'));
-        console.log('Cron test result:', data);
         fetchJobs(currentPage);
         fetchQueueStatus();
       } else {

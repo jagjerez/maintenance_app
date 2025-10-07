@@ -192,7 +192,6 @@ export default function LocationTreeView({
 
     try {
       setIsLoadingMore(true);
-      console.log(`Loading more root locations, offset: ${rootOffset}`);
       
       // Use search API if there's a search query, otherwise use regular tree API
       const apiUrl = searchQuery 
@@ -204,9 +203,6 @@ export default function LocationTreeView({
         const data = await response.json();
         const newLocations = data.locations || data;
 
-        console.log(
-          `Loaded ${newLocations.length} new locations, hasMore: ${data.hasMore}`
-        );
 
         if (newLocations.length > 0) {
           setTree((prevTree) => [...prevTree, ...newLocations]);
@@ -308,17 +304,8 @@ export default function LocationTreeView({
       const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
       const isNearBottom = scrollTop + clientHeight >= scrollHeight - 50; // 50px threshold
 
-      console.log("Scroll debug:", {
-        scrollTop,
-        scrollHeight,
-        clientHeight,
-        isNearBottom,
-        hasMoreRoot,
-        isLoadingMore,
-      });
 
       if (isNearBottom && hasMoreRoot && !isLoadingMore) {
-        console.log("Loading more root locations...");
         loadMoreRootLocations();
       }
     };
