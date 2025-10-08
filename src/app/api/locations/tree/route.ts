@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     const parentId = searchParams.get('parentId');
 
     // Get locations based on parentId parameter
-    const query: any = { companyId: session.user.companyId };
+    const query: Record<string, unknown> = { companyId: session.user.companyId };
     
     if (parentId) {
       query.parentId = new mongoose.Types.ObjectId(parentId);

@@ -231,14 +231,14 @@ export class FileProcessor {
 
 
   private async processMachineRow(row: FileRowData): Promise<void> {
-    const { internalCode, description, brand, model, series, category, locationInternalCode, rootLocationInternalCode, state, characteristics } = row;
+    const { internalCode, description, brand, model, series, category, locationName, rootLocationName, state, characteristics } = row;
 
     // Check if the row has the old structure (name, manufacturer, year, locationInternalCode)
     if (row.name || row.manufacturer || row.year || row.locationInternalCode) {
       throw { 
         field: 'structure', 
         value: 'old', 
-        message: 'This file uses the old machine structure. Please download the new template and use the updated format with columns: internalCode, description, brand, model, series, category, locationInternalCode, rootLocationInternalCode, state, characteristics' 
+        message: 'This file uses the old machine structure. Please download the new template and use the updated format with columns: internalCode, description, brand, model, series, category, locationName, rootLocationName, state, characteristics' 
       };
     }
 
@@ -260,28 +260,30 @@ export class FileProcessor {
       }
     }
 
-    // Handle location references
+    // Handle location references by name
     let locationId = null;
     let rootId = null;
     
-    if (locationInternalCode && this.safeTrim(locationInternalCode)) {
+    if (locationName && this.safeTrim(locationName)) {
       const location = await Location.findOne({ 
-        internalCode: this.safeTrim(locationInternalCode), 
+        name: this.safeTrim(locationName), 
         companyId: this.companyId
       });
       if (location) {
         locationId = location._id;
       }
+      // If location not found, locationId remains null
     }
     
-    if (rootLocationInternalCode && this.safeTrim(rootLocationInternalCode)) {
+    if (rootLocationName && this.safeTrim(rootLocationName)) {
       const rootLocation = await Location.findOne({ 
-        internalCode: this.safeTrim(rootLocationInternalCode), 
+        name: this.safeTrim(rootLocationName), 
         companyId: this.companyId
       });
       if (rootLocation) {
         rootId = rootLocation._id;
       }
+      // If root location not found, rootId remains null
     }
 
     // Check if this is an update (has internalCode) or create

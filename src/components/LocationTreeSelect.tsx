@@ -47,7 +47,7 @@ const LocationTreeSelect = ({
       const response = await fetch(`/api/locations/tree?parentId=${parentId}`);
       if (response.ok) {
         const data = await response.json();
-        return (data.locations || []).map((location: any) => ({
+        return (data.locations || []).map((location: LocationNode) => ({
           ...location,
           children: [],
           childrenLoaded: false,
@@ -93,7 +93,7 @@ const LocationTreeSelect = ({
       
       if (response.ok) {
         const data = await response.json();
-        const transformedLocations = (data.locations || []).map((location: any) => ({
+        const transformedLocations = (data.locations || []).map((location: LocationNode) => ({
           ...location,
           children: [],
           childrenLoaded: false,
@@ -178,7 +178,7 @@ const LocationTreeSelect = ({
     } else if (!value) {
       setSelectedLocation(null);
     }
-  }, [value, locations]);
+  }, [value, locations, loadLocationById, selectedLocation]);
 
   // Handle click outside
   useEffect(() => {

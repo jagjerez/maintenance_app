@@ -17,15 +17,6 @@ interface LocationWithChildren {
   machines?: unknown[];
 }
 
-interface FlatLocation {
-  _id: string;
-  name: string;
-  description?: string;
-  parentId?: string;
-  path: string;
-  level: number;
-  machines?: unknown[];
-}
 
 // GET /api/locations - Get all locations for a company
 export async function GET(request: NextRequest) {
@@ -218,27 +209,3 @@ function buildLocationTree(locations: LocationWithChildren[], parentId: string |
   }));
 }
 
-// Helper function to flatten location tree with level information
-// Note: This function is currently not used for paginated results
-// but kept for potential future use with tree view
-function flattenLocationTree(locations: LocationWithChildren[], parentId: string | null = null, level: number = 0): FlatLocation[] {
-  const children = locations.filter(loc => 
-    (parentId === null && !loc.parentId) || 
-    (parentId !== null && loc.parentId && loc.parentId.toString() === parentId)
-  );
-
-  const result: FlatLocation[] = [];
-  
-  children.forEach(location => {
-    result.push({
-      ...location,
-      level: level
-    });
-    
-    // Recursively add children
-    const childLocations = flattenLocationTree(locations, location._id.toString(), level + 1);
-    result.push(...childLocations);
-  });
-
-  return result;
-}

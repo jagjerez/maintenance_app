@@ -650,7 +650,7 @@ export default function LocationsPage() {
             <FormLabel>{t("locations.parentLocation")}</FormLabel>
             <SearchableSelect
               value={watch("parentId") || null}
-              onChange={(value, option) => {
+              onChange={(value) => {
                 setValue("parentId", value || "");
               }}
               fetchOptions={fetchLocationOptions}
