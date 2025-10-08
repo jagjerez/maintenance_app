@@ -137,32 +137,34 @@ export async function GET(request: NextRequest) {
     }).sort({ name: 1 }).lean();
 
 
-    // Get machines for all relevant locations
-    const machines = await Machine.find({ 
-      locationId: { $in: objectIds },
-      companyId: session.user.companyId 
-    })
-      .lean();
+    // Simple approach: Check if each location has machines
+    const machineCountMap = new Map();
+    
+    for (const locationId of objectIds) {
+      const machineCount = await Machine.countDocuments({
+        locationId: locationId,
+        companyId: session.user.companyId,
+        deletedAt: null
+      });
+      machineCountMap.set(locationId.toString(), machineCount);
+    }
 
     // Build the tree structure with only relevant locations
     const locationMap = new Map();
     allRelevantLocations.forEach(loc => {
+      const machineCount = machineCountMap.get(loc._id.toString()) || 0;
+      
+      
       locationMap.set(loc._id.toString(), {
         ...loc,
         machines: [],
         children: [],
         childrenCount: 0,
         hasChildren: false,
-        isLeaf: true
+        isLeaf: true,
+        machinesCount: machineCount,
+        hasMachines: machineCount > 0
       });
-    });
-
-    // Add machines to locations
-    machines.forEach(machine => {
-      const locationId = machine.locationId?.toString();
-      if (locationId && locationMap.has(locationId)) {
-        locationMap.get(locationId).machines.push(machine);
-      }
     });
 
     // Build the complete tree structure recursively

@@ -345,79 +345,8 @@ export default function LocationTreeView({
                return newExpanded;
              });
              
-             // Load machines for nodes that have machines but haven't loaded them yet
-             const loadMachinesForExpandedNodes = async (nodes: LocationNode[]) => {
-               for (const node of nodes) {
-                 if (node.hasMachines && !node.machinesLoaded && !node.isLoadingMachines) {
-                   try {
-                     // Mark as loading
-                     setTree((prevTree) =>
-                       prevTree.map((n) => {
-                         if (n._id === node._id) {
-                           return normalizeNode({ ...n, isLoadingMachines: true });
-                         }
-                         if (n.children && n.children.length > 0) {
-                           return normalizeNode({
-                             ...n,
-                             children: n.children.map((child) =>
-                               child._id === node._id ? normalizeNode({ ...child, isLoadingMachines: true }) : child
-                             )
-                           });
-                         }
-                         return n;
-                       })
-                     );
-
-                     // Load machines
-                     const machinesData = await loadMachines(node._id);
-                     const machines = machinesData.machines || [];
-                     const hasMore = machinesData.hasMore || false;
-                     const offset = machinesData.offset || 0;
-                     const totalItems = machinesData.totalItems || 0;
-
-                     // Update tree with loaded machines
-                     setTree((prevTree) =>
-                       updateTreeWithMachines(
-                         prevTree,
-                         node._id,
-                         machines,
-                         false,
-                         hasMore,
-                         offset,
-                         totalItems
-                       )
-                     );
-                   } catch (error) {
-                     console.error(`Error loading machines for ${node._id} during search:`, error);
-                     // Reset loading state on error
-                     setTree((prevTree) =>
-                       prevTree.map((n) => {
-                         if (n._id === node._id) {
-                           return normalizeNode({ ...n, isLoadingMachines: false });
-                         }
-                         if (n.children && n.children.length > 0) {
-                           return normalizeNode({
-                             ...n,
-                             children: n.children.map((child) =>
-                               child._id === node._id ? normalizeNode({ ...child, isLoadingMachines: false }) : child
-                             )
-                           });
-                         }
-                         return n;
-                       })
-                     );
-                   }
-                 }
-                 
-                 // Recursively process children
-                 if (node.children && node.children.length > 0) {
-                   await loadMachinesForExpandedNodes(node.children);
-                 }
-               }
-             };
-             
-             // Load machines for all expanded nodes
-             loadMachinesForExpandedNodes(normalizedNewLocations);
+             // Don't load machines automatically during search
+             // Let users expand nodes manually to load machines with proper pagination
            }
         } else {
           setHasMoreRoot(false);
@@ -433,7 +362,7 @@ export default function LocationTreeView({
     } finally {
       setIsLoadingMore(false);
     }
-  }, [rootOffset, isLoadingMore, hasMoreRoot, searchQuery, updateTreeWithMachines]);
+  }, [rootOffset, isLoadingMore, hasMoreRoot, searchQuery]);
 
   // Load location tree with pagination
   useEffect(() => {
@@ -452,10 +381,16 @@ export default function LocationTreeView({
         if (response.ok) {
           const data = await response.json();
           const locations = data.locations || data;
+          
+          // Debug: Log raw API data
+          
           // Normalize all nodes to ensure they have all required properties
           const normalizedLocations = Array.isArray(locations) 
             ? locations.map(normalizeNode)
             : [normalizeNode(locations)];
+            
+          // Debug: Log normalized data
+          
           setTree(normalizedLocations);
           setRootOffset(data.locations?.length || 0);
           setHasMoreRoot(data.hasMore || false);
@@ -478,79 +413,8 @@ export default function LocationTreeView({
             collectAllNodeIds(normalizedLocations);
             setExpandedNodes(allNodeIds);
             
-            // Load machines for nodes that have machines but haven't loaded them yet
-            const loadMachinesForExpandedNodes = async (nodes: LocationNode[]) => {
-              for (const node of nodes) {
-                if (node.hasMachines && !node.machinesLoaded && !node.isLoadingMachines) {
-                  try {
-                    // Mark as loading
-                    setTree((prevTree) =>
-                      prevTree.map((n) => {
-                        if (n._id === node._id) {
-                          return normalizeNode({ ...n, isLoadingMachines: true });
-                        }
-                        if (n.children && n.children.length > 0) {
-                          return normalizeNode({
-                            ...n,
-                            children: n.children.map((child) =>
-                              child._id === node._id ? normalizeNode({ ...child, isLoadingMachines: true }) : child
-                            )
-                          });
-                        }
-                        return n;
-                      })
-                    );
-
-                    // Load machines
-                    const machinesData = await loadMachines(node._id);
-                    const machines = machinesData.machines || [];
-                    const hasMore = machinesData.hasMore || false;
-                    const offset = machinesData.offset || 0;
-                    const totalItems = machinesData.totalItems || 0;
-
-                    // Update tree with loaded machines
-                    setTree((prevTree) =>
-                      updateTreeWithMachines(
-                        prevTree,
-                        node._id,
-                        machines,
-                        false,
-                        hasMore,
-                        offset,
-                        totalItems
-                      )
-                    );
-                  } catch (error) {
-                    console.error(`Error loading machines for ${node._id} during search:`, error);
-                    // Reset loading state on error
-                    setTree((prevTree) =>
-                      prevTree.map((n) => {
-                        if (n._id === node._id) {
-                          return normalizeNode({ ...n, isLoadingMachines: false });
-                        }
-                        if (n.children && n.children.length > 0) {
-                          return normalizeNode({
-                            ...n,
-                            children: n.children.map((child) =>
-                              child._id === node._id ? normalizeNode({ ...child, isLoadingMachines: false }) : child
-                            )
-                          });
-                        }
-                        return n;
-                      })
-                    );
-                  }
-                }
-                
-                // Recursively process children
-                if (node.children && node.children.length > 0) {
-                  await loadMachinesForExpandedNodes(node.children);
-                }
-              }
-            };
-            
-            // Load machines for all expanded nodes
-            loadMachinesForExpandedNodes(normalizedLocations);
+            // Don't load machines automatically during search
+            // Let users expand nodes manually to load machines with proper pagination
           }
         } else {
           console.error("Error loading location tree:", response.status);
@@ -563,7 +427,7 @@ export default function LocationTreeView({
     };
 
     loadTree();
-  }, [refreshTrigger, searchQuery, updateTreeWithMachines]); // Add searchQuery as dependency
+  }, [refreshTrigger, searchQuery]); // Add searchQuery as dependency
 
   // Infinite scroll effect
   useEffect(() => {
@@ -648,7 +512,6 @@ export default function LocationTreeView({
   const loadMoreMachines = useCallback(async (nodeId: string) => {
     // Check if already loading to prevent duplicate calls
     if (loadingMachinesRef.current.has(nodeId)) {
-      console.log(`Already loading machines for ${nodeId}, skipping`);
       return;
     }
 
@@ -668,7 +531,6 @@ export default function LocationTreeView({
 
     const node = findNode(tree, nodeId);
     if (node && node.hasMoreMachines && !node.isLoadingMachines) {
-      console.log(`Starting loadMoreMachines for ${nodeId}`);
       
       // Mark as loading in ref
       loadingMachinesRef.current.add(nodeId);
@@ -699,7 +561,6 @@ export default function LocationTreeView({
         const hasMore = machinesData.hasMore || false;
         const totalItems = machinesData.totalItems || 0;
 
-        console.log(`Loaded ${machines.length} more machines for ${nodeId}, hasMore: ${hasMore}`);
 
         // Update tree with additional machines
         setTree((prevTree) =>
@@ -737,7 +598,6 @@ export default function LocationTreeView({
         loadingMachinesRef.current.delete(nodeId);
       }
     } else {
-      console.log(`Skipping loadMoreMachines for ${nodeId}: hasMore=${node?.hasMoreMachines}, isLoading=${node?.isLoadingMachines}`);
     }
   }, [tree, updateTreeWithMachines]);
 
@@ -764,7 +624,6 @@ export default function LocationTreeView({
       const node = findNode(tree, nodeId);
       
       if (node && node.hasMoreMachines && !node.isLoadingMachines && !loadingMachinesRef.current.has(nodeId)) {
-        console.log(`Loading more machines for ${nodeId} - preventing multiple calls`);
         loadMoreMachines(nodeId);
       }
     }
@@ -829,12 +688,12 @@ export default function LocationTreeView({
         }
 
         // Load machines if needed and showMachines is true
+        // Only load machines if the user is manually expanding (not during search auto-expansion)
         if (
           showMachines &&
           !node.machinesLoaded &&
           !node.isLoadingMachines
         ) {
-          console.log(`Loading machines for node: ${nodeId}, showMachines: ${showMachines}`);
           
           // Mark as loading machines
           setTree((prevTree) =>
@@ -856,19 +715,12 @@ export default function LocationTreeView({
 
           // Load machines
           const machinesData = await loadMachines(nodeId);
-          console.log(`Machines data for ${nodeId}:`, machinesData);
           
           const machines = machinesData.machines || machinesData;
           const hasMore = machinesData.hasMore || false;
           const offset = machinesData.offset || 0;
           const totalItems = machinesData.totalItems || 0;
           
-          console.log(`Machines data for ${nodeId}:`, {
-            machines: machines.length,
-            totalItems,
-            hasMore,
-            offset
-          });
 
           // Update tree with loaded machines
           setTree((prevTree) =>
@@ -1027,24 +879,12 @@ export default function LocationTreeView({
     const isExpanded = expandedNodes.has(node._id);
     const isSelected = selectedLocationId === node._id;
     const hasChildren = node.children && node.children.length > 0;
-    const hasMachines =
-      showMachines && node.machines && node.machines.length > 0;
     const isLoadingChildren = node.isLoadingChildren;
     
-    // Debug logging
-    console.log(`Node ${node.name}:`, {
-      isLoadingChildren,
-      isLoadingMachines: node.isLoadingMachines,
-      machinesLoaded: node.machinesLoaded,
-      machinesCount: node.machines?.length || 0,
-      showMachines,
-      hasMachines: node.hasMachines,
-      hasMoreMachines: node.hasMoreMachines
-    });
 
 
     // Can expand if has children (loaded or available) or has machines
-    const canExpand = hasChildren || hasMachines || node.hasChildren;
+    const canExpand = hasChildren || node.hasMachines || node.hasChildren;
     
     // Note: Removed search match highlighting as requested
 
@@ -1134,10 +974,10 @@ export default function LocationTreeView({
                   )}
 
                   {/* Machine count */}
-                  {node.machines && node.machines.length > 0 && (
+                  {node.hasMachines && (
                     <div className="flex items-center">
                       <Wrench className="h-3 w-3 mr-1 text-blue-500" />
-                      <span>{node.machinesCount || node.machines.length}</span>
+                      <span>{node.machinesCount || 0}</span>
                     </div>
                   )}
                 </div>
@@ -1199,7 +1039,7 @@ export default function LocationTreeView({
             
 
             {/* Integrated LocationMachinesView - Detailed Machine View */}
-            {showMachines && (node.machines && node.machines.length > 0 || node.isLoadingMachines) && (
+            {showMachines && (node.hasMachines || node.isLoadingMachines) && node.machines.length > 0 && (
               <div 
                 className="mt-2" 
                 style={{ marginLeft: `${level * 12 + 12}px` }}
@@ -1247,7 +1087,7 @@ export default function LocationTreeView({
                     }}
                   >
                     {/* Skeleton loading for initial load */}
-                    {node.isLoadingMachines && node.machines.length === 0 && (
+                    {node.isLoadingMachines && !node.machinesLoaded && (
                       <div className="p-4 flex flex-col items-center justify-center">
                         <div className="flex items-center space-x-3 mb-3">
                           <div className="w-6 h-6 border-3 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
@@ -1333,7 +1173,7 @@ export default function LocationTreeView({
                         <div className="flex items-center space-x-3 mb-2">
                           <div className="w-6 h-6 border-3 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
                           <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                            {node.machines.length === 0 ? t("common.loading") + "..." : t("common.loadingMore") + "..."}
+                            {!node.machinesLoaded ? t("common.loading") + "..." : t("common.loadingMore") + "..."}
                           </span>
                         </div>
                         <div className="flex space-x-1">

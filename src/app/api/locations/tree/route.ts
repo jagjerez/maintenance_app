@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
-import { Location } from '@/models';
+import { Location, Machine } from '@/models';
 import mongoose from 'mongoose';
 
 // GET /api/locations/tree - Get root locations only (optimized for lazy loading)
@@ -43,10 +43,12 @@ export async function GET(request: NextRequest) {
 
     // Get children count for each location - Batch query for better performance
     const locationIds = locations.map(loc => loc._id);
+    const locationObjectIds = locationIds.map(id => new mongoose.Types.ObjectId(id));
+    
     const childrenCounts = await Location.aggregate([
       {
         $match: {
-          parentId: { $in: locationIds },
+          parentId: { $in: locationObjectIds },
           companyId: new mongoose.Types.ObjectId(session.user.companyId)
         }
       },
@@ -63,9 +65,23 @@ export async function GET(request: NextRequest) {
       childrenCountMap.set(item._id.toString(), item.count);
     });
 
+    // Simple approach: Check if each location has machines
+    const machineCountMap = new Map();
+    
+    for (const locationId of locationObjectIds) {
+      const machineCount = await Machine.countDocuments({
+        locationId: locationId,
+        companyId: session.user.companyId,
+        deletedAt: null
+      });
+      machineCountMap.set(locationId.toString(), machineCount);
+    }
+
     // Build locations without preloading machines or children
     const tree = locations.map(location => {
       const childrenCount = childrenCountMap.get(location._id.toString()) || 0;
+      const machineCount = machineCountMap.get(location._id.toString()) || 0;
+
 
       return {
         ...location,
@@ -76,6 +92,8 @@ export async function GET(request: NextRequest) {
         isLeaf: childrenCount === 0, // True if no children
         machinesLoaded: false, // Track if machines have been loaded
         childrenLoaded: false, // Track if children have been loaded
+        machinesCount: machineCount, // Number of machines available
+        hasMachines: machineCount > 0, // Boolean flag for easy checking
       };
     });
 
