@@ -51,7 +51,8 @@
     "addNew": "Agregar Nuevo",
     "endOfList": "Fin de la lista",
     "searchLocation": "Buscar ubicación...",
-    "information": "Información"
+    "information": "Información",
+    "viewDetails": "Ver Detalles"
   },
   "Integration": {
     "title": "Integración de Datos",
@@ -288,7 +289,9 @@
     "listView": "Vista de Lista",
     "searchParentLocation": "Buscar ubicación padre...",
     "noParentLocationsFound": "No se encontraron ubicaciones padre",
-    "loadingParentLocations": "Cargando ubicaciones padre..."
+    "loadingParentLocations": "Cargando ubicaciones padre...",
+    "machinesInLocation": "Máquinas en esta ubicación",
+    "noMachinesInLocation": "No hay máquinas en esta ubicación"
   },
   "settings": {
     "title": "Configuración",

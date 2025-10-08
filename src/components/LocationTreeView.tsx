@@ -19,6 +19,7 @@ import {
   Truck,
   Building2,
   Landmark,
+  Eye,
 } from "lucide-react";
 import { useTranslations } from "@/hooks/useTranslations";
 import { FormButton } from "./Form";
@@ -27,14 +28,17 @@ import { toast } from "react-hot-toast";
 
 interface Machine {
   _id: string;
-  model: {
-    _id: string;
-    name: string;
-    manufacturer: string;
-    brand: string;
-    year: number;
-  };
-  location: string;
+  internalCode: string;
+  description: string;
+  brand: string;
+  model: string;
+  series: string;
+  category: string;
+  state: string;
+  locationId: string;
+  companyId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface LocationNode {
@@ -53,6 +57,12 @@ interface LocationNode {
   hasChildren?: boolean; // Boolean flag for easy checking
   childrenOffset?: number; // Track pagination offset for children
   hasMoreChildren?: boolean; // Track if there are more children to load
+  machinesLoaded?: boolean; // Track if machines have been loaded
+  isLoadingMachines?: boolean; // Track machines loading state
+  machinesCount?: number; // Number of machines available
+  hasMachines?: boolean; // Boolean flag for easy checking
+  machinesOffset?: number; // Track pagination offset for machines
+  hasMoreMachines?: boolean; // Track if there are more machines to load
 }
 
 interface LocationTreeViewProps {
@@ -110,6 +120,9 @@ export default function LocationTreeView({
     isOpen: boolean;
     location: LocationNode | null;
   }>({ isOpen: false, location: null });
+  
+  // Ref to track loading states and prevent duplicate calls
+  const loadingMachinesRef = useRef<Set<string>>(new Set());
 
   // Scroll infinite states
   const [rootOffset, setRootOffset] = useState(0);
@@ -140,8 +153,106 @@ export default function LocationTreeView({
     }
   };
 
+  // Function to load machines for a specific location with pagination
+  const loadMachines = async (
+    locationId: string,
+    offset: number = 0,
+    limit: number = 50
+  ) => {
+    try {
+      const response = await fetch(
+        `/api/locations/${locationId}/machines?offset=${offset}&limit=${limit}`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        return data;
+      } else {
+        console.error("Error loading machines:", response.statusText);
+        return { machines: [], totalItems: 0, hasMore: false };
+      }
+    } catch (error) {
+      console.error("Error loading machines:", error);
+      return { machines: [], totalItems: 0, hasMore: false };
+    }
+  };
+
+  // Function to update tree with loaded machines (supports pagination)
+  const updateTreeWithMachines = useCallback((
+    tree: LocationNode[],
+    locationId: string,
+    machines: Machine[],
+    append: boolean = false,
+    hasMore: boolean = false,
+    offset: number = 0,
+    totalItems: number = 0
+  ): LocationNode[] => {
+    return tree.map((node) => {
+      if (node._id === locationId) {
+        // Filter out duplicate machines when appending
+        const existingMachineIds = new Set(node.machines.map(m => m._id));
+        const newMachines = append 
+          ? machines.filter(machine => !existingMachineIds.has(machine._id))
+          : machines;
+        
+        return {
+          ...node,
+          machines: append ? [...node.machines, ...newMachines] : machines,
+          machinesLoaded: true,
+          isLoadingMachines: false, // Reset loading state after machines are loaded
+          machinesOffset: append ? (node.machinesOffset || 0) + newMachines.length : machines.length,
+          hasMoreMachines: hasMore,
+          machinesCount: totalItems > 0 ? totalItems : (append ? (node.machinesCount || 0) : machines.length),
+          hasMachines: machines.length > 0,
+        };
+      }
+      if (node.children && node.children.length > 0) {
+        return {
+          ...node,
+          children: updateTreeWithMachines(
+            node.children,
+            locationId,
+            machines,
+            append,
+            hasMore,
+            offset,
+            totalItems
+          ),
+        };
+      }
+      return node;
+    });
+  }, []);
+
+  // Function to normalize node properties
+  const normalizeNode = (node: Record<string, unknown>): LocationNode => {
+    return {
+      ...node,
+      _id: (node._id as string) || '',
+      name: (node.name as string) || '',
+      description: (node.description as string) || '',
+      icon: (node.icon as string) || '',
+      path: (node.path as string) || '',
+      level: (node.level as number) || 0,
+      isLeaf: (node.isLeaf as boolean) || false,
+      isLoadingChildren: (node.isLoadingChildren as boolean) || false,
+      isLoadingMachines: (node.isLoadingMachines as boolean) || false,
+      machinesLoaded: (node.machinesLoaded as boolean) || false,
+      machinesCount: (node.machinesCount as number) || 0,
+      hasMachines: (node.hasMachines as boolean) || false,
+      machinesOffset: (node.machinesOffset as number) || 0,
+      hasMoreMachines: (node.hasMoreMachines as boolean) || false,
+      childrenLoaded: (node.childrenLoaded as boolean) || false,
+      childrenCount: (node.childrenCount as number) || 0,
+      hasChildren: (node.hasChildren as boolean) || false,
+      childrenOffset: (node.childrenOffset as number) || 0,
+      hasMoreChildren: (node.hasMoreChildren as boolean) || false,
+      machines: (node.machines as Machine[]) || [],
+      children: (node.children as LocationNode[]) || []
+    };
+  };
+
   // Function to update tree with loaded children (supports pagination)
-  const updateTreeWithChildren = (
+  const updateTreeWithChildren = useCallback((
     tree: LocationNode[],
     parentId: string,
     children: LocationNode[],
@@ -176,7 +287,7 @@ export default function LocationTreeView({
       }
       return node;
     });
-  };
+  }, []);
 
   const getIconComponent = (iconName?: string) => {
     if (!iconName || !iconMap[iconName as keyof typeof iconMap]) {
@@ -202,32 +313,112 @@ export default function LocationTreeView({
       if (response.ok) {
         const data = await response.json();
         const newLocations = data.locations || data;
+        // Normalize new locations
+        const normalizedNewLocations = Array.isArray(newLocations) 
+          ? newLocations.map(normalizeNode)
+          : [normalizeNode(newLocations)];
 
-
-        if (newLocations.length > 0) {
-          setTree((prevTree) => [...prevTree, ...newLocations]);
-          setRootOffset((prev) => prev + newLocations.length);
+        if (normalizedNewLocations.length > 0) {
+          setTree((prevTree) => [...prevTree, ...normalizedNewLocations]);
+          setRootOffset((prev) => prev + normalizedNewLocations.length);
           setHasMoreRoot(data.hasMore || false);
           
-          // If there's a search query, auto-expand new nodes
-          if (searchQuery && newLocations.length > 0) {
-            setExpandedNodes((prevExpanded) => {
-              const newExpanded = new Set(prevExpanded);
-              
-              // Function to collect all node IDs that should be expanded
-              const collectExpandableNodes = (nodes: LocationNode[]) => {
-                nodes.forEach(node => {
-                  if (node.children && node.children.length > 0) {
-                    newExpanded.add(node._id);
-                    collectExpandableNodes(node.children);
-                  }
-                });
-              };
-              
-              collectExpandableNodes(newLocations);
-              return newExpanded;
-            });
-          }
+           // If there's a search query, expand nodes to show search results
+           if (searchQuery && normalizedNewLocations.length > 0) {
+             // For search results, expand all nodes to show the complete hierarchy
+             // This allows users to see the full tree structure and identify which nodes have machines/children
+             const allNodeIds = new Set<string>();
+             
+             const collectAllNodeIds = (nodes: LocationNode[]) => {
+               nodes.forEach(node => {
+                 allNodeIds.add(node._id);
+                 if (node.children && node.children.length > 0) {
+                   collectAllNodeIds(node.children);
+                 }
+               });
+             };
+             
+             collectAllNodeIds(normalizedNewLocations);
+             setExpandedNodes((prevExpanded) => {
+               const newExpanded = new Set(prevExpanded);
+               allNodeIds.forEach(nodeId => newExpanded.add(nodeId));
+               return newExpanded;
+             });
+             
+             // Load machines for nodes that have machines but haven't loaded them yet
+             const loadMachinesForExpandedNodes = async (nodes: LocationNode[]) => {
+               for (const node of nodes) {
+                 if (node.hasMachines && !node.machinesLoaded && !node.isLoadingMachines) {
+                   try {
+                     // Mark as loading
+                     setTree((prevTree) =>
+                       prevTree.map((n) => {
+                         if (n._id === node._id) {
+                           return normalizeNode({ ...n, isLoadingMachines: true });
+                         }
+                         if (n.children && n.children.length > 0) {
+                           return normalizeNode({
+                             ...n,
+                             children: n.children.map((child) =>
+                               child._id === node._id ? normalizeNode({ ...child, isLoadingMachines: true }) : child
+                             )
+                           });
+                         }
+                         return n;
+                       })
+                     );
+
+                     // Load machines
+                     const machinesData = await loadMachines(node._id);
+                     const machines = machinesData.machines || [];
+                     const hasMore = machinesData.hasMore || false;
+                     const offset = machinesData.offset || 0;
+                     const totalItems = machinesData.totalItems || 0;
+
+                     // Update tree with loaded machines
+                     setTree((prevTree) =>
+                       updateTreeWithMachines(
+                         prevTree,
+                         node._id,
+                         machines,
+                         false,
+                         hasMore,
+                         offset,
+                         totalItems
+                       )
+                     );
+                   } catch (error) {
+                     console.error(`Error loading machines for ${node._id} during search:`, error);
+                     // Reset loading state on error
+                     setTree((prevTree) =>
+                       prevTree.map((n) => {
+                         if (n._id === node._id) {
+                           return normalizeNode({ ...n, isLoadingMachines: false });
+                         }
+                         if (n.children && n.children.length > 0) {
+                           return normalizeNode({
+                             ...n,
+                             children: n.children.map((child) =>
+                               child._id === node._id ? normalizeNode({ ...child, isLoadingMachines: false }) : child
+                             )
+                           });
+                         }
+                         return n;
+                       })
+                     );
+                   }
+                 }
+                 
+                 // Recursively process children
+                 if (node.children && node.children.length > 0) {
+                   await loadMachinesForExpandedNodes(node.children);
+                 }
+               }
+             };
+             
+             // Load machines for all expanded nodes
+             loadMachinesForExpandedNodes(normalizedNewLocations);
+           }
         } else {
           setHasMoreRoot(false);
         }
@@ -242,7 +433,7 @@ export default function LocationTreeView({
     } finally {
       setIsLoadingMore(false);
     }
-  }, [rootOffset, isLoadingMore, hasMoreRoot, searchQuery]);
+  }, [rootOffset, isLoadingMore, hasMoreRoot, searchQuery, updateTreeWithMachines]);
 
   // Load location tree with pagination
   useEffect(() => {
@@ -260,27 +451,106 @@ export default function LocationTreeView({
         const response = await fetch(apiUrl);
         if (response.ok) {
           const data = await response.json();
-          setTree(data.locations || data);
+          const locations = data.locations || data;
+          // Normalize all nodes to ensure they have all required properties
+          const normalizedLocations = Array.isArray(locations) 
+            ? locations.map(normalizeNode)
+            : [normalizeNode(locations)];
+          setTree(normalizedLocations);
           setRootOffset(data.locations?.length || 0);
           setHasMoreRoot(data.hasMore || false);
           
-          // If there's a search query, auto-expand all nodes to show the complete hierarchy
+          // If there's a search query, expand all nodes to show search results
           if (searchQuery && data.locations) {
-            const nodesToExpand = new Set<string>();
+            // For search results, expand all nodes to show the complete hierarchy
+            // This allows users to see the full tree structure and identify which nodes have machines/children
+            const allNodeIds = new Set<string>();
             
-            // Function to collect all node IDs that should be expanded
-            const collectExpandableNodes = (nodes: LocationNode[]) => {
+            const collectAllNodeIds = (nodes: LocationNode[]) => {
               nodes.forEach(node => {
-                // Expand all nodes that have children to show the complete hierarchy
+                allNodeIds.add(node._id);
                 if (node.children && node.children.length > 0) {
-                  nodesToExpand.add(node._id);
-                  collectExpandableNodes(node.children);
+                  collectAllNodeIds(node.children);
                 }
               });
             };
             
-            collectExpandableNodes(data.locations);
-            setExpandedNodes(nodesToExpand);
+            collectAllNodeIds(normalizedLocations);
+            setExpandedNodes(allNodeIds);
+            
+            // Load machines for nodes that have machines but haven't loaded them yet
+            const loadMachinesForExpandedNodes = async (nodes: LocationNode[]) => {
+              for (const node of nodes) {
+                if (node.hasMachines && !node.machinesLoaded && !node.isLoadingMachines) {
+                  try {
+                    // Mark as loading
+                    setTree((prevTree) =>
+                      prevTree.map((n) => {
+                        if (n._id === node._id) {
+                          return normalizeNode({ ...n, isLoadingMachines: true });
+                        }
+                        if (n.children && n.children.length > 0) {
+                          return normalizeNode({
+                            ...n,
+                            children: n.children.map((child) =>
+                              child._id === node._id ? normalizeNode({ ...child, isLoadingMachines: true }) : child
+                            )
+                          });
+                        }
+                        return n;
+                      })
+                    );
+
+                    // Load machines
+                    const machinesData = await loadMachines(node._id);
+                    const machines = machinesData.machines || [];
+                    const hasMore = machinesData.hasMore || false;
+                    const offset = machinesData.offset || 0;
+                    const totalItems = machinesData.totalItems || 0;
+
+                    // Update tree with loaded machines
+                    setTree((prevTree) =>
+                      updateTreeWithMachines(
+                        prevTree,
+                        node._id,
+                        machines,
+                        false,
+                        hasMore,
+                        offset,
+                        totalItems
+                      )
+                    );
+                  } catch (error) {
+                    console.error(`Error loading machines for ${node._id} during search:`, error);
+                    // Reset loading state on error
+                    setTree((prevTree) =>
+                      prevTree.map((n) => {
+                        if (n._id === node._id) {
+                          return normalizeNode({ ...n, isLoadingMachines: false });
+                        }
+                        if (n.children && n.children.length > 0) {
+                          return normalizeNode({
+                            ...n,
+                            children: n.children.map((child) =>
+                              child._id === node._id ? normalizeNode({ ...child, isLoadingMachines: false }) : child
+                            )
+                          });
+                        }
+                        return n;
+                      })
+                    );
+                  }
+                }
+                
+                // Recursively process children
+                if (node.children && node.children.length > 0) {
+                  await loadMachinesForExpandedNodes(node.children);
+                }
+              }
+            };
+            
+            // Load machines for all expanded nodes
+            loadMachinesForExpandedNodes(normalizedLocations);
           }
         } else {
           console.error("Error loading location tree:", response.status);
@@ -293,7 +563,7 @@ export default function LocationTreeView({
     };
 
     loadTree();
-  }, [refreshTrigger, searchQuery]); // Add searchQuery as dependency
+  }, [refreshTrigger, searchQuery, updateTreeWithMachines]); // Add searchQuery as dependency
 
   // Infinite scroll effect
   useEffect(() => {
@@ -345,7 +615,7 @@ export default function LocationTreeView({
       // Mark as loading
       setTree((prevTree) =>
         prevTree.map((n) =>
-          n._id === nodeId ? { ...n, isLoadingChildren: true } : n
+          n._id === nodeId ? normalizeNode({ ...n, isLoadingChildren: true, childrenLoaded: false }) : n
         )
       );
 
@@ -355,12 +625,17 @@ export default function LocationTreeView({
       const children = childrenData.locations || childrenData;
       const hasMore = childrenData.hasMore || false;
 
+      // Normalize children
+      const normalizedChildren = Array.isArray(children) 
+        ? children.map(normalizeNode)
+        : [normalizeNode(children)];
+
       // Update tree with additional children
       setTree((prevTree) =>
         updateTreeWithChildren(
           prevTree,
           nodeId,
-          children,
+          normalizedChildren,
           true,
           hasMore,
           offset
@@ -368,6 +643,132 @@ export default function LocationTreeView({
       );
     }
   };
+
+  // Function to load more machines for pagination
+  const loadMoreMachines = useCallback(async (nodeId: string) => {
+    // Check if already loading to prevent duplicate calls
+    if (loadingMachinesRef.current.has(nodeId)) {
+      console.log(`Already loading machines for ${nodeId}, skipping`);
+      return;
+    }
+
+    const findNode = (
+      nodes: LocationNode[],
+      id: string
+    ): LocationNode | null => {
+      for (const node of nodes) {
+        if (node._id === id) return node;
+        if (node.children) {
+          const found = findNode(node.children, id);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const node = findNode(tree, nodeId);
+    if (node && node.hasMoreMachines && !node.isLoadingMachines) {
+      console.log(`Starting loadMoreMachines for ${nodeId}`);
+      
+      // Mark as loading in ref
+      loadingMachinesRef.current.add(nodeId);
+      
+      // Mark as loading in tree
+      setTree((prevTree) =>
+        prevTree.map((n) => {
+          if (n._id === nodeId) {
+            return normalizeNode({ ...n, isLoadingMachines: true, machinesLoaded: false });
+          }
+          if (n.children && n.children.length > 0) {
+            return normalizeNode({
+              ...n,
+              children: n.children.map((child) =>
+                child._id === nodeId ? normalizeNode({ ...child, isLoadingMachines: true, machinesLoaded: false }) : child
+              )
+            });
+          }
+          return n;
+        })
+      );
+
+      try {
+        // Load more machines
+        const offset = node.machinesOffset || 0;
+        const machinesData = await loadMachines(nodeId, offset, 50);
+        const machines = machinesData.machines || machinesData;
+        const hasMore = machinesData.hasMore || false;
+        const totalItems = machinesData.totalItems || 0;
+
+        console.log(`Loaded ${machines.length} more machines for ${nodeId}, hasMore: ${hasMore}`);
+
+        // Update tree with additional machines
+        setTree((prevTree) =>
+          updateTreeWithMachines(
+            prevTree,
+            nodeId,
+            machines,
+            true, // append to existing machines
+            hasMore,
+            offset,
+            totalItems
+          )
+        );
+      } catch (error) {
+        console.error(`Error loading more machines for ${nodeId}:`, error);
+        // Reset loading state on error
+        setTree((prevTree) =>
+          prevTree.map((n) => {
+            if (n._id === nodeId) {
+              return normalizeNode({ ...n, isLoadingMachines: false, machinesLoaded: false });
+            }
+            if (n.children && n.children.length > 0) {
+              return normalizeNode({
+                ...n,
+                children: n.children.map((child) =>
+                  child._id === nodeId ? normalizeNode({ ...child, isLoadingMachines: false, machinesLoaded: false }) : child
+                )
+              });
+            }
+            return n;
+          })
+        );
+      } finally {
+        // Remove from loading ref
+        loadingMachinesRef.current.delete(nodeId);
+      }
+    } else {
+      console.log(`Skipping loadMoreMachines for ${nodeId}: hasMore=${node?.hasMoreMachines}, isLoading=${node?.isLoadingMachines}`);
+    }
+  }, [tree, updateTreeWithMachines]);
+
+  // Function to handle infinite scroll for machines with debounce
+  const handleMachineScroll = useCallback((nodeId: string, container: HTMLElement) => {
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const isNearBottom = scrollTop + clientHeight >= scrollHeight - 50; // 50px threshold
+
+    if (isNearBottom) {
+      const findNode = (
+        nodes: LocationNode[],
+        id: string
+      ): LocationNode | null => {
+        for (const node of nodes) {
+          if (node._id === id) return node;
+          if (node.children) {
+            const found = findNode(node.children, id);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      const node = findNode(tree, nodeId);
+      
+      if (node && node.hasMoreMachines && !node.isLoadingMachines && !loadingMachinesRef.current.has(nodeId)) {
+        console.log(`Loading more machines for ${nodeId} - preventing multiple calls`);
+        loadMoreMachines(nodeId);
+      }
+    }
+  }, [tree, loadMoreMachines]);
 
   const toggleExpanded = async (nodeId: string) => {
     const isCurrentlyExpanded = expandedNodes.has(nodeId);
@@ -389,36 +790,99 @@ export default function LocationTreeView({
       };
 
       const node = findNode(tree, nodeId);
-      if (
-        node &&
-        node.hasChildren &&
-        !node.childrenLoaded &&
-        !node.isLoadingChildren
-      ) {
-        // Mark as loading
-        setTree((prevTree) =>
-          updateTreeWithChildren(prevTree, nodeId, []).map((n) =>
-            n._id === nodeId ? { ...n, isLoadingChildren: true } : n
-          )
-        );
+      if (node) {
+        // Load children if needed
+        if (
+          node.hasChildren &&
+          !node.childrenLoaded &&
+          !node.isLoadingChildren
+        ) {
+          // Mark as loading children
+          setTree((prevTree) =>
+            updateTreeWithChildren(prevTree, nodeId, []).map((n) =>
+              n._id === nodeId ? normalizeNode({ ...n, isLoadingChildren: true, childrenLoaded: false }) : n
+            )
+          );
 
-        // Load children
-        const childrenData = await loadChildren(nodeId);
-        const children = childrenData.locations || childrenData;
-        const hasMore = childrenData.hasMore || false;
-        const offset = childrenData.offset || 0;
+          // Load children
+          const childrenData = await loadChildren(nodeId);
+          const children = childrenData.locations || childrenData;
+          const hasMore = childrenData.hasMore || false;
+          const offset = childrenData.offset || 0;
 
-        // Update tree with loaded children
-        setTree((prevTree) =>
-          updateTreeWithChildren(
-            prevTree,
-            nodeId,
-            children,
-            false,
+          // Normalize children
+          const normalizedChildren = Array.isArray(children) 
+            ? children.map(normalizeNode)
+            : [normalizeNode(children)];
+
+          // Update tree with loaded children
+          setTree((prevTree) =>
+            updateTreeWithChildren(
+              prevTree,
+              nodeId,
+              normalizedChildren,
+              false,
+              hasMore,
+              offset
+            )
+          );
+        }
+
+        // Load machines if needed and showMachines is true
+        if (
+          showMachines &&
+          !node.machinesLoaded &&
+          !node.isLoadingMachines
+        ) {
+          console.log(`Loading machines for node: ${nodeId}, showMachines: ${showMachines}`);
+          
+          // Mark as loading machines
+          setTree((prevTree) =>
+            prevTree.map((n) => {
+              if (n._id === nodeId) {
+                return normalizeNode({ ...n, isLoadingMachines: true, machinesLoaded: false });
+              }
+              if (n.children && n.children.length > 0) {
+                return normalizeNode({
+                  ...n,
+                  children: n.children.map((child) =>
+                    child._id === nodeId ? normalizeNode({ ...child, isLoadingMachines: true, machinesLoaded: false }) : child
+                  )
+                });
+              }
+              return n;
+            })
+          );
+
+          // Load machines
+          const machinesData = await loadMachines(nodeId);
+          console.log(`Machines data for ${nodeId}:`, machinesData);
+          
+          const machines = machinesData.machines || machinesData;
+          const hasMore = machinesData.hasMore || false;
+          const offset = machinesData.offset || 0;
+          const totalItems = machinesData.totalItems || 0;
+          
+          console.log(`Machines data for ${nodeId}:`, {
+            machines: machines.length,
+            totalItems,
             hasMore,
             offset
-          )
-        );
+          });
+
+          // Update tree with loaded machines
+          setTree((prevTree) =>
+            updateTreeWithMachines(
+              prevTree,
+              nodeId,
+              machines,
+              false,
+              hasMore,
+              offset,
+              totalItems
+            )
+          );
+        }
       }
     }
 
@@ -528,10 +992,11 @@ export default function LocationTreeView({
         node.machines &&
         node.machines.some(
           (machine) =>
-            machine.model.name.toLowerCase().includes(searchLower) ||
-            machine.model.manufacturer.toLowerCase().includes(searchLower) ||
-            machine.model.brand.toLowerCase().includes(searchLower) ||
-            machine.location.toLowerCase().includes(searchLower)
+            machine.description.toLowerCase().includes(searchLower) ||
+            machine.brand.toLowerCase().includes(searchLower) ||
+            machine.model.toLowerCase().includes(searchLower) ||
+            machine.series.toLowerCase().includes(searchLower) ||
+            machine.category.toLowerCase().includes(searchLower)
         ))
     );
   };
@@ -565,6 +1030,18 @@ export default function LocationTreeView({
     const hasMachines =
       showMachines && node.machines && node.machines.length > 0;
     const isLoadingChildren = node.isLoadingChildren;
+    
+    // Debug logging
+    console.log(`Node ${node.name}:`, {
+      isLoadingChildren,
+      isLoadingMachines: node.isLoadingMachines,
+      machinesLoaded: node.machinesLoaded,
+      machinesCount: node.machines?.length || 0,
+      showMachines,
+      hasMachines: node.hasMachines,
+      hasMoreMachines: node.hasMoreMachines
+    });
+
 
     // Can expand if has children (loaded or available) or has machines
     const canExpand = hasChildren || hasMachines || node.hasChildren;
@@ -609,8 +1086,10 @@ export default function LocationTreeView({
                         : "No children to load"
                     }
                   >
-                    {isLoadingChildren ? (
-                      <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+                    {isLoadingChildren || node.isLoadingMachines ? (
+                      <div className="flex items-center space-x-1">
+                        <div className="w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+                      </div>
                     ) : canExpand ? (
                       isExpanded ? (
                         <ChevronDown className="h-4 w-4 text-gray-600 dark:text-gray-400" />
@@ -655,10 +1134,10 @@ export default function LocationTreeView({
                   )}
 
                   {/* Machine count */}
-                  {hasMachines && (
+                  {node.machines && node.machines.length > 0 && (
                     <div className="flex items-center">
-                      <Wrench className="h-3 w-3 mr-1" />
-                      <span>{node.machines.length}</span>
+                      <Wrench className="h-3 w-3 mr-1 text-blue-500" />
+                      <span>{node.machinesCount || node.machines.length}</span>
                     </div>
                   )}
                 </div>
@@ -715,33 +1194,160 @@ export default function LocationTreeView({
         </div>
 
         {/* Machines in this location - only show if showMachines is true */}
-        {isExpanded && hasMachines && showMachines && (
-          <div className="ml-2 sm:ml-4" onClick={(e) => e.stopPropagation()}>
-            {/* Mobile Machine Cards */}
-            <div className="block space-y-2">
-              {node.machines.map((machine) => (
-                <div
-                  key={machine._id}
-                  className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 min-h-[44px] touch-manipulation"
-                  onClick={(e) => handleMachineClick(machine, e)}
-                  title={t("machines.clickToEdit")}
-                >
-                  <div className="flex items-start space-x-3">
-                    <Wrench className="h-4 w-4 text-gray-500 dark:text-gray-400 mt-1 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {machine.model.name}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {machine.model.manufacturer} {machine.model.brand} (
-                        {machine.model.year})
+        {isExpanded && showMachines && (
+          <>
+            
+
+            {/* Integrated LocationMachinesView - Detailed Machine View */}
+            {showMachines && (node.machines && node.machines.length > 0 || node.isLoadingMachines) && (
+              <div 
+                className="mt-2" 
+                style={{ marginLeft: `${level * 12 + 12}px` }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={`bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg transition-all duration-300 ${
+                  node.isLoadingMachines ? 'animate-pulse border-blue-300 dark:border-blue-700' : ''
+                }`}>
+                  {/* Header */}
+                  <div className="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-600">
+                    <div className="flex items-center space-x-3">
+                      <Wrench className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                          {t("locations.machinesInLocation")}
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {node.name}
+                        </p>
                       </div>
                     </div>
+                    <div className="flex items-center space-x-2">
+                      {node.isLoadingMachines ? (
+                        <div className="flex items-center space-x-2">
+                          <div className="w-4 h-4 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+                          <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                            {t("common.loading")}...
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-500 dark:text-gray-400">
+                          {node.machines.length} {t("machines.machine")}
+                          {(node.machines.length) !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Machine Details */}
+                  <div 
+                    className="max-h-64 overflow-y-auto"
+                    onScroll={(e) => {
+                      const container = e.currentTarget;
+                      handleMachineScroll(node._id, container);
+                    }}
+                  >
+                    {/* Skeleton loading for initial load */}
+                    {node.isLoadingMachines && node.machines.length === 0 && (
+                      <div className="p-4 flex flex-col items-center justify-center">
+                        <div className="flex items-center space-x-3 mb-3">
+                          <div className="w-6 h-6 border-3 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+                          <span className="text-sm font-medium text-blue-600 dark:text-blue-400">
+                            {t("common.loading")} {t("machines.machine")}s...
+                          </span>
+                        </div>
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        </div>
+                      </div>
+                    )}
+                    {node.machines.map((machine) => (
+                      <div
+                        key={machine._id}
+                        className="p-3 border-b border-gray-200 dark:border-gray-600 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <h4 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {machine.description}
+                              </h4>
+                              <span
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                  machine.state === "active"
+                                    ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+                                    : machine.state === "inactive"
+                                    ? "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                                    : machine.state === "maintenance"
+                                    ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
+                                    : machine.state === "retired"
+                                    ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
+                                    : "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300"
+                                }`}
+                              >
+                                {machine.state === "active"
+                                  ? t("machines.active")
+                                  : machine.state === "inactive"
+                                  ? t("machines.inactive")
+                                  : machine.state === "maintenance"
+                                  ? t("machines.maintenance")
+                                  : machine.state === "retired"
+                                  ? t("machines.retired")
+                                  : machine.state}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                              <p>
+                                <span className="font-medium">{t("machines.brand")}:</span> {machine.brand}
+                              </p>
+                              <p>
+                                <span className="font-medium">{t("machines.model")}:</span> {machine.model}
+                              </p>
+                              <p>
+                                <span className="font-medium">{t("machines.series")}:</span> {machine.series}
+                              </p>
+                              <p>
+                                <span className="font-medium">{t("machines.category")}:</span> {machine.category}
+                              </p>
+                              <p>
+                                <span className="font-medium">{t("machines.internalCode")}:</span> {machine.internalCode}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="ml-4 flex-shrink-0">
+                            <button
+                              className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                              title={t("common.viewDetails")}
+                              onClick={(e) => handleMachineClick(machine, e)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {/* Loading indicator for infinite scroll */}
+                    {node.isLoadingMachines && (
+                      <div className="p-4 flex flex-col items-center justify-center bg-blue-50 dark:bg-blue-900/20 rounded-lg mx-2 mb-2 border border-blue-200 dark:border-blue-800">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <div className="w-6 h-6 border-3 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+                          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                            {node.machines.length === 0 ? t("common.loading") + "..." : t("common.loadingMore") + "..."}
+                          </span>
+                        </div>
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Children */}

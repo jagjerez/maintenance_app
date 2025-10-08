@@ -142,7 +142,6 @@ export async function GET(request: NextRequest) {
       locationId: { $in: objectIds },
       companyId: session.user.companyId 
     })
-      .populate('model')
       .lean();
 
     // Build the tree structure with only relevant locations

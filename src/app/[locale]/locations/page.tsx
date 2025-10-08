@@ -61,14 +61,17 @@ const iconOptions = [
 
 interface Machine {
   _id: string;
-  model: {
-    _id: string;
-    name: string;
-    manufacturer: string;
-    brand: string;
-    year: number;
-  };
-  location: string;
+  internalCode: string;
+  description: string;
+  brand: string;
+  model: string;
+  series: string;
+  category: string;
+  state: string;
+  locationId: string;
+  companyId: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface Location {
@@ -387,6 +390,7 @@ export default function LocationsPage() {
     router.push(`/machines?edit=${machine._id}`);
   };
 
+
   const handleSearch = useCallback((query: string, signal?: AbortSignal) => {
     const previousQuery = searchQuery;
     setSearchQuery(query);
@@ -539,8 +543,9 @@ export default function LocationsPage() {
 
       {/* Content */}
       {viewMode === "tree" ? (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
-          <div className="p-4">
+        <div className="space-y-4">
+          <div className="bg-white dark:bg-gray-800 shadow rounded-lg">
+            <div className="p-4">
             <LocationTreeView
               onLocationEdit={(location) => handleLocationEdit(location)}
               onLocationDelete={(location) => handleLocationDelete(location)}
@@ -554,6 +559,7 @@ export default function LocationsPage() {
               searchQuery={searchQuery}
               className=""
             />
+            </div>
           </div>
         </div>
       ) : (

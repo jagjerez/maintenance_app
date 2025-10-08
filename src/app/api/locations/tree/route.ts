@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { connectDB } from '@/lib/db';
-import { Location, Machine } from '@/models';
+import { Location } from '@/models';
 import mongoose from 'mongoose';
 
 // GET /api/locations/tree - Get root locations only (optimized for lazy loading)
@@ -38,17 +38,11 @@ export async function GET(request: NextRequest) {
     // Get total count for pagination
     const totalLocations = await Location.countDocuments(query);
 
-    // Get machines for locations (limit to avoid memory issues)
-    const locationIds = locations.map(loc => loc._id);
-    const machines = await Machine.find({ 
-      locationId: { $in: locationIds },
-      companyId: session.user.companyId 
-    })
-      .populate('model')
-      .limit(100) // Limit machines per location to avoid memory issues
-      .lean();
+    // Don't preload machines - they will be loaded on demand when nodes are expanded
+
 
     // Get children count for each location - Batch query for better performance
+    const locationIds = locations.map(loc => loc._id);
     const childrenCounts = await Location.aggregate([
       {
         $match: {
@@ -69,22 +63,19 @@ export async function GET(request: NextRequest) {
       childrenCountMap.set(item._id.toString(), item.count);
     });
 
-    // Build locations with their machines and children info
+    // Build locations without preloading machines or children
     const tree = locations.map(location => {
-      // Find machines in this location
-      const locationMachines = machines.filter(machine => 
-        machine.locationId && machine.locationId.toString() === location._id.toString()
-      );
-
       const childrenCount = childrenCountMap.get(location._id.toString()) || 0;
 
       return {
         ...location,
-        machines: locationMachines,
+        machines: [], // Will be loaded on demand when node is expanded
         children: [], // Will be loaded on demand
         childrenCount: childrenCount, // Number of children available
         hasChildren: childrenCount > 0, // Boolean flag for easy checking
         isLeaf: childrenCount === 0, // True if no children
+        machinesLoaded: false, // Track if machines have been loaded
+        childrenLoaded: false, // Track if children have been loaded
       };
     });
 

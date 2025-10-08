@@ -20,11 +20,16 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const search = searchParams.get("search") || "";
+    const locationId = searchParams.get("locationId");
     const skip = (page - 1) * limit;
 
     // Build search query
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const query: Record<string, any> = { companyId: session.user.companyId };
+
+    if (locationId) {
+      query.locationId = new mongoose.Types.ObjectId(locationId);
+    }
 
     if (search) {
       query.$or = [

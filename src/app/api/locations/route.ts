@@ -6,6 +6,21 @@ import { Location } from '@/models';
 import { locationCreateSchema } from '@/lib/validations';
 import crypto from 'crypto';
 
+interface Machine {
+  _id: string;
+  internalCode: string;
+  description: string;
+  brand: string;
+  model: string;
+  series: string;
+  category: string;
+  state: string;
+  locationId: string;
+  companyId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface LocationWithChildren {
   _id: string;
   name: string;
@@ -14,7 +29,7 @@ interface LocationWithChildren {
   path: string;
   level: number;
   children: LocationWithChildren[];
-  machines?: unknown[];
+  machines?: Machine[];
 }
 
 
@@ -31,7 +46,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const parentId = searchParams.get('parentId');
     const includeChildren = searchParams.get('includeChildren') === 'true';
-    const includeMachines = searchParams.get('includeMachines') === 'true';
     const flat = searchParams.get('flat') === 'true';
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
@@ -53,10 +67,11 @@ export async function GET(request: NextRequest) {
       query.parentId = parentId;
     }
 
-    let populateFields = '';
-    if (includeMachines) {
-      populateFields = 'machines';
-    }
+    // Always include machines for read-only display with specific fields
+    const populateFields = {
+      path: 'machines',
+      select: '_id internalCode description brand model series category state locationId companyId createdAt updatedAt'
+    };
 
     // If includeChildren is true, get all locations for tree building
     if (includeChildren) {

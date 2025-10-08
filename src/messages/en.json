@@ -51,7 +51,8 @@
     "addNew": "Add New",
     "endOfList": "End of list",
     "searchLocation": "Search location...",
-    "information": "Information"
+    "information": "Information",
+    "viewDetails": "View Details"
   },
   "Integration": {
     "title": "Data Integration",
@@ -288,7 +289,9 @@
     "listView": "List View",
     "searchParentLocation": "Search parent location...",
     "noParentLocationsFound": "No parent locations found",
-    "loadingParentLocations": "Loading parent locations..."
+    "loadingParentLocations": "Loading parent locations...",
+    "machinesInLocation": "Machines in this location",
+    "noMachinesInLocation": "No machines in this location"
   },
   "settings": {
     "title": "Settings",
