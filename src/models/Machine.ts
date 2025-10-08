@@ -8,6 +8,9 @@ export interface IMachine {
   brand: string;
   model: string;
   series: string;
+  category: string;
+  locationId?: string;
+  rootId?: string;
   characteristics: Map<string, unknown>;
   state: string;
   deletedAt?: Date;
@@ -47,6 +50,22 @@ const MachineSchema = new Schema({
     required: [true, 'Series is required'],
     trim: true,
     maxlength: [255, 'Series cannot exceed 255 characters'],
+  },
+  category: {
+    type: String,
+    required: [true, 'Category is required'],
+    trim: true,
+    maxlength: [100, 'Category cannot exceed 100 characters'],
+  },
+  locationId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Location',
+    default: null,
+  },
+  rootId: {
+    type: Schema.Types.ObjectId,
+    ref: 'Location',
+    default: null,
   },
   characteristics: {
     type: Map,
@@ -96,8 +115,11 @@ MachineSchema.pre('findOneAndUpdate', function() {
 
 // Index for better query performance
 MachineSchema.index({ internalCode: 1 });
-MachineSchema.index({ brand: 1, model: 1, series: 1 });
+MachineSchema.index({ brand: 1, model: 1, series: 1, category: 1 });
 MachineSchema.index({ state: 1 });
+MachineSchema.index({ category: 1 });
+MachineSchema.index({ locationId: 1 });
+MachineSchema.index({ rootId: 1 });
 MachineSchema.index({ deletedAt: 1 });
 MachineSchema.index({ companyId: 1 });
 

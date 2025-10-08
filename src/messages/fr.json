@@ -165,6 +165,8 @@
     "brand": "Marque",
     "model": "Modèle",
     "series": "Série",
+    "category": "Catégorie",
+    "location": "Emplacement",
     "state": "État",
     "characteristics": "Caractéristiques",
     "characteristic": "Caractéristique",

@@ -5,6 +5,7 @@ import { Machine } from "@/models";
 import { machineCreateSchema } from "@/lib/validations";
 import { authOptions } from "@/lib/auth";
 import crypto from 'crypto';
+import mongoose from "mongoose";
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,6 +42,7 @@ export async function GET(request: NextRequest) {
       .limit(limit);
     const totalPages = Math.ceil(totalItems / limit);
 
+
     return NextResponse.json({
       machines,
       totalItems,
@@ -71,7 +73,17 @@ export async function POST(request: NextRequest) {
       ...validatedData,
       internalCode: crypto.randomUUID(),
       companyId: session.user.companyId,
-    };
+    } as Record<string, unknown>;
+    
+    // Convert string IDs to ObjectIds for MongoDB
+    if (dataWithCompany.locationId && typeof dataWithCompany.locationId === 'string') {
+      dataWithCompany.locationId = new mongoose.Types.ObjectId(dataWithCompany.locationId);
+    }
+    
+    if (dataWithCompany.rootId && typeof dataWithCompany.rootId === 'string') {
+      dataWithCompany.rootId = new mongoose.Types.ObjectId(dataWithCompany.rootId);
+    }
+
 
     // Validate no duplicate internal code
     const existingMachine = await Machine.findOne({

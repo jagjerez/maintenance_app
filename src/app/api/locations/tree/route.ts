@@ -18,39 +18,41 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '50'); // Limit root locations
     const offset = parseInt(searchParams.get('offset') || '0');
+    const parentId = searchParams.get('parentId');
 
-    // Get only root locations (no parentId) with pagination
-    const rootLocations = await Location.find({ 
-      parentId: null,
-      companyId: session.user.companyId 
-    })
+    // Get locations based on parentId parameter
+    const query: any = { companyId: session.user.companyId };
+    
+    if (parentId) {
+      query.parentId = new mongoose.Types.ObjectId(parentId);
+    } else {
+      query.parentId = null;
+    }
+    
+    const locations = await Location.find(query)
       .sort({ name: 1 })
       .skip(offset)
       .limit(limit)
       .lean();
       
     // Get total count for pagination
-    const totalRootLocations = await Location.countDocuments({
-      parentId: null,
-      companyId: session.user.companyId
-    });
+    const totalLocations = await Location.countDocuments(query);
 
-    // Get machines for root locations only (limit to avoid memory issues)
-    const rootLocationIds = rootLocations.map(loc => loc._id);
+    // Get machines for locations (limit to avoid memory issues)
+    const locationIds = locations.map(loc => loc._id);
     const machines = await Machine.find({ 
-      locationId: { $in: rootLocationIds },
+      locationId: { $in: locationIds },
       companyId: session.user.companyId 
     })
       .populate('model')
       .limit(100) // Limit machines per location to avoid memory issues
       .lean();
 
-    // Get children count for each root location - Batch query for better performance
-    
+    // Get children count for each location - Batch query for better performance
     const childrenCounts = await Location.aggregate([
       {
         $match: {
-          parentId: { $in: rootLocationIds },
+          parentId: { $in: locationIds },
           companyId: new mongoose.Types.ObjectId(session.user.companyId)
         }
       },
@@ -67,8 +69,8 @@ export async function GET(request: NextRequest) {
       childrenCountMap.set(item._id.toString(), item.count);
     });
 
-    // Build root locations with their machines and children info
-    const tree = rootLocations.map(location => {
+    // Build locations with their machines and children info
+    const tree = locations.map(location => {
       // Find machines in this location
       const locationMachines = machines.filter(machine => 
         machine.locationId && machine.locationId.toString() === location._id.toString()
@@ -88,8 +90,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       locations: tree,
-      totalItems: totalRootLocations,
-      hasMore: offset + limit < totalRootLocations,
+      totalItems: totalLocations,
+      hasMore: offset + limit < totalLocations,
       offset,
       limit
     });

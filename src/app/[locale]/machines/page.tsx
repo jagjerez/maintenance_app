@@ -19,6 +19,8 @@ import {
 import { Pagination } from "@/components/Pagination";
 import DataTable from "@/components/DataTable";
 import SearchInput from "@/components/SearchInput";
+import SearchableSelectWithAdd from "@/components/SearchableSelectWithAdd";
+import LocationTreeSelect from "@/components/LocationTreeSelect";
 
 // Schema according to PlantUML structure
 import { formatDateSafe } from "@/lib/utils";
@@ -32,6 +34,9 @@ interface Machine {
   brand: string;
   model: string;
   series: string;
+  category: string;
+  locationId?: string;
+  rootId?: string;
   characteristics: Record<string, string>;
   state: 'active' | 'inactive' | 'maintenance' | 'retired';
   deletedAt?: string;
@@ -64,6 +69,12 @@ export default function MachinesPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [characteristics, setCharacteristics] = useState<Record<string, string>>({});
   const [editingKeys, setEditingKeys] = useState<Record<string, string>>({});
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [selectedRootId, setSelectedRootId] = useState<string | null>(null);
+  const [locationNames, setLocationNames] = useState<Record<string, string>>({});
+  const [locationNamesLoaded, setLocationNamesLoaded] = useState(false);
+  const [resolvedLocations, setResolvedLocations] = useState<Record<string, string>>({});
 
   // Form setup
   const {
@@ -79,6 +90,8 @@ export default function MachinesPage() {
       brand: "",
       model: "",
       series: "",
+      category: "",
+      locationId: "",
       characteristics: {},
       state: "active",
     },
@@ -95,12 +108,16 @@ export default function MachinesPage() {
         );
         if (response.ok) {
           const data = await response.json();
-          setMachines(data.machines || data);
+          const machines = data.machines || data;
+          setMachines(machines);
           setTotalPages(
             data.totalPages ||
-              Math.ceil((data.machines || data).length / ITEMS_PER_PAGE)
+              Math.ceil(machines.length / ITEMS_PER_PAGE)
           );
-          setTotalItems(data.totalItems || (data.machines || data).length);
+          setTotalItems(data.totalItems || machines.length);
+          
+          // Load location names for display
+          await loadLocationNames();
         } else {
           toast.error(t("machines.machineLoadError"));
         }
@@ -113,8 +130,80 @@ export default function MachinesPage() {
         toast.error(t("machines.machineLoadError"));
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [t]
   );
+
+  // Function to resolve location name from ID
+  const resolveLocationName = useCallback(async (locationId: string): Promise<string> => {
+    if (!locationId || locationId === "null" || locationId === "undefined") {
+      return "-";
+    }
+
+    // First check if we already have it in our map
+    if (locationNames[locationId]) {
+      return locationNames[locationId];
+    }
+
+    // If not found, try to fetch it directly
+    try {
+      const response = await fetch(`/api/locations/${locationId}`);
+      if (response.ok) {
+        const location = await response.json();
+        
+        // Build the full path
+        let fullPath = location.name;
+        if (location.path && location.path !== `/${location.name}`) {
+          fullPath = location.path;
+        }
+        
+        // Update our map for future use
+        setLocationNames(prev => ({
+          ...prev,
+          [locationId]: fullPath
+        }));
+        
+        return fullPath;
+      }
+    } catch (error) {
+      console.error("Error resolving location:", error);
+    }
+
+    return "-";
+  }, [locationNames]);
+
+  // Fetch location names for display
+  const loadLocationNames = useCallback(async () => {
+    try {
+      const response = await fetch('/api/locations/tree');
+      if (response.ok) {
+        const data = await response.json();
+        const locations = data.locations || [];
+        
+        // Create a flat map of all locations with their names
+        const locationMap: Record<string, string> = {};
+        
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const flattenLocations = (locations: any[], parentPath = '') => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          locations.forEach((location: any) => {
+            const fullPath = parentPath ? `${parentPath}/${location.name}` : location.name;
+            locationMap[location._id] = fullPath;
+            
+            if (location.children && location.children.length > 0) {
+              flattenLocations(location.children, fullPath);
+            }
+          });
+        };
+        
+        flattenLocations(locations);
+        setLocationNames(locationMap);
+        setLocationNamesLoaded(true);
+      }
+    } catch (error) {
+      console.error("Error fetching location names:", error);
+    }
+  }, []);
 
 
   // Load data on component mount and when dependencies change
@@ -122,6 +211,9 @@ export default function MachinesPage() {
     const loadData = async () => {
       setLoading(true);
       try {
+        // Load location names first
+        await loadLocationNames();
+        // Then load machines
         await fetchMachines(currentPage, searchQuery);
       } catch (error) {
         console.error("Error loading data:", error);
@@ -130,7 +222,7 @@ export default function MachinesPage() {
       }
     };
     loadData();
-  }, [currentPage, fetchMachines, searchQuery]);
+  }, [currentPage, fetchMachines, searchQuery, loadLocationNames]);
 
 
   // Form submission
@@ -139,10 +231,26 @@ export default function MachinesPage() {
     brand: string;
     model: string;
     series: string;
+    category: string;
+    locationId?: string | null;
+    rootId?: string | null;
     characteristics: Record<string, string>;
     state: string;
   }) => {
     try {
+      
+      const formValues = {
+        description: data.description,
+        brand: data.brand,
+        model: data.model,
+        series: data.series,
+        category: data.category,
+        locationId: data.locationId,
+        rootId: selectedRootId,
+        characteristics: data.characteristics,
+        state: data.state,
+      };
+      
       const url = editingMachine ? `/api/machines/${editingMachine._id}` : "/api/machines";
       const method = editingMachine ? "PUT" : "POST";
 
@@ -151,14 +259,18 @@ export default function MachinesPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(formValues),
       });
 
       if (response.ok) {
+        await response.json();
+        
         await fetchMachines(currentPage, searchQuery);
         setShowModal(false);
         setEditingMachine(null);
         reset();
+        setSelectedCategory(null);
+        setSelectedLocation(null);
         toast.success(
           editingMachine
             ? t("machines.machineUpdated")
@@ -182,12 +294,17 @@ export default function MachinesPage() {
       brand: machine.brand,
       model: machine.model,
       series: machine.series,
+      category: machine.category,
+      locationId: machine.locationId || "",
       characteristics: machine.characteristics || {},
       state: machine.state,
     });
     
-    // Set characteristics
+    // Set characteristics and selections
     setCharacteristics(machine.characteristics || {});
+    setSelectedCategory(machine.category || null);
+    setSelectedLocation(machine.locationId || null);
+    setSelectedRootId(machine.rootId || null);
     
     setShowModal(true);
   };
@@ -313,6 +430,48 @@ export default function MachinesPage() {
       label: t("machines.series"),
     },
     {
+      key: "category" as keyof Machine,
+      label: t("machines.category"),
+    },
+    {
+      key: "locationId" as keyof Machine,
+      label: t("machines.location"),
+      render: (value: unknown) => {
+        const locationId = String(value || "");
+        
+        if (!locationNamesLoaded) {
+          return "Loading...";
+        }
+        
+        if (!locationId || locationId === "null" || locationId === "undefined") {
+          return "-";
+        }
+        
+        // Check if we have it in our resolved locations
+        if (resolvedLocations[locationId]) {
+          return resolvedLocations[locationId];
+        }
+        
+        // Check if we have it in our location names map
+        if (locationNames[locationId]) {
+          return locationNames[locationId];
+        }
+        
+        // If not found, trigger async resolution
+        if (locationId && !resolvedLocations[locationId]) {
+          resolveLocationName(locationId).then(resolvedName => {
+            setResolvedLocations(prev => ({
+              ...prev,
+              [locationId]: resolvedName
+            }));
+          });
+          return "Resolving...";
+        }
+        
+        return "-";
+      },
+    },
+    {
       key: "state" as keyof Machine,
       label: t("machines.state"),
     },
@@ -397,11 +556,16 @@ export default function MachinesPage() {
                 brand: "",
                 model: "",
                 series: "",
+                category: "",
+                locationId: "",
+                rootId: "",
                 characteristics: {},
                 state: "active",
               });
               setCharacteristics({});
               setEditingKeys({});
+              setSelectedCategory(null);
+              setSelectedLocation(null);
               setShowModal(true);
             }}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -477,6 +641,8 @@ export default function MachinesPage() {
           reset();
           setCharacteristics({});
           setEditingKeys({});
+          setSelectedCategory(null);
+          setSelectedLocation(null);
         }}
         title={
           editingMachine
@@ -540,16 +706,87 @@ export default function MachinesPage() {
                   </FormGroup>
 
                   <FormGroup>
+                    <FormLabel required>{t("machines.category")}</FormLabel>
+                    <SearchableSelectWithAdd
+                      value={selectedCategory}
+                      onChange={(value) => {
+                        setSelectedCategory(value);
+                        setValue("category", value || "");
+                      }}
+                      fetchOptions={async (search, offset, limit) => {
+                        try {
+                          const response = await fetch(`/api/machines/categories`);
+                          if (response.ok) {
+                            const data = await response.json();
+                            const categories = data.categories || [];
+                            const filtered = search 
+                              ? categories.filter((cat: string) => 
+                                  cat.toLowerCase().includes(search.toLowerCase())
+                                )
+                              : categories;
+                            
+                            return {
+                              options: filtered.slice(offset, offset + limit).map((cat: string) => ({
+                                _id: cat,
+                                name: cat,
+                              })),
+                              hasMore: offset + limit < filtered.length,
+                              totalItems: filtered.length,
+                            };
+                          }
+                          return { options: [], hasMore: false };
+                        } catch (error) {
+                          console.error("Error fetching categories:", error);
+                          return { options: [], hasMore: false };
+                        }
+                      }}
+                      placeholder={t("placeholders.category")}
+                      addNewText={t("common.addNew")}
+                      error={errors.category?.message}
+                      className="text-base"
+                      searchable={true}
+                      clearable={true}
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
+                    <FormLabel>{t("machines.location")}</FormLabel>
+                    {/* Hidden input for form registration */}
+                    <input
+                      type="hidden"
+                      {...register("locationId")}
+                    />
+                    <LocationTreeSelect
+                      value={selectedLocation}
+                      onChange={(value, option, rootId) => {
+                        setSelectedLocation(value);
+                        setSelectedRootId(rootId || null);
+                        setValue("locationId", value || "");
+                      }}
+                      placeholder={t("placeholders.location")}
+                      error={errors.locationId?.message}
+                      className="text-base"
+                    />
+                  </FormGroup>
+
+                  <FormGroup>
                     <FormLabel required>{t("machines.state")}</FormLabel>
-                    <select
-                      {...register("state")}
-                      className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-base min-h-[48px]"
-                    >
-                      <option value="active">{t("machines.active")}</option>
-                      <option value="inactive">{t("machines.inactive")}</option>
-                      <option value="maintenance">{t("machines.maintenance")}</option>
-                      <option value="retired">{t("machines.retired")}</option>
-                    </select>
+                    <div className="relative">
+                      <select
+                        {...register("state")}
+                        className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white text-base min-h-[48px] appearance-none cursor-pointer bg-white dark:bg-gray-700"
+                      >
+                        <option value="active">{t("machines.active")}</option>
+                        <option value="inactive">{t("machines.inactive")}</option>
+                        <option value="maintenance">{t("machines.maintenance")}</option>
+                        <option value="retired">{t("machines.retired")}</option>
+                      </select>
+                      <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
                   </FormGroup>
                 </div>
               </div>

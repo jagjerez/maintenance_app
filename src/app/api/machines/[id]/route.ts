@@ -4,6 +4,7 @@ import connectDB from "@/lib/db";
 import { Machine } from "@/models";
 import { machineUpdateSchema } from "@/lib/validations";
 import { authOptions } from "@/lib/auth";
+import mongoose from "mongoose";
 
 export async function GET(
   request: NextRequest,
@@ -77,17 +78,36 @@ export async function PUT(
       }
     }
 
-    const updateData = { ...validatedData };
-
-    const machine = await Machine.findOneAndUpdate(
-      { _id: id, companyId: session.user.companyId },
-      updateData,
-      { new: true, runValidators: true }
-    );
-
+    const updateData = { ...validatedData } as Record<string, unknown>;
+    
+    // Convert string IDs to ObjectIds for MongoDB
+    if (updateData.locationId && typeof updateData.locationId === 'string') {
+      updateData.locationId = new mongoose.Types.ObjectId(updateData.locationId);
+    }
+    
+    if (updateData.rootId && typeof updateData.rootId === 'string') {
+      updateData.rootId = new mongoose.Types.ObjectId(updateData.rootId);
+    }
+    
+    
+    // Find the machine first
+    const machine = await Machine.findOne({ _id: id, companyId: session.user.companyId });
+    
     if (!machine) {
       return NextResponse.json({ error: "Machine not found" }, { status: 404 });
     }
+
+    // Update the fields manually - force assignment for all fields
+    Object.assign(machine, updateData);
+    
+    // Force mark ALL fields as modified to ensure Mongoose saves them
+    Object.keys(updateData).forEach(key => {
+      machine.markModified(key);
+    });
+    
+    // Save the machine
+    await machine.save();
+
 
     return NextResponse.json(machine);
   } catch (error) {
