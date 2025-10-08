@@ -22,11 +22,11 @@ const templates = {
     ]
   },
   machines: {
-    headers: ['internalCode', 'name', 'manufacturer', 'brand', 'year', 'locationInternalCode', 'description', 'properties'],
+    headers: ['internalCode', 'description', 'brand', 'model', 'series', 'category', 'locationInternalCode', 'rootLocationInternalCode', 'state', 'characteristics'],
     data: [
-      ['', 'Production Machine 1', 'Manufacturer A', 'Brand X', 2023, 'PLANT_A', 'Main production machine', '{"serialNumber":"MX1001","installationDate":"2023-01-15"}'],
-      ['', 'Production Machine 2', 'Manufacturer B', 'Brand Y', 2022, 'BUILDING_A', 'Secondary machine', '{"serialNumber":"MY2002","installationDate":"2023-02-20"}'],
-      ['', 'Backup Machine', 'Manufacturer C', 'Brand Z', 2024, 'BUILDING_B', 'Backup machine', '{"serialNumber":"MZ3003","installationDate":"2023-03-10"}']
+      ['', 'Main production machine', 'Brand X', 'Model X1', 'Series A', 'Production', 'PROD_LINE_1', 'PLANT_A', 'active', '{"power":"100kW","weight":"500kg","voltage":"220V"}'],
+      ['', 'Secondary machine', 'Brand Y', 'Model Y2', 'Series B', 'Production', 'PROD_LINE_2', 'PLANT_A', 'active', '{"power":"150kW","weight":"750kg","voltage":"380V"}'],
+      ['', 'Backup machine', 'Brand Z', 'Model Z3', 'Series C', 'Maintenance', 'WAREHOUSE', 'PLANT_A', 'inactive', '{"power":"200kW","weight":"1000kg","voltage":"220V"}']
     ]
   },
   operations: {

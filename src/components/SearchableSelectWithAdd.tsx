@@ -267,7 +267,7 @@ export default function SearchableSelectWithAdd({
           }
           ${disabled 
             ? "bg-gray-50 dark:bg-gray-700 cursor-not-allowed" 
-            : "bg-white dark:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500"
+            : "bg-white dark:bg-gray-700 hover:border-gray-400 dark:hover:border-gray-500"
           }
           ${isOpen 
             ? "ring-2 ring-blue-500 border-blue-500" 
@@ -373,7 +373,7 @@ export default function SearchableSelectWithAdd({
                     <div className="flex items-center">
                       <Plus className="h-4 w-4 text-green-600 dark:text-green-400 mr-2" />
                       <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                        {addNewText}: "{searchQuery}"
+                        {addNewText}: &quot;{searchQuery}&quot;
                       </span>
                     </div>
                   </div>

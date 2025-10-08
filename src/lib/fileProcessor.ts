@@ -231,14 +231,14 @@ export class FileProcessor {
 
 
   private async processMachineRow(row: FileRowData): Promise<void> {
-    const { internalCode, description, brand, model, series, state, characteristics } = row;
+    const { internalCode, description, brand, model, series, category, locationInternalCode, rootLocationInternalCode, state, characteristics } = row;
 
     // Check if the row has the old structure (name, manufacturer, year, locationInternalCode)
     if (row.name || row.manufacturer || row.year || row.locationInternalCode) {
       throw { 
         field: 'structure', 
         value: 'old', 
-        message: 'This file uses the old machine structure. Please download the new template and use the updated format with columns: internalCode, description, brand, model, series, state, characteristics' 
+        message: 'This file uses the old machine structure. Please download the new template and use the updated format with columns: internalCode, description, brand, model, series, category, locationInternalCode, rootLocationInternalCode, state, characteristics' 
       };
     }
 
@@ -247,6 +247,7 @@ export class FileProcessor {
     const safeBrand = this.safeTrim(brand) || 'N/A';
     const safeModel = this.safeTrim(model) || 'N/A';
     const safeSeries = this.safeTrim(series) || 'N/A';
+    const safeCategory = this.safeTrim(category) || 'N/A';
     const safeState = this.safeTrim(state) || 'active';
 
     let characteristicsMap = new Map();
@@ -256,6 +257,30 @@ export class FileProcessor {
         characteristicsMap = new Map(Object.entries(parsedCharacteristics));
       } catch {
         throw { field: 'characteristics', value: characteristics, message: 'Invalid JSON format' };
+      }
+    }
+
+    // Handle location references
+    let locationId = null;
+    let rootId = null;
+    
+    if (locationInternalCode && this.safeTrim(locationInternalCode)) {
+      const location = await Location.findOne({ 
+        internalCode: this.safeTrim(locationInternalCode), 
+        companyId: this.companyId
+      });
+      if (location) {
+        locationId = location._id;
+      }
+    }
+    
+    if (rootLocationInternalCode && this.safeTrim(rootLocationInternalCode)) {
+      const rootLocation = await Location.findOne({ 
+        internalCode: this.safeTrim(rootLocationInternalCode), 
+        companyId: this.companyId
+      });
+      if (rootLocation) {
+        rootId = rootLocation._id;
       }
     }
 
@@ -274,6 +299,9 @@ export class FileProcessor {
           brand: safeBrand,
           model: safeModel,
           series: safeSeries,
+          category: safeCategory,
+          locationId: locationId,
+          rootId: rootId,
           state: safeState,
           characteristics: characteristicsMap,
           companyId: this.companyId,
@@ -285,6 +313,9 @@ export class FileProcessor {
       existingMachine.brand = safeBrand;
       existingMachine.model = safeModel;
       existingMachine.series = safeSeries;
+      existingMachine.category = safeCategory;
+      existingMachine.locationId = locationId;
+      existingMachine.rootId = rootId;
       existingMachine.state = safeState;
       existingMachine.characteristics = characteristicsMap;
       
@@ -297,6 +328,9 @@ export class FileProcessor {
         brand: safeBrand,
         model: safeModel,
         series: safeSeries,
+        category: safeCategory,
+        locationId: locationId,
+        rootId: rootId,
         state: safeState,
         characteristics: characteristicsMap,
         companyId: this.companyId,
