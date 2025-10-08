@@ -114,7 +114,6 @@ MachineSchema.pre('findOneAndUpdate', function() {
 });
 
 // Index for better query performance
-MachineSchema.index({ internalCode: 1 });
 MachineSchema.index({ brand: 1, model: 1, series: 1, category: 1 });
 MachineSchema.index({ state: 1 });
 MachineSchema.index({ category: 1 });

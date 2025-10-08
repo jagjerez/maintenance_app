@@ -10,7 +10,7 @@ export interface ProcessingResult {
   successRows: number;
   errorRows: number;
   limitedRows: number; // Number of rows that were not processed due to limit
-  errors: Array<{
+  jobErrors: Array<{
     row: number;
     field: string;
     value: string;
@@ -108,7 +108,7 @@ export class FileProcessor {
       successRows: 0,
       errorRows: 0,
       limitedRows,
-      errors: [],
+      jobErrors: [],
     };
 
     // Process only the first MAX_ROWS_PER_PROCESSING rows
@@ -122,7 +122,7 @@ export class FileProcessor {
       } catch (error: unknown) {
         result.errorRows++;
         const errorObj = error as { field?: string; value?: string; message?: string };
-        result.errors.push({
+        result.jobErrors.push({
           row: rowNumber,
           field: errorObj.field || 'unknown',
           value: errorObj.value || '',
@@ -252,11 +252,30 @@ export class FileProcessor {
 
     let characteristicsMap = new Map();
     if (characteristics) {
-      try {
-        const parsedCharacteristics = JSON.parse(String(characteristics));
-        characteristicsMap = new Map(Object.entries(parsedCharacteristics));
-      } catch {
-        throw { field: 'characteristics', value: characteristics, message: 'Invalid JSON format' };
+      const characteristicsStr = String(characteristics).trim();
+      if (characteristicsStr) {
+        // Try JSON format first
+        if (characteristicsStr.startsWith('{') && characteristicsStr.endsWith('}')) {
+          try {
+            const parsedCharacteristics = JSON.parse(characteristicsStr);
+            characteristicsMap = new Map(Object.entries(parsedCharacteristics));
+          } catch {
+            throw { field: 'characteristics', value: characteristics, message: 'Invalid JSON format' };
+          }
+        } else {
+          // Try semicolon-separated format: key:value;key2:value2
+          try {
+            const pairs = characteristicsStr.split(';');
+            pairs.forEach(pair => {
+              const [key, value] = pair.split(':');
+              if (key && value) {
+                characteristicsMap.set(key.trim(), value.trim());
+              }
+            });
+          } catch {
+            throw { field: 'characteristics', value: characteristics, message: 'Invalid characteristics format. Use JSON or key:value;key2:value2 format' };
+          }
+        }
       }
     }
 
@@ -410,7 +429,7 @@ export class FileProcessor {
       successRows: result.successRows,
       errorRows: result.errorRows,
       limitedRows: result.limitedRows,
-      errors: result.errors,
+      jobErrors: result.jobErrors,
     });
   }
 
@@ -423,7 +442,7 @@ export class FileProcessor {
       successRows: result.successRows,
       errorRows: result.errorRows,
       limitedRows: result.limitedRows,
-      errors: result.errors,
+      jobErrors: result.jobErrors,
       completedAt: new Date(),
     });
   }

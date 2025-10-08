@@ -72,7 +72,6 @@ OperationSchema.pre('findOneAndUpdate', function() {
 });
 
 // Index for better query performance
-OperationSchema.index({ internalCode: 1 });
 OperationSchema.index({ name: 1 });
 OperationSchema.index({ companyId: 1 });
 OperationSchema.index({ deletedAt: 1 });

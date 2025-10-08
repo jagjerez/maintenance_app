@@ -93,7 +93,6 @@ LocationSchema.pre('findOneAndUpdate', function() {
 });
 
 // Indexes for better query performance
-LocationSchema.index({ internalCode: 1 });
 LocationSchema.index({ companyId: 1 });
 LocationSchema.index({ parentId: 1 });
 LocationSchema.index({ path: 1 });

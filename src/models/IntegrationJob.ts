@@ -13,7 +13,7 @@ export interface IIntegrationJob {
   successRows: number;
   errorRows: number;
   limitedRows: number; // Number of rows that were not processed due to limit
-  errors: Array<{
+  jobErrors: Array<{
     row: number;
     field: string;
     value: string;
@@ -86,7 +86,7 @@ const IntegrationJobSchema = new Schema({
     default: 0,
     min: [0, 'Limited rows must be non-negative'],
   },
-  errors: [{
+  jobErrors: [{
     row: {
       type: Number,
       required: true,

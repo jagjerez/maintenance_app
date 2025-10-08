@@ -151,6 +151,37 @@ export default function SearchableSelectWithAdd({
     }
   }, [value, options]);
 
+  // Load selected option when value is set but not in visible options
+  useEffect(() => {
+    const loadSelectedOption = async () => {
+      if (value && !selectedOption) {
+        try {
+          // Try to fetch the specific option by searching for it
+          const result = await fetchOptions(value, 0, 1);
+          const found = result.options.find(option => option._id === value);
+          if (found) {
+            setSelectedOption(found);
+          } else {
+            // If not found in search, create a temporary option for display
+            setSelectedOption({
+              _id: value,
+              name: value, // Use the value as display name
+            });
+          }
+        } catch (error) {
+          console.error("Error loading selected option:", error);
+          // Create a temporary option for display
+          setSelectedOption({
+            _id: value,
+            name: value,
+          });
+        }
+      }
+    };
+
+    loadSelectedOption();
+  }, [value, selectedOption, fetchOptions]);
+
   // Handle click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

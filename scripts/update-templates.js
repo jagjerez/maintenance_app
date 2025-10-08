@@ -24,9 +24,9 @@ const templates = {
   machines: {
     headers: ['internalCode', 'description', 'brand', 'model', 'series', 'category', 'locationName', 'rootLocationName', 'state', 'characteristics'],
     data: [
-      ['', 'Main production machine', 'Brand X', 'Model X1', 'Series A', 'Production', 'Production Line 1', 'Plant A', 'active', '{"power":"100kW","weight":"500kg","voltage":"220V"}'],
-      ['', 'Secondary machine', 'Brand Y', 'Model Y2', 'Series B', 'Production', 'Production Line 2', 'Plant A', 'active', '{"power":"150kW","weight":"750kg","voltage":"380V"}'],
-      ['', 'Backup machine', 'Brand Z', 'Model Z3', 'Series C', 'Maintenance', 'Warehouse Section', 'Plant A', 'inactive', '{"power":"200kW","weight":"1000kg","voltage":"220V"}']
+      ['', 'Main production machine', 'Brand X', 'Model X1', 'Series A', 'Production', 'Production Line 1', 'Plant A', 'active', 'power:100kW;weight:500kg;voltage:220V'],
+      ['', 'Secondary machine', 'Brand Y', 'Model Y2', 'Series B', 'Production', 'Production Line 2', 'Plant A', 'active', 'power:150kW;weight:750kg;voltage:380V'],
+      ['', 'Backup machine', 'Brand Z', 'Model Z3', 'Series C', 'Maintenance', 'Warehouse Section', 'Plant A', 'inactive', 'power:200kW;weight:1000kg;voltage:220V']
     ]
   },
   operations: {
@@ -44,7 +44,11 @@ const templates = {
 };
 
 function createCSV(headers, data) {
-  const csvContent = [headers.join(','), ...data.map(row => row.map(cell => `"${cell}"`).join(','))].join('\n');
+  const csvContent = [headers.join(','), ...data.map(row => row.map(cell => {
+    // Properly escape quotes and wrap in quotes
+    const escaped = String(cell).replace(/"/g, '""');
+    return `"${escaped}"`;
+  }).join(','))].join('\n');
   return csvContent;
 }
 
@@ -65,6 +69,8 @@ function updateTemplates() {
     const csvContent = createCSV(templateData.headers, templateData.data);
     const csvPath = path.join(templatesDir, `${templateName}_template.csv`);
     fs.writeFileSync(csvPath, csvContent);
+    console.log(`CSV content for ${templateName}:`);
+    console.log(csvContent);
     
     // Update Excel
     const excelBuffer = createExcel(templateData.headers, templateData.data);

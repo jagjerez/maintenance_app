@@ -890,7 +890,7 @@ export default function IntegrationPage() {
           size="xl"
         >
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {jobs.find(j => j._id === showErrors)?.errors.map((error, index) => (
+            {jobs.find(j => j._id === showErrors)?.jobErrors.map((error, index) => (
               <div key={index} className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
                 <div className="text-sm text-red-800 dark:text-red-200">
                   <strong>{t('row')} {error.row}:</strong> {error.field} - {error.message}
