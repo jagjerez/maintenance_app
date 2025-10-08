@@ -688,7 +688,6 @@ export default function LocationTreeView({
         }
 
         // Load machines if needed and showMachines is true
-        // Only load machines if the user is manually expanding (not during search auto-expansion)
         if (
           showMachines &&
           !node.machinesLoaded &&
