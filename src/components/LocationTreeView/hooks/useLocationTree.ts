@@ -18,7 +18,7 @@ export function useLocationTree() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Function to load children for a specific location with pagination
-  const loadChildren = async (
+  const loadChildren = useCallback(async (
     locationId: string,
     offset: number = 0,
     limit: number = PAGINATION_LIMITS.CHILDREN
@@ -38,10 +38,10 @@ export function useLocationTree() {
       console.error("Error loading children:", error);
       return { locations: [], totalItems: 0, hasMore: false };
     }
-  };
+  }, []);
 
   // Function to load machines for a specific location with pagination
-  const loadMachines = async (
+  const loadMachines = useCallback(async (
     locationId: string,
     offset: number = 0,
     limit: number = PAGINATION_LIMITS.MACHINES
@@ -61,10 +61,10 @@ export function useLocationTree() {
       console.error("Error loading machines:", error);
       return { machines: [], totalItems: 0, hasMore: false };
     }
-  };
+  }, []);
 
   // Function to normalize node properties
-  const normalizeNode = (node: Record<string, unknown>): LocationNode => {
+  const normalizeNode = useCallback((node: Record<string, unknown>): LocationNode => {
     return {
       ...node,
       _id: (node._id as string) || '',
@@ -89,7 +89,7 @@ export function useLocationTree() {
       machines: (node.machines as Machine[]) || [],
       children: (node.children as LocationNode[]) || []
     };
-  };
+  }, []);
 
   // Function to update tree with loaded machines (supports pagination)
   const updateTreeWithMachines = useCallback((

@@ -51,8 +51,13 @@ export function useLocationDataLoading(
 ) {
   // Load location tree with pagination
   useEffect(() => {
+    let isMounted = true;
+    let timeoutId: NodeJS.Timeout;
+
     const loadTree = async () => {
       try {
+        if (!isMounted) return;
+        
         setLoading(true);
         setRootOffset(0);
         setHasMoreRoot(true);
@@ -63,6 +68,8 @@ export function useLocationDataLoading(
           : `/api/locations/tree?limit=${PAGINATION_LIMITS.ROOT_LOCATIONS}&offset=0`;
           
         const response = await fetch(apiUrl);
+        if (!isMounted) return;
+        
         if (response.ok) {
           const data = await response.json();
           const locations = data.locations || data;
@@ -72,41 +79,59 @@ export function useLocationDataLoading(
             ? locations.map(normalizeNode)
             : [normalizeNode(locations)];
             
-          setTree(normalizedLocations);
-          setRootOffset(data.locations?.length || 0);
-          setHasMoreRoot(data.hasMore || false);
-          
-          // If there's a search query, expand all nodes to show search results
-          if (searchQuery && data.locations) {
-            // For search results, expand all nodes to show the complete hierarchy
-            // This allows users to see the full tree structure and identify which nodes have machines/children
-            const allNodeIds = new Set<string>();
+          if (isMounted) {
+            setTree(normalizedLocations);
+            setRootOffset(data.locations?.length || 0);
+            setHasMoreRoot(data.hasMore || false);
             
-            const collectAllNodeIds = (nodes: LocationNode[]) => {
-              nodes.forEach(node => {
-                allNodeIds.add(node._id);
-                if (node.children && node.children.length > 0) {
-                  collectAllNodeIds(node.children);
-                }
-              });
-            };
-            
-            collectAllNodeIds(normalizedLocations);
-            setExpandedNodes(allNodeIds);
-            
-            // Don't load machines automatically during search
-            // Let users expand nodes manually to load machines with proper pagination
+            // If there's a search query, expand all nodes to show search results
+            if (searchQuery && data.locations) {
+              // For search results, expand all nodes to show the complete hierarchy
+              // This allows users to see the full tree structure and identify which nodes have machines/children
+              const allNodeIds = new Set<string>();
+              
+              const collectAllNodeIds = (nodes: LocationNode[]) => {
+                nodes.forEach(node => {
+                  allNodeIds.add(node._id);
+                  if (node.children && node.children.length > 0) {
+                    collectAllNodeIds(node.children);
+                  }
+                });
+              };
+              
+              collectAllNodeIds(normalizedLocations);
+              setExpandedNodes(allNodeIds);
+              
+              // Don't load machines automatically during search
+              // Let users expand nodes manually to load machines with proper pagination
+            }
           }
         } else {
           console.error("Error loading location tree:", response.status);
         }
       } catch (error) {
-        console.error("Error loading location tree:", error);
+        if (isMounted) {
+          console.error("Error loading location tree:", error);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
 
-    loadTree();
+    // Debounce search queries to prevent excessive API calls
+    if (searchQuery) {
+      timeoutId = setTimeout(loadTree, 300); // 300ms debounce for search
+    } else {
+      loadTree();
+    }
+
+    return () => {
+      isMounted = false;
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [refreshTrigger, searchQuery, setLoading, setRootOffset, setHasMoreRoot, setTree, setExpandedNodes, normalizeNode]);
 }

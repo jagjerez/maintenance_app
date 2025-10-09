@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useCallback } from "react";
 import { MapPin, Plus } from "lucide-react";
 import { useTranslations } from "@/hooks/useTranslations";
 import { FormButton } from "../Form";
@@ -94,7 +94,7 @@ export default function LocationTreeView({
   );
 
   // Infinite scroll for root locations
-  const loadMoreRootLocations = async () => {
+  const loadMoreRootLocations = useCallback(async () => {
     if (isLoadingMore || !hasMoreRoot) return;
 
     try {
@@ -158,7 +158,7 @@ export default function LocationTreeView({
     } finally {
       setIsLoadingMore(false);
     }
-  };
+  }, [isLoadingMore, hasMoreRoot, searchQuery, rootOffset, normalizeNode, setTree, setRootOffset, setHasMoreRoot, setExpandedNodes]);
 
   // Infinite scroll hook
   useLocationInfiniteScroll(
