@@ -49,10 +49,19 @@ export interface LocationTreeViewProps {
   selectedLocationId?: string;
   showActions?: boolean;
   className?: string;
-  refreshTrigger?: number;
   showMachines?: boolean;
   preventFormSubmit?: boolean;
-  searchQuery?: string;
+  // Data props instead of internal API calls
+  tree?: LocationNode[];
+  loading?: boolean;
+  expandedNodes?: Set<string>;
+  onToggleExpanded?: (nodeId: string) => void;
+  onLoadMoreChildren?: (nodeId: string) => void;
+  onLoadMoreMachines?: (nodeId: string) => void;
+  onMachineScroll?: (nodeId: string, container: HTMLElement) => void;
+  hasMoreRoot?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMoreRoot?: () => void;
 }
 
 export interface LocationNodeProps {

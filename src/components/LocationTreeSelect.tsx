@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { ChevronDown, ChevronRight, MapPin, X, Folder, FolderOpen } from "lucide-react";
 
 interface LocationNode {
   _id: string;
   name: string;
   path: string;
+  description?: string;
   children?: LocationNode[];
   isLeaf?: boolean;
   hasChildren?: boolean;
@@ -21,6 +22,11 @@ interface LocationTreeSelectProps {
   placeholder?: string;
   error?: string;
   className?: string;
+  // Data props instead of internal API calls
+  locations?: LocationNode[];
+  loading?: boolean;
+  onLoadChildren?: (parentId: string) => Promise<LocationNode[]>;
+  onLoadLocationById?: (locationId: string) => Promise<LocationNode | null>;
 }
 
 const LocationTreeSelect = ({
@@ -29,11 +35,13 @@ const LocationTreeSelect = ({
   placeholder = "Select location...",
   error,
   className = "",
+  locations = [],
+  loading = false,
+  onLoadChildren,
+  onLoadLocationById,
 }: LocationTreeSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [locations, setLocations] = useState<LocationNode[]>([]);
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [selectedLocation, setSelectedLocation] = useState<LocationNode | null>(null);
   const [rootId, setRootId] = useState<string | null>(null);
@@ -41,25 +49,16 @@ const LocationTreeSelect = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch children for a specific location using the existing API
+  // Load children using the provided callback
   const loadChildren = useCallback(async (parentId: string) => {
+    if (!onLoadChildren) return [];
     try {
-      const response = await fetch(`/api/locations/tree?parentId=${parentId}`);
-      if (response.ok) {
-        const data = await response.json();
-        return (data.locations || []).map((location: LocationNode) => ({
-          ...location,
-          children: [],
-          childrenLoaded: false,
-          isLoadingChildren: false,
-        }));
-      }
-      return [];
+      return await onLoadChildren(parentId);
     } catch (error) {
       console.error("Error loading children:", error);
       return [];
     }
-  }, []);
+  }, [onLoadChildren]);
 
   // Update tree with loaded children
   const updateTreeWithChildren = useCallback((
@@ -85,60 +84,26 @@ const LocationTreeSelect = ({
     });
   }, []);
 
-  // Fetch locations from API (initial load for root)
-  const fetchLocations = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/locations/tree");
-      
-      if (response.ok) {
-        const data = await response.json();
-        const transformedLocations = (data.locations || []).map((location: LocationNode) => ({
-          ...location,
-          children: [],
-          childrenLoaded: false,
-          isLoadingChildren: false,
-        }));
-        setLocations(transformedLocations);
-        // Set the first location as root (if exists)
-        if (transformedLocations.length > 0) {
-          setRootId(transformedLocations[0]._id);
-        }
-      } else {
-        console.error("Error fetching locations");
-        setLocations([]);
-      }
-    } catch (error) {
-      console.error("Error fetching locations:", error);
-      setLocations([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Load initial data
+  // Set root ID when locations change
   useEffect(() => {
-    fetchLocations();
-  }, [fetchLocations]);
+    if (locations.length > 0) {
+      setRootId(locations[0]._id);
+    }
+  }, [locations]);
 
 
   // Function to load a specific location by ID
   const loadLocationById = useCallback(async (locationId: string) => {
+    if (!onLoadLocationById) return;
     try {
-      const response = await fetch(`/api/locations/${locationId}`);
-      if (response.ok) {
-        const location = await response.json();
-        
-        // Set the selected location
+      const location = await onLoadLocationById(locationId);
+      if (location) {
         setSelectedLocation(location);
-        
-        // Don't reload the full tree immediately, just set the location
-        // The tree will be reloaded when the user opens the dropdown
       }
     } catch (error) {
       console.error("Error loading location by ID:", error);
     }
-  }, []);
+  }, [onLoadLocationById]);
 
   // Load selected location when value changes and expand path to it
   useEffect(() => {
@@ -223,20 +188,9 @@ const LocationTreeSelect = ({
 
       const node = findNode(locations, nodeId);
       if (node && node.hasChildren && !node.childrenLoaded && !node.isLoadingChildren) {
-        // Mark as loading
-        setLocations(prev => 
-          updateTreeWithChildren(prev, nodeId, []).map(n =>
-            n._id === nodeId ? { ...n, isLoadingChildren: true } : n
-          )
-        );
-
-        // Load children
-        const children = await loadChildren(nodeId);
-
-        // Update tree with loaded children
-        setLocations(prev =>
-          updateTreeWithChildren(prev, nodeId, children)
-        );
+        // Note: In the new architecture, tree state is managed by the parent
+        // This component now receives locations as props and doesn't manage state internally
+        // The parent should handle loading states and tree updates
       }
     }
 
@@ -347,10 +301,22 @@ const LocationTreeSelect = ({
     setIsOpen(false);
   };
 
-  // Handle search
+  // Handle search (now just for UI filtering)
   const handleSearch = (query: string) => {
     setSearchQuery(query);
   };
+
+  // Filter locations based on search query
+  const filteredLocations = useMemo(() => {
+    if (!searchQuery) return locations;
+    
+    const searchLower = searchQuery.toLowerCase();
+    return locations.filter(location => 
+      location.name.toLowerCase().includes(searchLower) ||
+      (location.description && location.description.toLowerCase().includes(searchLower)) ||
+      location.path.toLowerCase().includes(searchLower)
+    );
+  }, [locations, searchQuery]);
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
@@ -432,12 +398,12 @@ const LocationTreeSelect = ({
           {/* Locations List */}
           {!loading && (
             <div className="max-h-60 overflow-y-auto">
-              {locations.length === 0 ? (
+              {filteredLocations.length === 0 ? (
                 <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                  No locations found
+                  {searchQuery ? "No locations found" : "No locations available"}
                 </div>
               ) : (
-                locations.map(location => renderLocationNode(location))
+                filteredLocations.map(location => renderLocationNode(location))
               )}
             </div>
           )}

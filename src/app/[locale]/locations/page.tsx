@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "@/hooks/useTranslations";
+import { useLocationTreeData } from "@/hooks/useLocationTreeData";
 import {
   Plus,
   MapPin,
@@ -109,6 +110,21 @@ export default function LocationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
 
+  // Location tree data hook
+  const {
+    tree,
+    loading: treeLoading,
+    expandedNodes,
+    hasMoreRoot,
+    isLoadingMore,
+    loadTreeData,
+    loadMoreRootLocations,
+    toggleExpanded,
+    loadMoreChildren,
+    loadMoreMachines,
+    handleMachineScroll,
+  } = useLocationTreeData();
+
   const {
     register,
     handleSubmit,
@@ -190,6 +206,39 @@ export default function LocationsPage() {
     }
   }, []);
 
+  // Functions for LocationTreeSelect (if needed in the future)
+  // const loadChildrenForSelect = useCallback(async (parentId: string) => {
+  //   try {
+  //     const response = await fetch(`/api/locations/tree?parentId=${parentId}`);
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       return (data.locations || []).map((location: any) => ({
+  //         ...location,
+  //         children: [],
+  //         childrenLoaded: false,
+  //         isLoadingChildren: false,
+  //       }));
+  //     }
+  //     return [];
+  //   } catch (error) {
+  //     console.error("Error loading children:", error);
+  //     return [];
+  //   }
+  // }, []);
+
+  // const loadLocationByIdForSelect = useCallback(async (locationId: string) => {
+  //   try {
+  //     const response = await fetch(`/api/locations/${locationId}`);
+  //     if (response.ok) {
+  //       return await response.json();
+  //     }
+  //     return null;
+  //   } catch (error) {
+  //     console.error("Error loading location by ID:", error);
+  //     return null;
+  //   }
+  // }, []);
+
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -198,6 +247,11 @@ export default function LocationsPage() {
     };
     loadData();
   }, [currentPage, fetchLocations, searchQuery]);
+
+  // Load tree data when search query changes or refresh trigger
+  useEffect(() => {
+    loadTreeData(searchQuery);
+  }, [loadTreeData, searchQuery, refreshTrigger]);
 
   const onSubmit = async (data: {
     name: string;
@@ -399,6 +453,7 @@ export default function LocationsPage() {
     if (query !== previousQuery) {
       setCurrentPage(1);
       fetchLocations(1, query, signal);
+      // Tree data will be reloaded by the useEffect
     }
   }, [fetchLocations, searchQuery]);
 
@@ -555,9 +610,18 @@ export default function LocationsPage() {
               onMachineClick={(machine) => handleMachineClick(machine)}
               showActions={true}
               showMachines={true}
-              refreshTrigger={refreshTrigger}
-              searchQuery={searchQuery}
               className=""
+              // Data props
+              tree={tree}
+              loading={treeLoading}
+              expandedNodes={expandedNodes}
+              onToggleExpanded={(nodeId) => toggleExpanded(nodeId, true)}
+              onLoadMoreChildren={loadMoreChildren}
+              onLoadMoreMachines={loadMoreMachines}
+              onMachineScroll={handleMachineScroll}
+              hasMoreRoot={hasMoreRoot}
+              isLoadingMore={isLoadingMore}
+              onLoadMoreRoot={() => loadMoreRootLocations(searchQuery)}
             />
             </div>
           </div>

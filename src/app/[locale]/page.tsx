@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Plus, Wrench, Cog, MapPin } from "lucide-react";
 import toast from "react-hot-toast";
 import { useTranslations } from "@/hooks/useTranslations";
+import { useLocationTreeData } from "@/hooks/useLocationTreeData";
 import LocationTreeView from "@/components/LocationTreeView";
 import SearchInput from "@/components/SearchInput";
 
@@ -28,6 +29,21 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [, setIsSearching] = useState(false);
+
+  // Location tree data hook
+  const {
+    tree,
+    loading: treeLoading,
+    expandedNodes,
+    hasMoreRoot,
+    isLoadingMore,
+    loadTreeData,
+    loadMoreRootLocations,
+    toggleExpanded,
+    loadMoreChildren,
+    loadMoreMachines,
+    handleMachineScroll,
+  } = useLocationTreeData();
 
   const fetchDashboardData = useCallback(async () => {
     try {
@@ -62,6 +78,7 @@ export default function Dashboard() {
 
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
+    // Tree data will be reloaded by the useEffect
   }, []);
 
   useEffect(() => {
@@ -73,6 +90,13 @@ export default function Dashboard() {
       fetchDashboardData();
     }
   }, [status, router, fetchDashboardData]);
+
+  // Load tree data when search query changes
+  useEffect(() => {
+    if (status === "authenticated") {
+      loadTreeData(searchQuery);
+    }
+  }, [loadTreeData, searchQuery, status]);
 
   if (status === "loading" || loading) {
     return (
@@ -282,8 +306,17 @@ export default function Dashboard() {
               showActions={false}
               showMachines={true}
               className="max-h-64 sm:max-h-80 lg:max-h-96"
-              refreshTrigger={0}
-              searchQuery={searchQuery}
+              // Data props
+              tree={tree}
+              loading={treeLoading}
+              expandedNodes={expandedNodes}
+              onToggleExpanded={(nodeId) => toggleExpanded(nodeId, true)}
+              onLoadMoreChildren={loadMoreChildren}
+              onLoadMoreMachines={loadMoreMachines}
+              onMachineScroll={handleMachineScroll}
+              hasMoreRoot={hasMoreRoot}
+              isLoadingMore={isLoadingMore}
+              onLoadMoreRoot={() => loadMoreRootLocations(searchQuery)}
             />
           </div>
         </div>
