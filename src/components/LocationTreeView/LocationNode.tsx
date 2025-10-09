@@ -17,6 +17,7 @@ export default function LocationNode({
   showActions,
   showMachines,
   preventFormSubmit,
+  expandedNodes,
   onToggleExpanded,
   onLocationClick,
   onLocationEdit,
@@ -188,11 +189,12 @@ export default function LocationNode({
                   key={child._id}
                   node={child}
                   level={level + 1}
-                  isExpanded={false} // This will be managed by parent
+                  isExpanded={expandedNodes?.has(child._id) || false}
                   isSelected={false} // This will be managed by parent
                   showActions={showActions}
                   showMachines={showMachines}
                   preventFormSubmit={preventFormSubmit}
+                  expandedNodes={expandedNodes}
                   onToggleExpanded={onToggleExpanded}
                   onLocationClick={onLocationClick}
                   onLocationEdit={onLocationEdit}

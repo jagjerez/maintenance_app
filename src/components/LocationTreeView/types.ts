@@ -72,6 +72,7 @@ export interface LocationNodeProps {
   showActions: boolean;
   showMachines: boolean;
   preventFormSubmit: boolean;
+  expandedNodes?: Set<string>;
   onToggleExpanded: (nodeId: string) => void;
   onLocationClick?: (location: LocationNode) => void;
   onLocationEdit?: (location: LocationNode, event: React.MouseEvent) => void;

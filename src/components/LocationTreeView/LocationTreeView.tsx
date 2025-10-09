@@ -96,6 +96,7 @@ export default function LocationTreeView({
                 showActions={showActions}
                 showMachines={showMachines}
                 preventFormSubmit={preventFormSubmit}
+                expandedNodes={expandedNodes}
                 onToggleExpanded={onToggleExpanded || (() => {})}
                 onLocationClick={onLocationClick}
                 onLocationEdit={(location, event) => handleLocationEdit(location, event, onLocationEdit, preventFormSubmit)}

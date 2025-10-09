@@ -290,6 +290,7 @@ export function useLocationTreeData() {
   // Toggle node expansion
   const toggleExpanded = useCallback(async (nodeId: string, showMachines: boolean = false) => {
     const isCurrentlyExpanded = expandedNodes.has(nodeId);
+    console.log(`Toggle expanded for nodeId: ${nodeId}, isCurrentlyExpanded: ${isCurrentlyExpanded}`);
 
     if (!isCurrentlyExpanded) {
       // Expanding - check if we need to load children
@@ -308,18 +309,32 @@ export function useLocationTreeData() {
       };
 
       const node = findNode(tree, nodeId);
+      console.log(`Found node:`, node);
       if (node) {
         // Load children if needed
+        console.log(`Node children check: hasChildren=${node.hasChildren}, childrenLoaded=${node.childrenLoaded}, isLoadingChildren=${node.isLoadingChildren}`);
         if (
           node.hasChildren &&
           !node.childrenLoaded &&
           !node.isLoadingChildren
         ) {
+          console.log(`Loading children for node: ${nodeId}`);
           // Mark as loading children
           setTree((prevTree) =>
-            updateTreeWithChildren(prevTree, nodeId, []).map((n) =>
-              n._id === nodeId ? normalizeNode({ ...n, isLoadingChildren: true, childrenLoaded: false }) : n
-            )
+            prevTree.map((n) => {
+              if (n._id === nodeId) {
+                return normalizeNode({ ...n, isLoadingChildren: true, childrenLoaded: false });
+              }
+              if (n.children && n.children.length > 0) {
+                return {
+                  ...n,
+                  children: n.children.map((child) =>
+                    child._id === nodeId ? normalizeNode({ ...child, isLoadingChildren: true, childrenLoaded: false }) : child
+                  )
+                };
+              }
+              return n;
+            })
           );
 
           // Load children
@@ -328,10 +343,14 @@ export function useLocationTreeData() {
           const hasMore = childrenData.hasMore || false;
           const offset = childrenData.offset || 0;
 
+          console.log(`Loaded children data:`, { children, hasMore, offset });
+
           // Children are already LocationNode[] from the API
           const normalizedChildren = Array.isArray(children) 
             ? children
             : [children];
+
+          console.log(`Normalized children:`, normalizedChildren);
 
           // Update tree with loaded children
           setTree((prevTree) =>
@@ -399,9 +418,12 @@ export function useLocationTreeData() {
       const newSet = new Set(prev);
       if (newSet.has(nodeId)) {
         newSet.delete(nodeId);
+        console.log(`Collapsing node: ${nodeId}`);
       } else {
         newSet.add(nodeId);
+        console.log(`Expanding node: ${nodeId}`);
       }
+      console.log(`New expanded nodes:`, Array.from(newSet));
       return newSet;
     });
   }, [tree, expandedNodes, loadChildren, loadMachines, updateTreeWithChildren, updateTreeWithMachines, normalizeNode]);
