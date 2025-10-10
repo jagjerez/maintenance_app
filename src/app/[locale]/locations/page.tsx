@@ -441,6 +441,7 @@ export default function LocationsPage() {
 
   const handleMachineClick = (machine: Machine) => {
     // Navigate to machines page with edit parameter
+    console.log('Navigating to edit machine:', machine._id, machine.description);
     router.push(`/machines?edit=${machine._id}`);
   };
 

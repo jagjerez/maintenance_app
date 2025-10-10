@@ -261,6 +261,9 @@ export function useLocationTreeData() {
           
           // Load machines for all expanded nodes during search
           setTimeout(() => loadMachinesForSearchNodes(normalizedLocations, allNodeIds), 100);
+        } else {
+          // If no search query, reset expanded nodes to collapsed state
+          setExpandedNodes(new Set());
         }
       } else {
         console.error("Error loading location tree:", response.status);

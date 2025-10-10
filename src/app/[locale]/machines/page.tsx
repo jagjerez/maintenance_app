@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslations } from "@/hooks/useTranslations";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Plus, Wrench } from "lucide-react";
 import { toast } from "react-hot-toast";
 import Modal from "@/components/Modal";
@@ -51,6 +52,8 @@ const ITEMS_PER_PAGE = 10;
 
 export default function MachinesPage() {
   const { t } = useTranslations();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   
   // State management
   const [machines, setMachines] = useState<Machine[]>([]);
@@ -287,7 +290,7 @@ export default function MachinesPage() {
   };
 
   // Edit handler
-  const handleEdit = (machine: Machine) => {
+  const handleEdit = useCallback((machine: Machine) => {
     setEditingMachine(machine);
     reset({
       description: machine.description,
@@ -307,7 +310,54 @@ export default function MachinesPage() {
     setSelectedRootId(machine.rootId || null);
     
     setShowModal(true);
-  };
+  }, [reset]);
+
+  // Handle edit parameter from URL
+  useEffect(() => {
+    const editId = searchParams.get('edit');
+    console.log('Edit ID from URL:', editId);
+    console.log('Machines loaded:', machines.length);
+    console.log('Loading state:', loading);
+    
+    if (editId && !loading) {
+      const machineToEdit = machines.find(machine => machine._id === editId);
+      console.log('Machine found in current list:', machineToEdit);
+      
+      if (machineToEdit) {
+        console.log('Opening edit modal for machine:', machineToEdit.description);
+        handleEdit(machineToEdit);
+        // Clean up the URL parameter
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.delete('edit');
+        router.replace(newUrl.pathname + newUrl.search);
+      } else {
+        console.log('Machine not found in current list, fetching specific machine...');
+        // Fetch the specific machine data
+        const fetchSpecificMachine = async () => {
+          try {
+            const response = await fetch(`/api/machines/${editId}`);
+            if (response.ok) {
+              const machineData = await response.json();
+              console.log('Fetched machine data:', machineData);
+              handleEdit(machineData);
+              // Clean up the URL parameter
+              const newUrl = new URL(window.location.href);
+              newUrl.searchParams.delete('edit');
+              router.replace(newUrl.pathname + newUrl.search);
+            } else {
+              console.error('Failed to fetch machine:', response.statusText);
+              toast.error(t("machines.machineLoadError"));
+            }
+          } catch (error) {
+            console.error('Error fetching specific machine:', error);
+            toast.error(t("machines.machineLoadError"));
+          }
+        };
+        
+        fetchSpecificMachine();
+      }
+    }
+  }, [searchParams, machines, router, handleEdit, loading, t]);
 
   // Delete handlers
   const handleDelete = (machine: Machine) => {
