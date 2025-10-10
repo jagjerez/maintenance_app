@@ -161,13 +161,26 @@ export default function LocationNode({
       </div>
 
       {/* Machines in this location - only show if showMachines is true */}
-      {isExpanded && showMachines && (node.hasMachines || node.isLoadingMachines) && node.machines.length > 0 && (
-        <MachineList
-          node={node}
-          level={level}
-          onMachineClick={onMachineClick}
-          onMachineScroll={onMachineScroll}
-        />
+      {isExpanded && showMachines && (node.hasMachines) && (
+        <>
+          {node.isLoadingMachines ? (
+            <div className="ml-6 p-2 text-sm text-gray-500 dark:text-gray-400">
+              <LoadingIndicator
+                isLoading={true}
+                message="Cargando máquinas..."
+                size="sm"
+                variant="inline"
+              />
+            </div>
+          ) : node.machines.length > 0 ? (
+            <MachineList
+              node={node}
+              level={level}
+              onMachineClick={onMachineClick}
+              onMachineScroll={onMachineScroll}
+            />
+          ) : null}
+        </>
       )}
 
       {/* Children */}

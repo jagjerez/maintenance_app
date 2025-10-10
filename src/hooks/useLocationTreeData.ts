@@ -176,6 +176,47 @@ export function useLocationTreeData() {
     });
   }, []);
 
+  // Helper function to load machines for search results
+  const loadMachinesForSearchNodes = useCallback(async (nodes: LocationNode[], allNodeIds: Set<string>) => {
+    for (const nodeId of allNodeIds) {
+      const findNode = (nodeList: LocationNode[], id: string): LocationNode | null => {
+        for (const node of nodeList) {
+          if (node._id === id) return node;
+          if (node.children) {
+            const found = findNode(node.children, id);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+
+      const node = findNode(nodes, nodeId);
+      if (node && node.hasMachines && !node.machinesLoaded && !node.isLoadingMachines) {
+        try {
+          const machinesData = await loadMachines(nodeId);
+          const machines = machinesData.machines || machinesData;
+          const hasMore = machinesData.hasMore || false;
+          const offset = machinesData.offset || 0;
+          const totalItems = machinesData.totalItems || 0;
+
+          setTree((prevTree) =>
+            updateTreeWithMachines(
+              prevTree,
+              nodeId,
+              machines,
+              false,
+              hasMore,
+              offset,
+              totalItems
+            )
+          );
+        } catch (error) {
+          console.error(`Error loading machines for search node ${nodeId}:`, error);
+        }
+      }
+    }
+  }, [loadMachines, updateTreeWithMachines]);
+
   // Load initial tree data
   const loadTreeData = useCallback(async (searchQuery: string = "") => {
     try {
@@ -217,6 +258,9 @@ export function useLocationTreeData() {
           
           collectAllNodeIds(normalizedLocations);
           setExpandedNodes(allNodeIds);
+          
+          // Load machines for all expanded nodes during search
+          setTimeout(() => loadMachinesForSearchNodes(normalizedLocations, allNodeIds), 100);
         }
       } else {
         console.error("Error loading location tree:", response.status);
@@ -226,7 +270,7 @@ export function useLocationTreeData() {
     } finally {
       setLoading(false);
     }
-  }, [normalizeNode]);
+  }, [normalizeNode, loadMachinesForSearchNodes]);
 
   // Load more root locations
   const loadMoreRootLocations = useCallback(async (searchQuery: string = "") => {
@@ -273,6 +317,9 @@ export function useLocationTreeData() {
                allNodeIds.forEach(nodeId => newExpanded.add(nodeId));
                return newExpanded;
              });
+
+             // Load machines for all expanded nodes during search
+             setTimeout(() => loadMachinesForSearchNodes(normalizedNewLocations, allNodeIds), 100);
            }
         } else {
           setHasMoreRoot(false);
@@ -285,14 +332,40 @@ export function useLocationTreeData() {
     } finally {
       setIsLoadingMore(false);
     }
-  }, [isLoadingMore, hasMoreRoot, rootOffset, normalizeNode]);
+  }, [isLoadingMore, hasMoreRoot, rootOffset, normalizeNode, loadMachinesForSearchNodes]);
 
   // Toggle node expansion
   const toggleExpanded = useCallback(async (nodeId: string, showMachines: boolean = false) => {
     const isCurrentlyExpanded = expandedNodes.has(nodeId);
-    console.log(`Toggle expanded for nodeId: ${nodeId}, isCurrentlyExpanded: ${isCurrentlyExpanded}`);
 
-    if (!isCurrentlyExpanded) {
+    if (isCurrentlyExpanded) {
+      // Collapsing - clear children and machines data
+      setTree((prevTree) => {
+        const clearNodeData = (nodes: LocationNode[]): LocationNode[] => {
+          return nodes.map(node => {
+            if (node._id === nodeId) {
+              return {
+                ...node,
+                children: [],
+                childrenLoaded: false,
+                isLoadingChildren: false,
+                machines: [],
+                machinesLoaded: false,
+                isLoadingMachines: false,
+              };
+            }
+            if (node.children && node.children.length > 0) {
+              return {
+                ...node,
+                children: clearNodeData(node.children)
+              };
+            }
+            return node;
+          });
+        };
+        return clearNodeData(prevTree);
+      });
+    } else {
       // Expanding - check if we need to load children
       const findNode = (
         nodes: LocationNode[],
@@ -309,33 +382,36 @@ export function useLocationTreeData() {
       };
 
       const node = findNode(tree, nodeId);
-      console.log(`Found node:`, node);
       if (node) {
+        // Always show loading spinner when expanding
+        setTree((prevTree) => {
+          const updateNodeLoadingState = (nodes: LocationNode[]): LocationNode[] => {
+            return nodes.map(n => {
+              if (n._id === nodeId) {
+                return normalizeNode({ 
+                  ...n, 
+                  isLoadingChildren: node.hasChildren && !node.childrenLoaded,
+                  isLoadingMachines: showMachines && node.hasMachines && !node.machinesLoaded
+                });
+              }
+              if (n.children && n.children.length > 0) {
+                return {
+                  ...n,
+                  children: updateNodeLoadingState(n.children)
+                };
+              }
+              return n;
+            });
+          };
+          return updateNodeLoadingState(prevTree);
+        });
+
         // Load children if needed
-        console.log(`Node children check: hasChildren=${node.hasChildren}, childrenLoaded=${node.childrenLoaded}, isLoadingChildren=${node.isLoadingChildren}`);
         if (
           node.hasChildren &&
           !node.childrenLoaded &&
           !node.isLoadingChildren
         ) {
-          console.log(`Loading children for node: ${nodeId}`);
-          // Mark as loading children
-          setTree((prevTree) =>
-            prevTree.map((n) => {
-              if (n._id === nodeId) {
-                return normalizeNode({ ...n, isLoadingChildren: true, childrenLoaded: false });
-              }
-              if (n.children && n.children.length > 0) {
-                return {
-                  ...n,
-                  children: n.children.map((child) =>
-                    child._id === nodeId ? normalizeNode({ ...child, isLoadingChildren: true, childrenLoaded: false }) : child
-                  )
-                };
-              }
-              return n;
-            })
-          );
 
           // Load children
           const childrenData = await loadChildren(nodeId);
@@ -343,14 +419,10 @@ export function useLocationTreeData() {
           const hasMore = childrenData.hasMore || false;
           const offset = childrenData.offset || 0;
 
-          console.log(`Loaded children data:`, { children, hasMore, offset });
-
           // Children are already LocationNode[] from the API
           const normalizedChildren = Array.isArray(children) 
             ? children
             : [children];
-
-          console.log(`Normalized children:`, normalizedChildren);
 
           // Update tree with loaded children
           setTree((prevTree) =>
@@ -368,27 +440,10 @@ export function useLocationTreeData() {
         // Load machines if needed and showMachines is true
         if (
           showMachines &&
+          node.hasMachines &&
           !node.machinesLoaded &&
           !node.isLoadingMachines
         ) {
-          
-          // Mark as loading machines
-          setTree((prevTree) =>
-            prevTree.map((n) => {
-              if (n._id === nodeId) {
-                return normalizeNode({ ...n, isLoadingMachines: true, machinesLoaded: false });
-              }
-              if (n.children && n.children.length > 0) {
-                return normalizeNode({
-                  ...n,
-                  children: n.children.map((child) =>
-                    child._id === nodeId ? normalizeNode({ ...child, isLoadingMachines: true, machinesLoaded: false }) : child
-                  )
-                });
-              }
-              return n;
-            })
-          );
 
           // Load machines
           const machinesData = await loadMachines(nodeId);
@@ -418,12 +473,9 @@ export function useLocationTreeData() {
       const newSet = new Set(prev);
       if (newSet.has(nodeId)) {
         newSet.delete(nodeId);
-        console.log(`Collapsing node: ${nodeId}`);
       } else {
         newSet.add(nodeId);
-        console.log(`Expanding node: ${nodeId}`);
       }
-      console.log(`New expanded nodes:`, Array.from(newSet));
       return newSet;
     });
   }, [tree, expandedNodes, loadChildren, loadMachines, updateTreeWithChildren, updateTreeWithMachines, normalizeNode]);

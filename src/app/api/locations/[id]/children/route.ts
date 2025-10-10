@@ -79,6 +79,17 @@ export async function GET(
       childrenCountMap.set(item._id.toString(), item.count);
     });
 
+    // Get machine counts for each child location
+    const machineCountMap = new Map();
+    for (const location of childrenLocations) {
+      const machineCount = await Machine.countDocuments({
+        locationId: location._id,
+        companyId: session.user.companyId,
+        deletedAt: null
+      });
+      machineCountMap.set(location._id.toString(), machineCount);
+    }
+
     // Build children with their own children and machines
     const childrenWithData = childrenLocations.map(location => {
       // Find machines in this child location
@@ -87,6 +98,7 @@ export async function GET(
       );
 
       const childrenCount = childrenCountMap.get(location._id.toString()) || 0;
+      const machineCount = machineCountMap.get(location._id.toString()) || 0;
 
       return {
         ...location,
@@ -95,6 +107,10 @@ export async function GET(
         childrenCount: childrenCount, // Number of children available
         hasChildren: childrenCount > 0, // Boolean flag for easy checking
         isLeaf: childrenCount === 0, // True if no children
+        machinesCount: machineCount, // Number of machines available
+        hasMachines: machineCount > 0, // Boolean flag for easy checking
+        machinesLoaded: false, // Track if machines have been loaded
+        childrenLoaded: false, // Track if children have been loaded
       };
     });
 
