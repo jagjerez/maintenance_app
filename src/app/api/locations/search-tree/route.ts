@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       }
     });
     
-    const searchConditions: any[] = [];
+    const searchConditions: Record<string, unknown>[] = [];
     
     // Add include conditions
     if (includeTerms.length > 0) {

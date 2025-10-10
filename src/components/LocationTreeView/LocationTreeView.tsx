@@ -5,7 +5,7 @@ import { MapPin, Plus } from "lucide-react";
 import { useTranslations } from "@/hooks/useTranslations";
 import { FormButton } from "../Form";
 import { ConfirmationModal } from "../ConfirmationModal";
-import { LocationTreeViewProps, LocationNode } from "./types";
+import { LocationTreeViewProps } from "./types";
 import { useLocationActions } from "./hooks/useLocationActions";
 import { useLocationSearch } from "./hooks/useLocationSearch";
 import { useLocationInfiniteScroll } from "./hooks/useLocationInfiniteScroll";
