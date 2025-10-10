@@ -587,6 +587,7 @@ export default function LocationsPage() {
             onSearch={handleSearch}
             onSearchingChange={setIsSearching}
             delay={500}
+            showHelp={true}
             className="w-full sm:w-64 px-3 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           />
           {isSearching && (

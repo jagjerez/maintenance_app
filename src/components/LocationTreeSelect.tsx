@@ -27,6 +27,7 @@ interface LocationTreeSelectProps {
   loading?: boolean;
   onLoadChildren?: (parentId: string) => Promise<LocationNode[]>;
   onLoadLocationById?: (locationId: string) => Promise<LocationNode | null>;
+  onSearch?: (query: string) => Promise<LocationNode[]>;
 }
 
 const LocationTreeSelect = ({
@@ -39,12 +40,16 @@ const LocationTreeSelect = ({
   loading = false,
   onLoadChildren,
   onLoadLocationById,
+  onSearch,
 }: LocationTreeSelectProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
   const [selectedLocation, setSelectedLocation] = useState<LocationNode | null>(null);
   const [rootId, setRootId] = useState<string | null>(null);
+  const [internalLocations, setInternalLocations] = useState<LocationNode[]>(locations);
+  const [searchResults, setSearchResults] = useState<LocationNode[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -91,6 +96,47 @@ const LocationTreeSelect = ({
     }
   }, [locations]);
 
+  // Sync internal locations with props
+  useEffect(() => {
+    setInternalLocations(locations);
+  }, [locations]);
+
+  // Handle search with debounce
+  useEffect(() => {
+    if (!onSearch) return;
+    
+    const timeoutId = setTimeout(async () => {
+      if (searchQuery.trim()) {
+        setIsSearching(true);
+        try {
+          const results = await onSearch(searchQuery);
+          setSearchResults(results);
+          // Auto-expand all search results
+          const allNodeIds = new Set<string>();
+          const collectAllNodeIds = (nodes: LocationNode[]) => {
+            nodes.forEach(node => {
+              allNodeIds.add(node._id);
+              if (node.children && node.children.length > 0) {
+                collectAllNodeIds(node.children);
+              }
+            });
+          };
+          collectAllNodeIds(results);
+          setExpandedNodes(allNodeIds);
+        } catch (error) {
+          console.error("Error searching locations:", error);
+          setSearchResults([]);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, onSearch]);
+
 
   // Function to load a specific location by ID
   const loadLocationById = useCallback(async (locationId: string) => {
@@ -124,7 +170,7 @@ const LocationTreeSelect = ({
         return { node: null, path: [] };
       };
 
-      const result = findLocationById(locations, value);
+      const result = findLocationById(internalLocations, value);
       if (result.node) {
         setSelectedLocation(result.node);
         
@@ -143,7 +189,7 @@ const LocationTreeSelect = ({
     } else if (!value) {
       setSelectedLocation(null);
     }
-  }, [value, locations, loadLocationById, selectedLocation]);
+  }, [value, internalLocations, loadLocationById, selectedLocation]);
 
   // Handle click outside
   useEffect(() => {
@@ -172,7 +218,7 @@ const LocationTreeSelect = ({
   // Toggle node expansion
   const toggleExpanded = async (nodeId: string) => {
     const isCurrentlyExpanded = expandedNodes.has(nodeId);
-
+    
     if (!isCurrentlyExpanded) {
       // Expanding - check if we need to load children
       const findNode = (nodes: LocationNode[], id: string): LocationNode | null => {
@@ -186,11 +232,16 @@ const LocationTreeSelect = ({
         return null;
       };
 
-      const node = findNode(locations, nodeId);
+      const node = findNode(internalLocations, nodeId);
       if (node && node.hasChildren && !node.childrenLoaded && !node.isLoadingChildren) {
-        // Note: In the new architecture, tree state is managed by the parent
-        // This component now receives locations as props and doesn't manage state internally
-        // The parent should handle loading states and tree updates
+        // Load children using the provided callback
+        try {
+          const children = await loadChildren(nodeId);
+          // Update the tree with loaded children
+          setInternalLocations(prevLocations => updateTreeWithChildren(prevLocations, nodeId, children));
+        } catch (error) {
+          console.error("Error loading children:", error);
+        }
       }
     }
 
@@ -308,15 +359,21 @@ const LocationTreeSelect = ({
 
   // Filter locations based on search query
   const filteredLocations = useMemo(() => {
-    if (!searchQuery) return locations;
+    if (!searchQuery.trim()) return internalLocations;
     
+    // If we have search results, use them; otherwise fall back to local filtering
+    if (searchResults.length > 0) {
+      return searchResults;
+    }
+    
+    // Fallback to local filtering if no search function provided
     const searchLower = searchQuery.toLowerCase();
-    return locations.filter(location => 
+    return internalLocations.filter(location => 
       location.name.toLowerCase().includes(searchLower) ||
       (location.description && location.description.toLowerCase().includes(searchLower)) ||
       location.path.toLowerCase().includes(searchLower)
     );
-  }, [locations, searchQuery]);
+  }, [internalLocations, searchQuery, searchResults]);
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
@@ -388,15 +445,17 @@ const LocationTreeSelect = ({
           </div>
 
           {/* Loading State */}
-          {loading && (
+          {(loading || isSearching) && (
             <div className="p-4 text-center">
               <div className="w-6 h-6 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mx-auto mb-2" />
-              <span className="text-sm text-gray-500 dark:text-gray-400">Loading locations...</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {isSearching ? "Searching locations..." : "Loading locations..."}
+              </span>
             </div>
           )}
 
           {/* Locations List */}
-          {!loading && (
+          {!loading && !isSearching && (
             <div className="max-h-60 overflow-y-auto">
               {filteredLocations.length === 0 ? (
                 <div className="p-4 text-center text-gray-500 dark:text-gray-400">

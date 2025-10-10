@@ -22,6 +22,7 @@ import DataTable from "@/components/DataTable";
 import SearchInput from "@/components/SearchInput";
 import SearchableSelectWithAdd from "@/components/SearchableSelectWithAdd";
 import LocationTreeSelect from "@/components/LocationTreeSelect";
+import { LocationNode } from "@/components/LocationTreeView/types";
 
 // Schema according to PlantUML structure
 import { formatDateSafe } from "@/lib/utils";
@@ -78,6 +79,8 @@ export default function MachinesPage() {
   const [locationNames, setLocationNames] = useState<Record<string, string>>({});
   const [locationNamesLoaded, setLocationNamesLoaded] = useState(false);
   const [resolvedLocations, setResolvedLocations] = useState<Record<string, string>>({});
+  const [locations, setLocations] = useState<LocationNode[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(false);
 
   // Form setup
   const {
@@ -208,6 +211,67 @@ export default function MachinesPage() {
     }
   }, []);
 
+  // Load locations for LocationTreeSelect
+  const loadLocations = useCallback(async () => {
+    try {
+      setLocationsLoading(true);
+      const response = await fetch('/api/locations/tree');
+      if (response.ok) {
+        const data = await response.json();
+        const locationsData = data.locations || [];
+        setLocations(locationsData);
+      }
+    } catch (error) {
+      console.error("Error fetching locations:", error);
+    } finally {
+      setLocationsLoading(false);
+    }
+  }, []);
+
+  // Load children for a specific location
+  const loadLocationChildren = useCallback(async (parentId: string) => {
+    try {
+      const response = await fetch(`/api/locations/${parentId}/children`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.locations || data;
+      }
+      return [];
+    } catch (error) {
+      console.error("Error loading location children:", error);
+      return [];
+    }
+  }, []);
+
+  // Load a specific location by ID
+  const loadLocationById = useCallback(async (locationId: string) => {
+    try {
+      const response = await fetch(`/api/locations/${locationId}`);
+      if (response.ok) {
+        return await response.json();
+      }
+      return null;
+    } catch (error) {
+      console.error("Error loading location by ID:", error);
+      return null;
+    }
+  }, []);
+
+  // Search locations
+  const searchLocations = useCallback(async (query: string) => {
+    try {
+      const response = await fetch(`/api/locations/search-tree?search=${encodeURIComponent(query)}&limit=100`);
+      if (response.ok) {
+        const data = await response.json();
+        return data.locations || [];
+      }
+      return [];
+    } catch (error) {
+      console.error("Error searching locations:", error);
+      return [];
+    }
+  }, []);
+
 
   // Load data on component mount and when dependencies change
   useEffect(() => {
@@ -226,6 +290,13 @@ export default function MachinesPage() {
     };
     loadData();
   }, [currentPage, fetchMachines, searchQuery, loadLocationNames]);
+
+  // Load locations when modal opens
+  useEffect(() => {
+    if (showModal && locations.length === 0) {
+      loadLocations();
+    }
+  }, [showModal, locations.length, loadLocations]);
 
 
   // Form submission
@@ -816,6 +887,11 @@ export default function MachinesPage() {
                       placeholder={t("placeholders.location")}
                       error={errors.locationId?.message}
                       className="text-base"
+                      locations={locations}
+                      loading={locationsLoading}
+                      onLoadChildren={loadLocationChildren}
+                      onLoadLocationById={loadLocationById}
+                      onSearch={searchLocations}
                     />
                   </FormGroup>
 

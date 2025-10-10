@@ -54,13 +54,51 @@ export async function GET(request: NextRequest) {
 
     const query: Record<string, unknown> = { companyId: session.user.companyId };
     
-    // Add search functionality
+    // Add search functionality with negation support
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { path: { $regex: search, $options: 'i' } }
-      ];
+      const searchTerms = search.trim().split(/\s+/);
+      const includeTerms: string[] = [];
+      const excludeTerms: string[] = [];
+      
+      // Parse search terms for negation (terms starting with -)
+      searchTerms.forEach(term => {
+        if (term.startsWith('-')) {
+          excludeTerms.push(term.substring(1));
+        } else {
+          includeTerms.push(term);
+        }
+      });
+      
+      const searchConditions: any[] = [];
+      
+      // Add include conditions
+      if (includeTerms.length > 0) {
+        const includeRegex = includeTerms.join('.*');
+        searchConditions.push({
+          $and: [
+            { name: { $regex: includeRegex, $options: 'i' } },
+            { description: { $regex: includeRegex, $options: 'i' } },
+            { path: { $regex: includeRegex, $options: 'i' } }
+          ]
+        });
+      }
+      
+      // Add exclude conditions
+      if (excludeTerms.length > 0) {
+        excludeTerms.forEach(term => {
+          searchConditions.push({
+            $and: [
+              { name: { $not: { $regex: term, $options: 'i' } } },
+              { description: { $not: { $regex: term, $options: 'i' } } },
+              { path: { $not: { $regex: term, $options: 'i' } } }
+            ]
+          });
+        });
+      }
+      
+      if (searchConditions.length > 0) {
+        query.$and = searchConditions;
+      }
     }
 
     if (parentId) {

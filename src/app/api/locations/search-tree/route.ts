@@ -42,14 +42,50 @@ export async function GET(request: NextRequest) {
       return response;
     }
 
-    // Search query for locations
+    // Search query for locations with negation support
+    const searchTerms = search.trim().split(/\s+/);
+    const includeTerms: string[] = [];
+    const excludeTerms: string[] = [];
+    
+    // Parse search terms for negation (terms starting with -)
+    searchTerms.forEach(term => {
+      if (term.startsWith('-')) {
+        excludeTerms.push(term.substring(1));
+      } else {
+        includeTerms.push(term);
+      }
+    });
+    
+    const searchConditions: any[] = [];
+    
+    // Add include conditions
+    if (includeTerms.length > 0) {
+      const includeRegex = includeTerms.join('.*');
+      searchConditions.push({
+        $or: [
+          { name: { $regex: includeRegex, $options: 'i' } },
+          { description: { $regex: includeRegex, $options: 'i' } },
+          { path: { $regex: includeRegex, $options: 'i' } }
+        ]
+      });
+    }
+    
+    // Add exclude conditions
+    if (excludeTerms.length > 0) {
+      excludeTerms.forEach(term => {
+        searchConditions.push({
+          $and: [
+            { name: { $not: { $regex: term, $options: 'i' } } },
+            { description: { $not: { $regex: term, $options: 'i' } } },
+            { path: { $not: { $regex: term, $options: 'i' } } }
+          ]
+        });
+      });
+    }
+    
     const searchQuery = {
       companyId: session.user.companyId,
-      $or: [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { path: { $regex: search, $options: 'i' } }
-      ]
+      ...(searchConditions.length > 0 && { $and: searchConditions })
     };
 
     // Find all locations that match the search
